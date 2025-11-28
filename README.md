@@ -37,7 +37,7 @@ Each variation includes a direct link to your Last.fm library (with `+noredirect
 ## How To Use It
 
 ### Option 1: Use it online
-Visit: **[scoblitz.github.io/scrobble-analyzer](https://your-github-username.github.io/scrobble-analyzer)**
+Visit: **[scoblitz.github.io/scrobble-analyzer](https://scoblitz.github.io/scrobble-analyzer)**
 
 ### Option 2: Run locally
 1. Download `index.html`
