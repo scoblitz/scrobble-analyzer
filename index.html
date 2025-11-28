@@ -1,0 +1,1845 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scrobble Analyzer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #0a0a0f;
+            --bg-card: #12121a;
+            --bg-hover: #1a1a25;
+            --border: #2a2a3a;
+            --text-primary: #e8e8f0;
+            --text-secondary: #8888a0;
+            --text-muted: #555570;
+            --accent-orange: #ff6b35;
+            --accent-orange-dim: #cc5528;
+            --accent-blue: #4a9eff;
+            --accent-green: #4ade80;
+            --accent-yellow: #fbbf24;
+            --accent-red: #ef4444;
+            --accent-purple: #a78bfa;
+            --vu-green: #22c55e;
+            --vu-yellow: #eab308;
+            --vu-red: #dc2626;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.5;
+        }
+
+        /* Header - vintage receiver style */
+        .header {
+            background: linear-gradient(180deg, #1a1a25 0%, #12121a 100%);
+            border-bottom: 1px solid var(--border);
+            padding: 1.5rem 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 2rem;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .logo-icon {
+            width: 48px;
+            height: 48px;
+            background: var(--accent-orange);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        .logo-text h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        .logo-text .tagline {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .header-stats {
+            display: flex;
+            gap: 2rem;
+        }
+
+        .stat-block {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--accent-orange);
+        }
+
+        .stat-label {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* VU Meter style indicator */
+        .vu-meter {
+            display: flex;
+            align-items: flex-end;
+            gap: 3px;
+            height: 32px;
+        }
+
+        .vu-bar {
+            width: 8px;
+            background: var(--vu-green);
+            border-radius: 2px;
+            transition: height 0.3s ease;
+        }
+
+        .vu-bar:nth-child(n+8) { background: var(--vu-yellow); }
+        .vu-bar:nth-child(n+11) { background: var(--vu-red); }
+
+        /* Main content */
+        .main {
+            display: flex;
+            height: calc(100vh - 100px);
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 280px;
+            background: var(--bg-card);
+            border-right: 1px solid var(--border);
+            padding: 1.5rem;
+            overflow-y: auto;
+        }
+
+        .sidebar-section {
+            margin-bottom: 2rem;
+        }
+
+        .sidebar-title {
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 0.75rem;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            margin-bottom: 0.25rem;
+        }
+
+        .nav-item:hover {
+            background: var(--bg-hover);
+        }
+
+        .nav-item.active {
+            background: var(--accent-orange);
+            color: white;
+        }
+
+        .nav-item .count {
+            margin-left: auto;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .nav-item.active .count {
+            color: rgba(255,255,255,0.8);
+        }
+
+        .nav-icon {
+            font-size: 1.1rem;
+        }
+
+        /* Upload area */
+        .upload-zone {
+            border: 2px dashed var(--border);
+            border-radius: 8px;
+            padding: 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .upload-zone:hover {
+            border-color: var(--accent-orange);
+            background: rgba(255, 107, 53, 0.05);
+        }
+
+        .upload-zone.dragover {
+            border-color: var(--accent-orange);
+            background: rgba(255, 107, 53, 0.1);
+        }
+
+        .upload-icon {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .upload-text {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        .upload-text strong {
+            color: var(--accent-orange);
+        }
+
+        /* Content area */
+        .content {
+            flex: 1;
+            padding: 1.5rem 2rem;
+            overflow-y: auto;
+        }
+
+        .content-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+        }
+
+        .content-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .content-subtitle {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-top: 0.25rem;
+        }
+
+        /* Search and filters */
+        .toolbar {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .search-box {
+            flex: 1;
+            max-width: 400px;
+            position: relative;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 0.75rem 1rem 0.75rem 2.5rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 0.9rem;
+        }
+
+        .search-box input:focus {
+            outline: none;
+            border-color: var(--accent-orange);
+        }
+
+        .search-box::before {
+            content: "🔍";
+            position: absolute;
+            left: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 0.9rem;
+        }
+
+        .filter-btn {
+            padding: 0.75rem 1.25rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-secondary);
+            font-family: inherit;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .filter-btn:hover {
+            border-color: var(--accent-orange);
+            color: var(--text-primary);
+        }
+
+        .filter-btn.active {
+            background: var(--accent-orange);
+            border-color: var(--accent-orange);
+            color: white;
+        }
+
+        /* Issue cards */
+        .issue-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .issue-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.25rem;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .issue-card:hover {
+            border-color: var(--accent-orange);
+            transform: translateX(4px);
+        }
+
+        .issue-card.expanded {
+            border-color: var(--accent-orange);
+        }
+
+        .issue-header {
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+
+        .issue-type {
+            flex-shrink: 0;
+            padding: 0.35rem 0.75rem;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .issue-type.artist { background: rgba(168, 139, 250, 0.2); color: var(--accent-purple); }
+        .issue-type.album { background: rgba(74, 158, 255, 0.2); color: var(--accent-blue); }
+        .issue-type.track { background: rgba(74, 222, 128, 0.2); color: var(--accent-green); }
+        .issue-type.missing { background: rgba(239, 68, 68, 0.2); color: var(--accent-red); }
+        .issue-type.compilation { background: rgba(251, 191, 36, 0.2); color: var(--accent-yellow); }
+        .issue-type.invisible { background: rgba(236, 72, 153, 0.2); color: #ec4899; }
+
+        .summary-dot.artist { background: var(--accent-purple); }
+        .summary-dot.album { background: var(--accent-blue); }
+        .summary-dot.track { background: var(--accent-green); }
+        .summary-dot.missing { background: var(--accent-red); }
+        .summary-dot.compilation { background: var(--accent-yellow); }
+        .summary-dot.invisible { background: #ec4899; }
+
+        /* Last.fm link styling */
+        .lastfm-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.25rem 0.5rem;
+            background: rgba(185, 0, 0, 0.15);
+            border: 1px solid rgba(185, 0, 0, 0.3);
+            border-radius: 4px;
+            color: #d41109;
+            font-size: 0.7rem;
+            text-decoration: none;
+            transition: all 0.15s ease;
+            margin-left: 0.5rem;
+        }
+
+        .lastfm-link:hover {
+            background: rgba(185, 0, 0, 0.25);
+            border-color: rgba(185, 0, 0, 0.5);
+        }
+
+        /* Invisible character warning */
+        .invisible-warning {
+            display: inline-block;
+            padding: 0.15rem 0.4rem;
+            background: rgba(236, 72, 153, 0.2);
+            border-radius: 3px;
+            font-size: 0.65rem;
+            color: #ec4899;
+            margin-left: 0.5rem;
+        }
+
+        .issue-content {
+            flex: 1;
+        }
+
+        .issue-title {
+            font-weight: 600;
+            margin-bottom: 0.35rem;
+        }
+
+        .issue-description {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .issue-meta {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-left: auto;
+            flex-shrink: 0;
+        }
+
+        .issue-count {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--accent-orange);
+        }
+
+        .issue-count-label {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+        }
+
+        /* Expanded issue details */
+        .issue-details {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border);
+            display: none;
+        }
+
+        .issue-card.expanded .issue-details {
+            display: block;
+        }
+
+        .variation-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .variation-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.75rem 1rem;
+            background: var(--bg-dark);
+            border-radius: 6px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+        }
+
+        .variation-value {
+            flex: 1;
+            word-break: break-word;
+        }
+
+        .variation-count {
+            color: var(--accent-orange);
+            font-weight: 600;
+        }
+
+        .variation-action {
+            padding: 0.35rem 0.75rem;
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .variation-action:hover {
+            border-color: var(--accent-green);
+            color: var(--accent-green);
+        }
+
+        .variation-action.primary {
+            background: var(--accent-orange);
+            border-color: var(--accent-orange);
+            color: white;
+        }
+
+        /* Empty state */
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+        }
+
+        .empty-state-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+
+        .empty-state h2 {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .empty-state p {
+            color: var(--text-secondary);
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        /* Loading state */
+        .loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 4rem;
+        }
+
+        .spinner {
+            width: 48px;
+            height: 48px;
+            border: 3px solid var(--border);
+            border-top-color: var(--accent-orange);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            margin-top: 1rem;
+            color: var(--text-secondary);
+        }
+
+        /* Progress bar */
+        .progress-container {
+            width: 300px;
+            margin-top: 1rem;
+        }
+
+        .progress-bar {
+            height: 8px;
+            background: var(--bg-card);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--accent-orange);
+            transition: width 0.3s ease;
+        }
+
+        .progress-text {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: 0.5rem;
+            text-align: center;
+        }
+
+        /* Sort controls */
+        .sort-controls {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .sort-controls select {
+            padding: 0.5rem 0.75rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 0.85rem;
+            cursor: pointer;
+        }
+
+        /* Hidden file input */
+        #file-input {
+            display: none;
+        }
+
+        /* Summary stats bar */
+        .summary-bar {
+            display: flex;
+            gap: 1.5rem;
+            padding: 1rem 1.5rem;
+            background: var(--bg-card);
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+        }
+
+        .summary-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .summary-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .summary-dot.artist { background: var(--accent-purple); }
+        .summary-dot.album { background: var(--accent-blue); }
+        .summary-dot.track { background: var(--accent-green); }
+        .summary-dot.missing { background: var(--accent-red); }
+        .summary-dot.compilation { background: var(--accent-yellow); }
+
+        .summary-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .summary-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 600;
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 0.25rem;
+            background: var(--bg-card);
+            padding: 0.25rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+        }
+
+        .tab {
+            padding: 0.75rem 1.5rem;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            color: var(--text-secondary);
+        }
+
+        .tab:hover {
+            color: var(--text-primary);
+        }
+
+        .tab.active {
+            background: var(--accent-orange);
+            color: white;
+        }
+
+        /* Export button */
+        .export-btn {
+            padding: 0.75rem 1.5rem;
+            background: var(--accent-orange);
+            border: none;
+            border-radius: 6px;
+            color: white;
+            font-family: inherit;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .export-btn:hover {
+            background: var(--accent-orange-dim);
+        }
+
+        /* Badge */
+        .badge {
+            padding: 0.2rem 0.5rem;
+            background: var(--accent-orange);
+            border-radius: 10px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="logo">
+            <div class="logo-icon">📊</div>
+            <div class="logo-text">
+                <h1>Scrobble Analyzer</h1>
+                <div class="tagline">Find & Fix Your Last.fm Data <span style="color: var(--accent-orange); margin-left: 0.5rem;">v0.4.0</span></div>
+            </div>
+        </div>
+        <div class="header-stats" id="header-stats" style="display: none;">
+            <div class="stat-block">
+                <div class="stat-value" id="stat-scrobbles">0</div>
+                <div class="stat-label">Scrobbles</div>
+            </div>
+            <div class="stat-block">
+                <div class="stat-value" id="stat-artists">0</div>
+                <div class="stat-label">Artists</div>
+            </div>
+            <div class="stat-block">
+                <div class="stat-value" id="stat-issues">0</div>
+                <div class="stat-label">Issues Found</div>
+            </div>
+            <div class="vu-meter" id="vu-meter">
+                <!-- VU meter bars will be added dynamically -->
+            </div>
+        </div>
+    </header>
+
+    <main class="main">
+        <aside class="sidebar">
+            <div class="sidebar-section">
+                <div class="sidebar-title">Data Source</div>
+                <div class="upload-zone" id="upload-zone">
+                    <div class="upload-icon">📁</div>
+                    <div class="upload-text">
+                        Drop your <strong>Last.fm CSV</strong> here<br>
+                        or click to browse
+                    </div>
+                </div>
+                <input type="file" id="file-input" accept=".csv">
+                <div style="margin-top: 1rem;">
+                    <label for="username-input" style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-bottom: 0.35rem;">Last.fm Username (for links)</label>
+                    <input type="text" id="username-input" placeholder="your username" style="width: 100%; padding: 0.5rem 0.75rem; background: var(--bg-dark); border: 1px solid var(--border); border-radius: 4px; color: var(--text-primary); font-family: inherit; font-size: 0.85rem;">
+                </div>
+            </div>
+
+            <div class="sidebar-section" id="nav-section" style="display: none;">
+                <div class="sidebar-title">Issue Types</div>
+                <div class="nav-item active" data-filter="all">
+                    <span class="nav-icon">📋</span>
+                    <span>All Issues</span>
+                    <span class="count" id="count-all">0</span>
+                </div>
+                <div class="nav-item" data-filter="artist">
+                    <span class="nav-icon">🎤</span>
+                    <span>Artist Variations</span>
+                    <span class="count" id="count-artist">0</span>
+                </div>
+                <div class="nav-item" data-filter="album">
+                    <span class="nav-icon">💿</span>
+                    <span>Album Variations</span>
+                    <span class="count" id="count-album">0</span>
+                </div>
+                <div class="nav-item" data-filter="track">
+                    <span class="nav-icon">🎵</span>
+                    <span>Track Variations</span>
+                    <span class="count" id="count-track">0</span>
+                </div>
+                <div class="nav-item" data-filter="missing">
+                    <span class="nav-icon">❓</span>
+                    <span>Missing Albums</span>
+                    <span class="count" id="count-missing">0</span>
+                </div>
+                <div class="nav-item" data-filter="compilation">
+                    <span class="nav-icon">📀</span>
+                    <span>Compilations</span>
+                    <span class="count" id="count-compilation">0</span>
+                </div>
+                <div class="nav-item" data-filter="invisible">
+                    <span class="nav-icon">👻</span>
+                    <span>Invisible Characters</span>
+                    <span class="count" id="count-invisible">0</span>
+                </div>
+            </div>
+
+            <div class="sidebar-section" id="artist-filter-section" style="display: none;">
+                <div class="sidebar-title">Filter by Artist</div>
+                <select id="artist-filter" style="width: 100%; padding: 0.5rem; background: var(--bg-dark); border: 1px solid var(--border); border-radius: 4px; color: var(--text-primary); font-family: inherit;">
+                    <option value="">All Artists</option>
+                </select>
+            </div>
+        </aside>
+
+        <section class="content">
+            <!-- Empty state - shown initially -->
+            <div class="empty-state" id="empty-state">
+                <div class="empty-state-icon">🎵</div>
+                <h2>Upload Your Scrobble Data</h2>
+                <p>Export your scrobble history from Last.fm and drop the CSV file here to analyze it for inconsistencies and errors.</p>
+            </div>
+
+            <!-- Loading state -->
+            <div class="loading" id="loading-state" style="display: none;">
+                <div class="spinner"></div>
+                <div class="loading-text">Analyzing your scrobbles...</div>
+                <div class="progress-container">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
+                    </div>
+                    <div class="progress-text" id="progress-text">Starting...</div>
+                </div>
+            </div>
+
+            <!-- Results -->
+            <div id="results-container" style="display: none;">
+                <div class="content-header">
+                    <div>
+                        <div class="content-title" id="results-title">All Issues</div>
+                        <div class="content-subtitle" id="results-subtitle">Sorted by impact (scrobble count)</div>
+                    </div>
+                    <div style="display: flex; gap: 1rem; align-items: center;">
+                        <div class="sort-controls">
+                            <span>Sort by:</span>
+                            <select id="sort-select">
+                                <option value="count">Impact (Count)</option>
+                                <option value="variations">Variations</option>
+                                <option value="name">Name</option>
+                            </select>
+                        </div>
+                        <button class="export-btn" id="export-btn">
+                            <span>📥</span> Export Report
+                        </button>
+                    </div>
+                </div>
+
+                <div class="toolbar">
+                    <div class="search-box">
+                        <input type="text" id="search-input" placeholder="Search artists, albums, tracks...">
+                    </div>
+                </div>
+
+                <div class="summary-bar" id="summary-bar">
+                    <div class="summary-item">
+                        <div class="summary-dot artist"></div>
+                        <span class="summary-label">Artist:</span>
+                        <span class="summary-value" id="summary-artist">0</span>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-dot album"></div>
+                        <span class="summary-label">Album:</span>
+                        <span class="summary-value" id="summary-album">0</span>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-dot track"></div>
+                        <span class="summary-label">Track:</span>
+                        <span class="summary-value" id="summary-track">0</span>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-dot missing"></div>
+                        <span class="summary-label">Missing:</span>
+                        <span class="summary-value" id="summary-missing">0</span>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-dot compilation"></div>
+                        <span class="summary-label">Compilations:</span>
+                        <span class="summary-value" id="summary-compilation">0</span>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-dot invisible"></div>
+                        <span class="summary-label">Invisible:</span>
+                        <span class="summary-value" id="summary-invisible">0</span>
+                    </div>
+                </div>
+
+                <div class="issue-grid" id="issue-grid">
+                    <!-- Issues will be populated here -->
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // Application State
+        const state = {
+            scrobbles: [],
+            issues: [],
+            currentFilter: 'all',
+            currentArtist: '',
+            searchQuery: '',
+            sortBy: 'count'
+        };
+
+        // DOM Elements
+        const uploadZone = document.getElementById('upload-zone');
+        const fileInput = document.getElementById('file-input');
+        const emptyState = document.getElementById('empty-state');
+        const loadingState = document.getElementById('loading-state');
+        const resultsContainer = document.getElementById('results-container');
+        const headerStats = document.getElementById('header-stats');
+        const navSection = document.getElementById('nav-section');
+        const artistFilterSection = document.getElementById('artist-filter-section');
+        const issueGrid = document.getElementById('issue-grid');
+        const searchInput = document.getElementById('search-input');
+        const sortSelect = document.getElementById('sort-select');
+        const artistFilter = document.getElementById('artist-filter');
+        const exportBtn = document.getElementById('export-btn');
+        const progressFill = document.getElementById('progress-fill');
+        const progressText = document.getElementById('progress-text');
+
+        // File upload handling
+        uploadZone.addEventListener('click', () => fileInput.click());
+        
+        uploadZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadZone.classList.add('dragover');
+        });
+
+        uploadZone.addEventListener('dragleave', () => {
+            uploadZone.classList.remove('dragover');
+        });
+
+        uploadZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadZone.classList.remove('dragover');
+            const file = e.dataTransfer.files[0];
+            if (file) processFile(file);
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) processFile(file);
+        });
+
+        // Parse CSV
+        function parseCSV(text) {
+            const lines = text.trim().split('\n');
+            
+            // Detect delimiter from first line
+            const firstLine = lines[0];
+            const delimiter = firstLine.includes(';') ? ';' : ',';
+            
+            const rawHeaders = parseCSVLine(firstLine.replace(/^\uFEFF/, ''), delimiter);
+            
+            // Normalize headers - map various possible names to our standard names
+            const headerMap = {};
+            rawHeaders.forEach((header, index) => {
+                const h = header.trim().toLowerCase();
+                if (h.includes('artist')) headerMap[index] = 'Artist';
+                else if (h.includes('album') && h.includes('id')) headerMap[index] = 'AlbumId';
+                else if (h.includes('album')) headerMap[index] = 'Album';
+                else if (h.includes('track') || h.includes('song') || h.includes('title')) headerMap[index] = 'Track';
+                else if (h.includes('date') || h.includes('time')) headerMap[index] = 'Date';
+                else headerMap[index] = header.trim(); // Keep original if no match
+            });
+            
+            console.log('Detected delimiter:', delimiter);
+            console.log('Raw headers:', rawHeaders);
+            console.log('Mapped headers:', headerMap);
+            
+            const data = [];
+            for (let i = 1; i < lines.length; i++) {
+                if (!lines[i].trim()) continue; // Skip empty lines
+                
+                const values = parseCSVLine(lines[i], delimiter);
+                const row = {};
+                Object.entries(headerMap).forEach(([index, header]) => {
+                    row[header] = values[index] ? values[index].trim() : '';
+                });
+                data.push(row);
+            }
+            
+            // Debug: log first few rows
+            console.log('First 3 rows:', data.slice(0, 3));
+            
+            return data;
+        }
+
+        function parseCSVLine(line, delimiter = ',') {
+            const result = [];
+            let current = '';
+            let inQuotes = false;
+            
+            for (let i = 0; i < line.length; i++) {
+                const char = line[i];
+                
+                if (char === '"') {
+                    if (inQuotes && line[i + 1] === '"') {
+                        current += '"';
+                        i++;
+                    } else {
+                        inQuotes = !inQuotes;
+                    }
+                } else if (char === delimiter && !inQuotes) {
+                    result.push(current);
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+            result.push(current);
+            
+            return result.map(v => v.replace(/^"|"$/g, ''));
+        }
+
+        // Process uploaded file
+        async function processFile(file) {
+            emptyState.style.display = 'none';
+            loadingState.style.display = 'flex';
+            resultsContainer.style.display = 'none';
+
+            const reader = new FileReader();
+            
+            reader.onload = async (e) => {
+                progressText.textContent = 'Parsing CSV...';
+                progressFill.style.width = '10%';
+                
+                // Remove BOM if present (handle multiple possible BOMs)
+                let text = e.target.result;
+                text = text.replace(/^\uFEFF/, ''); // UTF-8 BOM
+                text = text.replace(/^\u00EF\u00BB\u00BF/, ''); // UTF-8 BOM as separate chars
+                text = text.replace(/^\xEF\xBB\xBF/, ''); // UTF-8 BOM as bytes
+                
+                console.log('First 100 chars of file:', text.substring(0, 100));
+                
+                state.scrobbles = parseCSV(text);
+                
+                console.log('Parsed scrobbles count:', state.scrobbles.length);
+                console.log('Sample scrobble:', state.scrobbles[0]);
+                
+                progressText.textContent = 'Analyzing artist variations...';
+                progressFill.style.width = '20%';
+                await sleep(50);
+                
+                const artistIssues = findArtistVariations(state.scrobbles);
+                
+                progressText.textContent = 'Analyzing album variations...';
+                progressFill.style.width = '35%';
+                await sleep(50);
+                
+                const albumIssues = findAlbumVariations(state.scrobbles);
+                
+                progressText.textContent = 'Analyzing track variations...';
+                progressFill.style.width = '50%';
+                await sleep(50);
+                
+                const trackIssues = findTrackVariations(state.scrobbles);
+                
+                progressText.textContent = 'Finding missing albums...';
+                progressFill.style.width = '65%';
+                await sleep(50);
+                
+                const missingIssues = findMissingAlbums(state.scrobbles);
+                
+                progressText.textContent = 'Detecting compilations...';
+                progressFill.style.width = '80%';
+                await sleep(50);
+                
+                const compilationIssues = findCompilations(state.scrobbles);
+                
+                progressText.textContent = 'Detecting invisible characters...';
+                progressFill.style.width = '92%';
+                await sleep(50);
+                
+                const invisibleIssues = findInvisibleCharacterIssues(state.scrobbles);
+                
+                progressText.textContent = 'Finalizing...';
+                progressFill.style.width = '100%';
+                await sleep(100);
+                
+                state.issues = [...artistIssues, ...albumIssues, ...trackIssues, ...missingIssues, ...compilationIssues, ...invisibleIssues];
+                
+                displayResults();
+            };
+            
+            reader.readAsText(file);
+        }
+
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        // Normalize strings for comparison
+        function normalize(str) {
+            if (!str) return '';
+            return str.toLowerCase()
+                .replace(/\u00a0/g, ' ')  // Replace non-breaking spaces
+                .replace(/\s+/g, ' ')
+                .replace(/[^\w\s]/g, '')
+                .replace(/\b(the|and)\b/g, '')
+                .trim();
+        }
+
+        // Find artist variations (like "The Beatles" vs "Beatles")
+        function findArtistVariations(scrobbles) {
+            console.log('Finding artist variations...');
+            
+            const artistCounts = {};
+            scrobbles.forEach(s => {
+                if (s.Artist) {
+                    artistCounts[s.Artist] = (artistCounts[s.Artist] || 0) + 1;
+                }
+            });
+            
+            console.log('Unique artists found:', Object.keys(artistCounts).length);
+
+            const normalized = {};
+            Object.keys(artistCounts).forEach(artist => {
+                let norm = artist.toLowerCase().trim();
+                norm = norm.replace(/\u00a0/g, ' ');  // Replace non-breaking spaces
+                if (norm.startsWith('the ')) norm = norm.slice(4);
+                norm = norm.replace(/\s*&\s*/g, ' and ');
+                norm = norm.replace(/\s+/g, ' ').trim();
+                
+                if (!normalized[norm]) normalized[norm] = [];
+                normalized[norm].push({ name: artist, count: artistCounts[artist] });
+            });
+
+            const issues = [];
+            Object.entries(normalized).forEach(([norm, artists]) => {
+                if (artists.length > 1) {
+                    const total = artists.reduce((sum, a) => sum + a.count, 0);
+                    if (total >= 10) {
+                        issues.push({
+                            type: 'artist',
+                            title: artists.sort((a, b) => b.count - a.count)[0].name,
+                            description: `${artists.length} variations found`,
+                            totalCount: total,
+                            variations: artists.sort((a, b) => b.count - a.count),
+                            normalized: norm
+                        });
+                    }
+                }
+            });
+            
+            console.log('Artist variation issues found:', issues.length);
+            if (issues.length > 0) {
+                console.log('Sample artist issue:', issues[0]);
+            }
+
+            return issues;
+        }
+
+        // Find album variations (remastered, deluxe, etc.)
+        function findAlbumVariations(scrobbles) {
+            console.log('Finding album variations...');
+            
+            const albumCounts = {};
+            scrobbles.forEach(s => {
+                if (s.Album) {
+                    const key = `${s.Artist}|||${s.Album}`;
+                    albumCounts[key] = (albumCounts[key] || 0) + 1;
+                }
+            });
+            
+            console.log('Unique artist+album combos:', Object.keys(albumCounts).length);
+
+            function normalizeAlbum(album) {
+                if (!album) return '';
+                let norm = album.toLowerCase();
+                norm = norm.replace(/\u00a0/g, ' ');  // Replace non-breaking spaces
+                // Remove remaster/deluxe/edition suffixes
+                norm = norm.replace(/\s*[\(\[].*?(remaster|deluxe|edition|bonus|expanded|anniversary|version|disc \d).*?[\)\]]/gi, '');
+                norm = norm.replace(/\s*-\s*(remaster|deluxe|expanded).*$/i, '');
+                norm = norm.replace(/\s+/g, ' ').trim();
+                return norm;
+            }
+
+            const grouped = {};
+            Object.keys(albumCounts).forEach(key => {
+                const [artist, album] = key.split('|||');
+                const normAlbum = normalizeAlbum(album);
+                const groupKey = `${artist}|||${normAlbum}`;
+                
+                if (!grouped[groupKey]) grouped[groupKey] = [];
+                grouped[groupKey].push({ 
+                    name: album, 
+                    count: albumCounts[key],
+                    artist: artist
+                });
+            });
+
+            const issues = [];
+            Object.entries(grouped).forEach(([groupKey, albums]) => {
+                if (albums.length > 1) {
+                    const total = albums.reduce((sum, a) => sum + a.count, 0);
+                    if (total >= 5) {
+                        const [artist, normAlbum] = groupKey.split('|||');
+                        issues.push({
+                            type: 'album',
+                            title: `${artist} - ${albums.sort((a, b) => b.count - a.count)[0].name}`,
+                            artist: artist,
+                            description: `${albums.length} versions found`,
+                            totalCount: total,
+                            variations: albums.sort((a, b) => b.count - a.count),
+                            normalized: normAlbum
+                        });
+                    }
+                }
+            });
+            
+            console.log('Album variation issues found:', issues.length);
+
+            return issues;
+        }
+
+        // Find scrobbles missing album data
+        function findMissingAlbums(scrobbles) {
+            console.log('Finding missing albums...');
+            
+            const missing = {};
+            scrobbles.forEach(s => {
+                if (!s.Album || s.Album.trim() === '') {
+                    const key = `${s.Artist}|||${s.Track}`;
+                    if (!missing[key]) {
+                        missing[key] = { artist: s.Artist, track: s.Track, count: 0 };
+                    }
+                    missing[key].count++;
+                }
+            });
+            
+            console.log('Tracks missing album:', Object.keys(missing).length);
+
+            // Group by artist
+            const byArtist = {};
+            Object.values(missing).forEach(m => {
+                if (!m.artist) return;  // Skip if no artist
+                if (!byArtist[m.artist]) {
+                    byArtist[m.artist] = { tracks: [], totalCount: 0 };
+                }
+                byArtist[m.artist].tracks.push({ name: m.track, count: m.count });
+                byArtist[m.artist].totalCount += m.count;
+            });
+
+            const issues = [];
+            Object.entries(byArtist).forEach(([artist, data]) => {
+                if (data.totalCount >= 3) {
+                    issues.push({
+                        type: 'missing',
+                        title: artist,
+                        artist: artist,
+                        description: `${data.tracks.length} tracks missing album info`,
+                        totalCount: data.totalCount,
+                        variations: data.tracks.sort((a, b) => b.count - a.count)
+                    });
+                }
+            });
+            
+            console.log('Missing album issues found:', issues.length);
+
+            return issues;
+        }
+
+        // Find compilation albums
+        function findCompilations(scrobbles) {
+            console.log('Finding compilations...');
+            
+            const compilationPatterns = [
+                /greatest hits/i,
+                /best of/i,
+                /\bessential\b/i,
+                /\bcollection\b/i,
+                /anthology/i,
+                /definitive/i,
+                /\bgold$/i,
+                /platinum/i,
+                /chronicles/i,
+                /\blegend$/i,
+                /\bclassic/i,
+                /\bultimate\b/i,
+                /retrospective/i,
+                /\bhits$/i
+            ];
+
+            // Known false positives (albums that aren't compilations)
+            const falsePositives = [
+                'gold', // Ryan Adams album
+                'the gold experience', // Prince album
+            ];
+
+            const compilations = {};
+            scrobbles.forEach(s => {
+                if (!s.Album || !s.Artist) return;
+                const albumLower = s.Album.toLowerCase();
+                
+                // Skip known false positives
+                if (falsePositives.some(fp => albumLower === fp || albumLower.includes(fp))) {
+                    return;
+                }
+
+                const isCompilation = compilationPatterns.some(p => p.test(s.Album));
+                if (isCompilation) {
+                    const key = `${s.Artist}|||${s.Album}`;
+                    if (!compilations[key]) {
+                        compilations[key] = { 
+                            artist: s.Artist, 
+                            album: s.Album, 
+                            tracks: new Set(),
+                            count: 0 
+                        };
+                    }
+                    compilations[key].tracks.add(s.Track);
+                    compilations[key].count++;
+                }
+            });
+            
+            console.log('Compilation albums found:', Object.keys(compilations).length);
+
+            const issues = [];
+            Object.values(compilations).forEach(c => {
+                if (c.count >= 3) {
+                    issues.push({
+                        type: 'compilation',
+                        title: `${c.artist} - ${c.album}`,
+                        artist: c.artist,
+                        description: `${c.tracks.size} tracks from compilation`,
+                        totalCount: c.count,
+                        variations: Array.from(c.tracks).map(t => ({ name: t, count: '' }))
+                    });
+                }
+            });
+            
+            console.log('Compilation issues found:', issues.length);
+
+            return issues;
+        }
+
+        // Find track title variations (remastered, live, etc.)
+        function findTrackVariations(scrobbles) {
+            console.log('Finding track variations...');
+            
+            const trackCounts = {};
+            scrobbles.forEach(s => {
+                if (s.Track && s.Artist) {
+                    const key = `${s.Artist}|||${s.Track}`;
+                    trackCounts[key] = (trackCounts[key] || 0) + 1;
+                }
+            });
+            
+            console.log('Unique artist+track combos:', Object.keys(trackCounts).length);
+
+            function normalizeTrack(track) {
+                if (!track) return '';
+                let norm = track.toLowerCase();
+                norm = norm.replace(/\u00a0/g, ' ');  // Replace non-breaking spaces
+                // Remove common suffixes
+                norm = norm.replace(/\s*[\(\[].*?(remaster|live|remix|edit|version|mix|demo|acoustic|mono|stereo|single|radio|extended|instrumental|reprise|take \d+|alternate|alt\.|bonus).*?[\)\]]/gi, '');
+                norm = norm.replace(/\s*-\s*(remaster|live|remix|edit|version|demo|acoustic|mono|stereo|single|radio|extended).*$/i, '');
+                norm = norm.replace(/\s*\d{4}\s*(remaster|remix|version)?$/i, ''); // Year suffixes
+                norm = norm.replace(/\s+/g, ' ').trim();
+                return norm;
+            }
+
+            const grouped = {};
+            Object.keys(trackCounts).forEach(key => {
+                const [artist, track] = key.split('|||');
+                const normTrack = normalizeTrack(track);
+                const groupKey = `${artist}|||${normTrack}`;
+                
+                if (!grouped[groupKey]) grouped[groupKey] = [];
+                grouped[groupKey].push({ 
+                    name: track, 
+                    count: trackCounts[key],
+                    artist: artist
+                });
+            });
+
+            const issues = [];
+            Object.entries(grouped).forEach(([groupKey, tracks]) => {
+                if (tracks.length > 1) {
+                    const total = tracks.reduce((sum, t) => sum + t.count, 0);
+                    if (total >= 3) {
+                        const [artist, normTrack] = groupKey.split('|||');
+                        issues.push({
+                            type: 'track',
+                            title: `${artist} - ${tracks.sort((a, b) => b.count - a.count)[0].name}`,
+                            artist: artist,
+                            description: `${tracks.length} versions found`,
+                            totalCount: total,
+                            variations: tracks.sort((a, b) => b.count - a.count),
+                            normalized: normTrack
+                        });
+                    }
+                }
+            });
+            
+            console.log('Track variation issues found:', issues.length);
+
+            return issues;
+        }
+
+        // Find invisible character issues (strings that look the same but aren't)
+        function findInvisibleCharacterIssues(scrobbles) {
+            console.log('Finding invisible character issues...');
+            
+            // Get all unique artists, albums, and tracks
+            const artists = {};
+            const albums = {};
+            
+            scrobbles.forEach(s => {
+                if (s.Artist) {
+                    artists[s.Artist] = (artists[s.Artist] || 0) + 1;
+                }
+                if (s.Album && s.Artist) {
+                    const key = `${s.Artist}|||${s.Album}`;
+                    albums[key] = (albums[key] || 0) + 1;
+                }
+            });
+
+            // Function to get "visible" version (replace invisible chars with spaces)
+            function getVisibleString(str) {
+                return str
+                    .replace(/\u00a0/g, ' ')  // non-breaking space
+                    .replace(/\u200b/g, '')   // zero-width space
+                    .replace(/\u200c/g, '')   // zero-width non-joiner
+                    .replace(/\u200d/g, '')   // zero-width joiner
+                    .replace(/\u2060/g, '')   // word joiner
+                    .replace(/\ufeff/g, '')   // BOM
+                    .replace(/\s+/g, ' ')
+                    .trim();
+            }
+
+            // Function to detect invisible characters
+            function hasInvisibleChars(str) {
+                return /[\u00a0\u200b\u200c\u200d\u2060\ufeff]/.test(str);
+            }
+
+            // Group artists by visible string
+            const artistGroups = {};
+            Object.keys(artists).forEach(artist => {
+                const visible = getVisibleString(artist);
+                if (!artistGroups[visible]) artistGroups[visible] = [];
+                artistGroups[visible].push({ 
+                    name: artist, 
+                    count: artists[artist],
+                    hasInvisible: hasInvisibleChars(artist)
+                });
+            });
+
+            // Group albums by visible string
+            const albumGroups = {};
+            Object.keys(albums).forEach(key => {
+                const [artist, album] = key.split('|||');
+                const visible = `${getVisibleString(artist)}|||${getVisibleString(album)}`;
+                if (!albumGroups[visible]) albumGroups[visible] = [];
+                albumGroups[visible].push({ 
+                    name: album,
+                    fullKey: key,
+                    artist: artist,
+                    count: albums[key],
+                    hasInvisible: hasInvisibleChars(album) || hasInvisibleChars(artist)
+                });
+            });
+
+            const issues = [];
+
+            // Find artist issues
+            Object.entries(artistGroups).forEach(([visible, items]) => {
+                // Either multiple items that look the same, or single item with invisible chars
+                const hasIssue = items.length > 1 || items.some(i => i.hasInvisible);
+                if (hasIssue) {
+                    const total = items.reduce((sum, i) => sum + i.count, 0);
+                    if (total >= 5) {
+                        issues.push({
+                            type: 'invisible',
+                            subtype: 'artist',
+                            title: visible,
+                            description: items.length > 1 
+                                ? `${items.length} visually identical artists with different characters`
+                                : `Artist name contains invisible characters`,
+                            totalCount: total,
+                            variations: items.sort((a, b) => b.count - a.count).map(i => ({
+                                name: i.name,
+                                count: i.count,
+                                hasInvisible: i.hasInvisible
+                            }))
+                        });
+                    }
+                }
+            });
+
+            // Find album issues (only where there are actual duplicates)
+            Object.entries(albumGroups).forEach(([visible, items]) => {
+                if (items.length > 1) {
+                    const total = items.reduce((sum, i) => sum + i.count, 0);
+                    if (total >= 3) {
+                        const [visArtist, visAlbum] = visible.split('|||');
+                        issues.push({
+                            type: 'invisible',
+                            subtype: 'album',
+                            title: `${visArtist} - ${visAlbum}`,
+                            artist: items[0].artist,
+                            description: `${items.length} visually identical albums with different characters`,
+                            totalCount: total,
+                            variations: items.sort((a, b) => b.count - a.count).map(i => ({
+                                name: i.name,
+                                count: i.count,
+                                artist: i.artist,
+                                hasInvisible: i.hasInvisible
+                            }))
+                        });
+                    }
+                }
+            });
+            
+            console.log('Invisible character issues found:', issues.length);
+
+            return issues;
+        }
+
+        // Generate Last.fm URL for an item (using noredirect to prevent auto-redirects)
+        function getLastFmUrl(artist, album, track) {
+            const usernameInput = document.getElementById('username-input');
+            const username = usernameInput?.value?.trim() || 'USERNAME';
+            
+            const encodeForLastFm = (str) => {
+                if (!str) return '';
+                // Last.fm uses + for spaces in URLs
+                return encodeURIComponent(str).replace(/%20/g, '+');
+            };
+            
+            // Use the user library path with +noredirect to prevent redirects
+            // This lets us see the "wrong" version rather than being redirected to the canonical one
+            const base = `https://www.last.fm/user/${username}/library/music/`;
+            const artistEnc = encodeForLastFm(artist);
+            
+            if (track) {
+                return `${base}+noredirect/${artistEnc}/_/${encodeForLastFm(track)}`;
+            } else if (album) {
+                return `${base}+noredirect/${artistEnc}/${encodeForLastFm(album)}`;
+            } else {
+                return `${base}+noredirect/${artistEnc}`;
+            }
+        }
+
+        // Display results
+        function displayResults() {
+            console.log('Displaying results...');
+            console.log('Total issues:', state.issues.length);
+            console.log('Issues by type:', {
+                artist: state.issues.filter(i => i.type === 'artist').length,
+                album: state.issues.filter(i => i.type === 'album').length,
+                track: state.issues.filter(i => i.type === 'track').length,
+                missing: state.issues.filter(i => i.type === 'missing').length,
+                compilation: state.issues.filter(i => i.type === 'compilation').length,
+                invisible: state.issues.filter(i => i.type === 'invisible').length
+            });
+            
+            if (state.issues.length > 0) {
+                console.log('First issue:', state.issues[0]);
+            }
+            
+            loadingState.style.display = 'none';
+            resultsContainer.style.display = 'block';
+            headerStats.style.display = 'flex';
+            navSection.style.display = 'block';
+            artistFilterSection.style.display = 'block';
+
+            // Update header stats
+            document.getElementById('stat-scrobbles').textContent = state.scrobbles.length.toLocaleString();
+            
+            const uniqueArtists = new Set(state.scrobbles.map(s => s.Artist).filter(a => a)).size;
+            document.getElementById('stat-artists').textContent = uniqueArtists.toLocaleString();
+            document.getElementById('stat-issues').textContent = state.issues.length.toLocaleString();
+
+            // Create VU meter
+            const vuMeter = document.getElementById('vu-meter');
+            vuMeter.innerHTML = '';
+            const issueRatio = Math.min(state.issues.length / 100, 1);
+            for (let i = 0; i < 12; i++) {
+                const bar = document.createElement('div');
+                bar.className = 'vu-bar';
+                const height = i < issueRatio * 12 ? 8 + Math.random() * 24 : 4;
+                bar.style.height = height + 'px';
+                vuMeter.appendChild(bar);
+            }
+
+            // Update counts
+            const counts = {
+                all: state.issues.length,
+                artist: state.issues.filter(i => i.type === 'artist').length,
+                album: state.issues.filter(i => i.type === 'album').length,
+                track: state.issues.filter(i => i.type === 'track').length,
+                missing: state.issues.filter(i => i.type === 'missing').length,
+                compilation: state.issues.filter(i => i.type === 'compilation').length,
+                invisible: state.issues.filter(i => i.type === 'invisible').length
+            };
+
+            Object.entries(counts).forEach(([key, value]) => {
+                const el = document.getElementById(`count-${key}`);
+                if (el) el.textContent = value;
+                
+                const summaryEl = document.getElementById(`summary-${key}`);
+                if (summaryEl) summaryEl.textContent = value;
+            });
+
+            // Populate artist filter - get artist from either .artist property or extract from .title
+            const artistsSet = new Set();
+            state.issues.forEach(i => {
+                if (i.artist) {
+                    artistsSet.add(i.artist);
+                } else if (i.title && i.type === 'artist') {
+                    artistsSet.add(i.title);
+                }
+            });
+            const artists = [...artistsSet].sort();
+            
+            artistFilter.innerHTML = '<option value="">All Artists</option>';
+            artists.forEach(artist => {
+                const option = document.createElement('option');
+                option.value = artist;
+                option.textContent = artist;
+                artistFilter.appendChild(option);
+            });
+
+            renderIssues();
+        }
+
+        // Render issue cards
+        function renderIssues() {
+            console.log('Rendering issues...');
+            console.log('Current filter:', state.currentFilter);
+            console.log('Current artist:', state.currentArtist);
+            console.log('Search query:', state.searchQuery);
+            
+            let filtered = [...state.issues];  // Create a copy
+            
+            console.log('Starting with issues:', filtered.length);
+
+            // Apply type filter
+            if (state.currentFilter !== 'all') {
+                filtered = filtered.filter(i => i.type === state.currentFilter);
+                console.log('After type filter:', filtered.length);
+            }
+
+            // Apply artist filter
+            if (state.currentArtist) {
+                filtered = filtered.filter(i => {
+                    const issueArtist = i.artist || (i.type === 'artist' ? i.title : null);
+                    return issueArtist === state.currentArtist;
+                });
+                console.log('After artist filter:', filtered.length);
+            }
+
+            // Apply search
+            if (state.searchQuery) {
+                const query = state.searchQuery.toLowerCase();
+                filtered = filtered.filter(i => 
+                    (i.title && i.title.toLowerCase().includes(query)) ||
+                    (i.description && i.description.toLowerCase().includes(query)) ||
+                    (i.variations && i.variations.some(v => v.name && v.name.toLowerCase().includes(query)))
+                );
+                console.log('After search filter:', filtered.length);
+            }
+
+            // Sort
+            if (state.sortBy === 'count') {
+                filtered.sort((a, b) => b.totalCount - a.totalCount);
+            } else if (state.sortBy === 'variations') {
+                filtered.sort((a, b) => (b.variations?.length || 0) - (a.variations?.length || 0));
+            } else if (state.sortBy === 'name') {
+                filtered.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+            }
+
+            // Update title
+            const filterNames = {
+                all: 'All Issues',
+                artist: 'Artist Variations',
+                album: 'Album Variations',
+                track: 'Track Variations',
+                missing: 'Missing Albums',
+                compilation: 'Compilations',
+                invisible: 'Invisible Characters'
+            };
+            document.getElementById('results-title').textContent = filterNames[state.currentFilter] || 'All Issues';
+            document.getElementById('results-subtitle').textContent = `${filtered.length} issues found`;
+
+            // Render
+            issueGrid.innerHTML = '';
+            
+            if (filtered.length === 0) {
+                issueGrid.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--text-secondary);">No issues found matching your filters.</div>';
+                return;
+            }
+            
+            // Limit to first 100 for performance, add "load more" later if needed
+            const toRender = filtered.slice(0, 100);
+            console.log('Rendering', toRender.length, 'issues');
+            
+            toRender.forEach((issue, index) => {
+                const card = document.createElement('div');
+                card.className = 'issue-card';
+                
+                // Build variations HTML with Last.fm links
+                const variationsHtml = (issue.variations || []).map((v, i) => {
+                    // Determine the Last.fm URL based on issue type
+                    let lastFmUrl = '';
+                    const artistName = v.artist || issue.artist || (issue.type === 'artist' ? v.name : null);
+                    
+                    if (issue.type === 'artist' || issue.type === 'invisible' && issue.subtype === 'artist') {
+                        lastFmUrl = getLastFmUrl(v.name, null, null);
+                    } else if (issue.type === 'album' || issue.type === 'invisible' && issue.subtype === 'album') {
+                        lastFmUrl = getLastFmUrl(artistName, v.name, null);
+                    } else if (issue.type === 'track') {
+                        lastFmUrl = getLastFmUrl(artistName, null, v.name);
+                    } else if (issue.type === 'missing') {
+                        lastFmUrl = getLastFmUrl(issue.artist, null, v.name);
+                    } else if (issue.type === 'compilation') {
+                        lastFmUrl = getLastFmUrl(issue.artist, null, v.name);
+                    }
+                    
+                    const lastFmLinkHtml = lastFmUrl 
+                        ? `<a href="${lastFmUrl}" target="_blank" class="lastfm-link" onclick="event.stopPropagation()">🔗 Last.fm</a>`
+                        : '';
+                    
+                    const invisibleWarning = v.hasInvisible 
+                        ? '<span class="invisible-warning">⚠️ invisible chars</span>' 
+                        : '';
+                    
+                    return `
+                        <div class="variation-item">
+                            <span class="variation-value">${escapeHtml(v.name || '(empty)')}${invisibleWarning}</span>
+                            ${v.count ? `<span class="variation-count">${v.count}</span>` : ''}
+                            ${lastFmLinkHtml}
+                            ${i === 0 ? '<button class="variation-action primary">Canonical</button>' : '<button class="variation-action">Set as canonical</button>'}
+                        </div>
+                    `;
+                }).join('');
+                
+                card.innerHTML = `
+                    <div class="issue-header">
+                        <span class="issue-type ${issue.type}">${issue.type}</span>
+                        <div class="issue-content">
+                            <div class="issue-title">${escapeHtml(issue.title || 'Unknown')}</div>
+                            <div class="issue-description">${escapeHtml(issue.description || '')}</div>
+                        </div>
+                        <div class="issue-meta">
+                            <div>
+                                <div class="issue-count">${(issue.totalCount || 0).toLocaleString()}</div>
+                                <div class="issue-count-label">scrobbles</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="issue-details">
+                        <div class="variation-list">
+                            ${variationsHtml}
+                        </div>
+                    </div>
+                `;
+
+                card.addEventListener('click', (e) => {
+                    if (e.target.classList.contains('variation-action')) return;
+                    card.classList.toggle('expanded');
+                });
+
+                issueGrid.appendChild(card);
+            });
+            
+            // Show message if there are more
+            if (filtered.length > 100) {
+                const moreMsg = document.createElement('div');
+                moreMsg.style.cssText = 'text-align: center; padding: 1rem; color: var(--text-secondary);';
+                moreMsg.textContent = `Showing first 100 of ${filtered.length} issues. Use search or filters to narrow down.`;
+                issueGrid.appendChild(moreMsg);
+            }
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        // Event listeners
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', () => {
+                document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+                item.classList.add('active');
+                state.currentFilter = item.dataset.filter;
+                renderIssues();
+            });
+        });
+
+        searchInput.addEventListener('input', (e) => {
+            state.searchQuery = e.target.value;
+            renderIssues();
+        });
+
+        sortSelect.addEventListener('change', (e) => {
+            state.sortBy = e.target.value;
+            renderIssues();
+        });
+
+        artistFilter.addEventListener('change', (e) => {
+            state.currentArtist = e.target.value;
+            renderIssues();
+        });
+
+        // Re-render when username changes so links update
+        document.getElementById('username-input').addEventListener('input', () => {
+            if (state.issues.length > 0) {
+                renderIssues();
+            }
+        });
+
+        // Export functionality
+        exportBtn.addEventListener('click', () => {
+            let report = 'SCROBBLE ANALYZER REPORT\n';
+            report += '========================\n\n';
+            report += `Generated: ${new Date().toLocaleString()}\n`;
+            report += `Total Scrobbles: ${state.scrobbles.length.toLocaleString()}\n`;
+            report += `Issues Found: ${state.issues.length}\n\n`;
+
+            const types = ['artist', 'album', 'track', 'missing', 'compilation', 'invisible'];
+            types.forEach(type => {
+                const typeIssues = state.issues.filter(i => i.type === type);
+                if (typeIssues.length === 0) return;
+
+                const typeNames = {
+                    artist: 'ARTIST VARIATIONS',
+                    album: 'ALBUM VARIATIONS',
+                    track: 'TRACK VARIATIONS',
+                    missing: 'MISSING ALBUMS',
+                    compilation: 'COMPILATIONS',
+                    invisible: 'INVISIBLE CHARACTER ISSUES'
+                };
+
+                report += `\n${'='.repeat(50)}\n`;
+                report += `${typeNames[type]} (${typeIssues.length})\n`;
+                report += `${'='.repeat(50)}\n\n`;
+
+                typeIssues.sort((a, b) => b.totalCount - a.totalCount).forEach(issue => {
+                    report += `${issue.title}\n`;
+                    report += `  ${issue.description} | ${issue.totalCount} scrobbles\n`;
+                    issue.variations.forEach(v => {
+                        const invisibleNote = v.hasInvisible ? ' [HAS INVISIBLE CHARS]' : '';
+                        report += `    - ${v.name}${v.count ? ` (${v.count})` : ''}${invisibleNote}\n`;
+                    });
+                    report += '\n';
+                });
+            });
+
+            const blob = new Blob([report], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `scrobble-report-${new Date().toISOString().split('T')[0]}.txt`;
+            a.click();
+            URL.revokeObjectURL(url);
+        });
+    </script>
+</body>
+</html>
