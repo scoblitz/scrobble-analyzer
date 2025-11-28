@@ -11,13 +11,13 @@ After 20 years of scrobbling and 150,000+ plays, I discovered my Last.fm data wa
 I couldn't find any tool that surfaced these problems, so I built one.
 
 **Full Screen View**
-![image](images/scrobbleanalyzer-fullscreen.jpg)
+![image](scrobbleanalyzer-fullscreen.jpg)
 
 **Issue List**
-![image](images/scrobbleanalyzer-issuelist.jpg)
+![image](scrobbleanalyzer-issuelist.jpg)
 
 **Tracks Missing Album**
-![image](images/scrobbleanalyzer-missingalbum.jpg)
+![image](scrobbleanalyzer-missingalbum.jpg)
 
 ## What It Does
 
