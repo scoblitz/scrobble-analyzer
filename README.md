@@ -89,10 +89,12 @@ This project came out of my own frustration with messy scrobble data.
 - Discover edge cases in your own data
 
 Please open an issue! I'd love to hear what problems you're finding in your data.
+or
+💬 Join the conversation: [Discussions](https://github.com/scoblitz/scrobble-analyzer/discussions)
 
 ## Built With
 
-This is a collaboration between a music data nerd (me) and Claude (Anthropic's AI assistant). The entire tool is a single HTML file with no dependencies - just open it in a browser. Feature requests and bug reports are welcome via Issues, but I'm not accepting code contributions at this time.
+This is a collaboration between a music data nerd (me) and Claude (Anthropic's AI assistant). The entire tool is a single HTML file with no dependencies - just open it in a browser. Feature requests and bug reports are welcome via Issues and in Discussions, but I'm not accepting code contributions at this time.
 
 ## License
 
