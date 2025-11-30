@@ -696,7 +696,7 @@
             <div class="logo-icon">📊</div>
             <div class="logo-text">
                 <h1>Scrobble Analyzer</h1>
-                <div class="tagline">Find & Fix Your Last.fm Data <span style="color: var(--accent-orange); margin-left: 0.5rem;">v0.4.0</span></div>
+                <div class="tagline">Find & Fix Your Last.fm Data <span style="color: var(--accent-orange); margin-left: 0.5rem;">v0.4.1</span></div>
             </div>
         </div>
         <div class="header-stats" id="header-stats" style="display: none;">
@@ -730,10 +730,6 @@
                     </div>
                 </div>
                 <input type="file" id="file-input" accept=".csv">
-                <div style="margin-top: 1rem;">
-                    <label for="username-input" style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-bottom: 0.35rem;">Last.fm Username (for links)</label>
-                    <input type="text" id="username-input" placeholder="your username" style="width: 100%; padding: 0.5rem 0.75rem; background: var(--bg-dark); border: 1px solid var(--border); border-radius: 4px; color: var(--text-primary); font-family: inherit; font-size: 0.85rem;">
-                </div>
             </div>
 
             <div class="sidebar-section" id="nav-section" style="display: none;">
@@ -870,6 +866,12 @@
             </div>
         </section>
     </main>
+
+    <footer style="padding: 1rem 2rem; text-align: center; border-top: 1px solid var(--border); color: var(--text-muted); font-size: 0.8rem;">
+        <a href="https://github.com/scoblitz/scrobble-analyzer" target="_blank" style="color: var(--accent-orange); text-decoration: none;">Report issues or give feedback on GitHub</a>
+        <span style="margin: 0 0.5rem;">·</span>
+        <span>Built by scoblitz</span>
+    </footer>
 
     <script>
         // Application State
@@ -1501,18 +1503,15 @@
 
         // Generate Last.fm URL for an item (using noredirect to prevent auto-redirects)
         function getLastFmUrl(artist, album, track) {
-            const usernameInput = document.getElementById('username-input');
-            const username = usernameInput?.value?.trim() || 'USERNAME';
-            
             const encodeForLastFm = (str) => {
                 if (!str) return '';
                 // Last.fm uses + for spaces in URLs
                 return encodeURIComponent(str).replace(/%20/g, '+');
             };
             
-            // Use the user library path with +noredirect to prevent redirects
-            // This lets us see the "wrong" version rather than being redirected to the canonical one
-            const base = `https://www.last.fm/user/${username}/library/music/`;
+            // Use underscore for username - Last.fm redirects to currently logged-in user
+            // Use +noredirect to prevent auto-redirects to canonical artist/album names
+            const base = 'https://www.last.fm/user/_/library/music/';
             const artistEnc = encodeForLastFm(artist);
             
             if (track) {
@@ -1708,12 +1707,19 @@
                         ? '<span class="invisible-warning">⚠️ invisible chars</span>' 
                         : '';
                     
+                    // Don't show canonical buttons for missing albums or compilations
+                    // - those are lists of items to fix, not variations to choose between
+                    const showCanonicalButtons = !['missing', 'compilation'].includes(issue.type);
+                    const canonicalButtonHtml = showCanonicalButtons
+                        ? (i === 0 ? '<button class="variation-action primary">Canonical</button>' : '<button class="variation-action">Set as canonical</button>')
+                        : '';
+                    
                     return `
                         <div class="variation-item">
                             <span class="variation-value">${escapeHtml(v.name || '(empty)')}${invisibleWarning}</span>
                             ${v.count ? `<span class="variation-count">${v.count}</span>` : ''}
                             ${lastFmLinkHtml}
-                            ${i === 0 ? '<button class="variation-action primary">Canonical</button>' : '<button class="variation-action">Set as canonical</button>'}
+                            ${canonicalButtonHtml}
                         </div>
                     `;
                 }).join('');
@@ -1786,13 +1792,6 @@
         artistFilter.addEventListener('change', (e) => {
             state.currentArtist = e.target.value;
             renderIssues();
-        });
-
-        // Re-render when username changes so links update
-        document.getElementById('username-input').addEventListener('input', () => {
-            if (state.issues.length > 0) {
-                renderIssues();
-            }
         });
 
         // Export functionality

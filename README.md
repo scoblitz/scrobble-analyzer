@@ -1,23 +1,12 @@
----
-title: README
----
 # Scrobble Analyzer
 
 **Find and fix data quality issues in your Last.fm scrobble history.**
 
 After 20 years of scrobbling and 150,000+ plays, I discovered my Last.fm data was full of invisible inconsistencies - artist name variations, album duplicates, tracks scattered across remastered editions, and even entries that *looked* identical but contained hidden Unicode characters. These issues were silently skewing my stats the whole time.
- I have been correcting as I found things but I knew there were just so many that I never noticed or had missing data that made them not show up at all, so I never saw them.
- 
+
 I couldn't find any tool that surfaced these problems, so I built one.
 
-**Full Screen View**
-![image](scrobbleanalyzer-fullscreen.jpg)
-
-**Issue List**
-![image](scrobbleanalyzer-issuelist.jpg)
-
-**Tracks Missing Album**
-![image](scrobbleanalyzer-missingalbum.jpg)
+![Scrobble Analyzer Screenshot](screenshot.png)
 
 ## What It Does
 
@@ -36,21 +25,19 @@ Each variation includes a direct link to your Last.fm library (with `+noredirect
 
 ## How To Use It
 
-### Option 1: Use it online
-Visit: **[scoblitz.github.io/scrobble-analyzer](https://scoblitz.github.io/scrobble-analyzer)**
+### **→ [Launch Scrobble Analyzer](https://scoblitz.github.io/scrobble-analyzer)** 
+*Recommended - always up to date*
 
-### Option 2: Run locally
-1. Download `index.html`
-2. Open it in your browser
-3. That's it - everything runs client-side, your data never leaves your computer
+Or [download index.html](index.html) to run locally (note: you won't receive updates)
 
 ### Getting Your Data
 
-1. Go to a Last.fm stats service like [Last.fm Stats](https://lastfmstats.com/) or similar
-2. Export your scrobble history as CSV
-3. Drop the CSV file into Scrobble Analyzer
+1. Go to [lastfmstats.com](https://lastfmstats.com/) 
+2. Enter your Last.fm username and let it load your data
+3. Use the Export feature to download your scrobble history as CSV
+4. Drop the CSV file into Scrobble Analyzer
 
-The CSV should have columns for Artist, Album, Track, and optionally AlbumId.
+**Required CSV format:** Must have a header row with columns for `Artist`, `Album`, `Track`. The `AlbumId` column is optional but enables additional features.
 
 ## What It Found In My Data
 
@@ -59,14 +46,14 @@ From ~150,000 scrobbles over 20 years:
 - **77 artist variation issues** - Including 7 entries with invisible characters
 - **488 album variation issues** - Remasters, deluxe editions, and typos
 - **600+ track variations** - 11 different versions of "Statesboro Blues" alone!
-- **494 artists with missing album data** - ~6% of all scrobbles. Gov't Mule alone has 110 tracks without album data accounting for 348 total scrobbles.
-- **637 compilation albums** - Plays that could be reassigned to their original releases
+- **494 artists with missing album data** - ~6% of all scrobbles
+- **637 compilation albums** - Plays that could be reassigned to original releases
 
 I had no idea it was this messy. If you've been scrobbling for years, yours probably is too.
 
 ## Current Status
 
-**Version 0.4.0** - Working proof of concept
+**Version 0.4.1** - Working proof of concept
 
 This is functional and useful right now, but still evolving. Current limitations:
 
@@ -75,26 +62,24 @@ This is functional and useful right now, but still evolving. Current limitations
 
 ## Roadmap Ideas
 
-- Personal "discography" - mark canonical versions to check against future exports
-- Direct Last.fm API integration (skip the export step)
-- More detection patterns based on community feedback
-- Track-level invisible character detection
+- [ ] Personal "discography" - mark canonical versions to check against future exports
+- [ ] Direct Last.fm API integration (skip the export step)
+- [ ] MusicBrainz integration for canonical album/artist lookups
+- [ ] More detection patterns based on community feedback
 
 ## Feedback Welcome
 
-This project came out of my own frustration with messy scrobble data.
- If you:
+This project came out of my own frustration with messy scrobble data. If you:
+
 - Find bugs or issues
 - Have ideas for new detection patterns
 - Discover edge cases in your own data
 
-Please open an issue! I'd love to hear what problems you're finding in your data.
-or
-💬 Join the conversation: [Discussions](https://github.com/scoblitz/scrobble-analyzer/discussions)
+Please [open an issue](../../issues) or start a [discussion](../../discussions)! I'd love to hear what problems you're finding in your data.
 
 ## Built With
 
-This is a collaboration between a music data nerd (me) and Claude (Anthropic's AI assistant). The entire tool is a single HTML file with no dependencies - just open it in a browser. Feature requests and bug reports are welcome via Issues and in Discussions, but I'm not accepting code contributions at this time.
+This is a collaboration between a music data nerd (me) and Claude (Anthropic's AI assistant). The entire tool is a single HTML file with no dependencies - just open it in a browser.
 
 ## License
 
