@@ -53,7 +53,7 @@ I had no idea it was this messy. If you've been scrobbling for years, yours prob
 
 ## Current Status
 
-**Version 0.4.1** - Working proof of concept
+**Version 0.4.2** - Working proof of concept
 
 This is functional and useful right now, but still evolving. Current limitations:
 
