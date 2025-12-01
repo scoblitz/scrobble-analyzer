@@ -696,7 +696,7 @@
             <div class="logo-icon">📊</div>
             <div class="logo-text">
                 <h1>Scrobble Analyzer</h1>
-                <div class="tagline">Find & Fix Your Last.fm Data <span style="color: var(--accent-orange); margin-left: 0.5rem;">v0.4.1</span></div>
+                <div class="tagline">Find & Fix Your Last.fm Data <span style="color: var(--accent-orange); margin-left: 0.5rem;">v0.4.2</span></div>
             </div>
         </div>
         <div class="header-stats" id="header-stats" style="display: none;">
@@ -1097,7 +1097,7 @@
             
             console.log('Unique artists found:', Object.keys(artistCounts).length);
 
-            const normalized = {};
+            const normalized = new Map();
             Object.keys(artistCounts).forEach(artist => {
                 let norm = artist.toLowerCase().trim();
                 norm = norm.replace(/\u00a0/g, ' ');  // Replace non-breaking spaces
@@ -1105,12 +1105,12 @@
                 norm = norm.replace(/\s*&\s*/g, ' and ');
                 norm = norm.replace(/\s+/g, ' ').trim();
                 
-                if (!normalized[norm]) normalized[norm] = [];
-                normalized[norm].push({ name: artist, count: artistCounts[artist] });
+                if (!normalized.has(norm)) normalized.set(norm, []);
+                normalized.get(norm).push({ name: artist, count: artistCounts[artist] });
             });
 
             const issues = [];
-            Object.entries(normalized).forEach(([norm, artists]) => {
+            normalized.forEach((artists, norm) => {
                 if (artists.length > 1) {
                     const total = artists.reduce((sum, a) => sum + a.count, 0);
                     if (total >= 10) {
@@ -1159,14 +1159,14 @@
                 return norm;
             }
 
-            const grouped = {};
+            const grouped = new Map();
             Object.keys(albumCounts).forEach(key => {
                 const [artist, album] = key.split('|||');
                 const normAlbum = normalizeAlbum(album);
                 const groupKey = `${artist}|||${normAlbum}`;
                 
-                if (!grouped[groupKey]) grouped[groupKey] = [];
-                grouped[groupKey].push({ 
+                if (!grouped.has(groupKey)) grouped.set(groupKey, []);
+                grouped.get(groupKey).push({ 
                     name: album, 
                     count: albumCounts[key],
                     artist: artist
@@ -1174,7 +1174,7 @@
             });
 
             const issues = [];
-            Object.entries(grouped).forEach(([groupKey, albums]) => {
+            grouped.forEach((albums, groupKey) => {
                 if (albums.length > 1) {
                     const total = albums.reduce((sum, a) => sum + a.count, 0);
                     if (total >= 5) {
@@ -1344,14 +1344,14 @@
                 return norm;
             }
 
-            const grouped = {};
+            const grouped = new Map();
             Object.keys(trackCounts).forEach(key => {
                 const [artist, track] = key.split('|||');
                 const normTrack = normalizeTrack(track);
                 const groupKey = `${artist}|||${normTrack}`;
                 
-                if (!grouped[groupKey]) grouped[groupKey] = [];
-                grouped[groupKey].push({ 
+                if (!grouped.has(groupKey)) grouped.set(groupKey, []);
+                grouped.get(groupKey).push({ 
                     name: track, 
                     count: trackCounts[key],
                     artist: artist
@@ -1359,7 +1359,7 @@
             });
 
             const issues = [];
-            Object.entries(grouped).forEach(([groupKey, tracks]) => {
+            grouped.forEach((tracks, groupKey) => {
                 if (tracks.length > 1) {
                     const total = tracks.reduce((sum, t) => sum + t.count, 0);
                     if (total >= 3) {
@@ -1419,11 +1419,11 @@
             }
 
             // Group artists by visible string
-            const artistGroups = {};
+            const artistGroups = new Map();
             Object.keys(artists).forEach(artist => {
                 const visible = getVisibleString(artist);
-                if (!artistGroups[visible]) artistGroups[visible] = [];
-                artistGroups[visible].push({ 
+                if (!artistGroups.has(visible)) artistGroups.set(visible, []);
+                artistGroups.get(visible).push({ 
                     name: artist, 
                     count: artists[artist],
                     hasInvisible: hasInvisibleChars(artist)
@@ -1431,12 +1431,12 @@
             });
 
             // Group albums by visible string
-            const albumGroups = {};
+            const albumGroups = new Map();
             Object.keys(albums).forEach(key => {
                 const [artist, album] = key.split('|||');
                 const visible = `${getVisibleString(artist)}|||${getVisibleString(album)}`;
-                if (!albumGroups[visible]) albumGroups[visible] = [];
-                albumGroups[visible].push({ 
+                if (!albumGroups.has(visible)) albumGroups.set(visible, []);
+                albumGroups.get(visible).push({ 
                     name: album,
                     fullKey: key,
                     artist: artist,
@@ -1448,7 +1448,7 @@
             const issues = [];
 
             // Find artist issues
-            Object.entries(artistGroups).forEach(([visible, items]) => {
+            artistGroups.forEach((items, visible) => {
                 // Either multiple items that look the same, or single item with invisible chars
                 const hasIssue = items.length > 1 || items.some(i => i.hasInvisible);
                 if (hasIssue) {
@@ -1473,7 +1473,7 @@
             });
 
             // Find album issues (only where there are actual duplicates)
-            Object.entries(albumGroups).forEach(([visible, items]) => {
+            albumGroups.forEach((items, visible) => {
                 if (items.length > 1) {
                     const total = items.reduce((sum, i) => sum + i.count, 0);
                     if (total >= 3) {
