@@ -397,6 +397,78 @@
             margin-left: 0.5rem;
         }
 
+        /* Smart quote warning */
+        .smart-quote-warning {
+            display: inline-block;
+            padding: 0.15rem 0.4rem;
+            background: rgba(251, 191, 36, 0.2);
+            border-radius: 3px;
+            font-size: 0.65rem;
+            color: #fbbf24;
+            margin-left: 0.5rem;
+        }
+
+        /* Dismiss button */
+        .dismiss-btn {
+            padding: 0.4rem 0.8rem;
+            background: var(--bg-hover);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 0.8rem;
+            transition: all 0.2s;
+        }
+        
+        .dismiss-btn:hover {
+            background: var(--accent-green);
+            color: white;
+            border-color: var(--accent-green);
+        }
+        
+        .dismiss-btn.restore {
+            background: rgba(251, 191, 36, 0.1);
+            border-color: var(--accent-yellow);
+            color: var(--accent-yellow);
+        }
+        
+        .dismiss-btn.restore:hover {
+            background: var(--accent-yellow);
+            color: var(--bg-dark);
+        }
+
+        /* Small dismiss button for individual items */
+        .dismiss-btn-small {
+            padding: 0.2rem 0.5rem;
+            background: var(--bg-hover);
+            border: 1px solid var(--border);
+            border-radius: 3px;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 0.7rem;
+            margin-left: 0.5rem;
+            transition: all 0.2s;
+        }
+        
+        .dismiss-btn-small:hover {
+            background: var(--accent-green);
+            color: white;
+            border-color: var(--accent-green);
+        }
+        
+        .dismiss-btn-small.restore {
+            background: rgba(251, 191, 36, 0.1);
+            border-color: var(--accent-yellow);
+            color: var(--accent-yellow);
+        }
+        
+        .dismiss-btn-small.restore:hover {
+            background: var(--accent-yellow);
+            color: var(--bg-dark);
+        }
+
         .issue-content {
             flex: 1;
         }
@@ -696,7 +768,7 @@
             <div class="logo-icon">📊</div>
             <div class="logo-text">
                 <h1>Scrobble Analyzer</h1>
-                <div class="tagline">Find & Fix Your Last.fm Data <span style="color: var(--accent-orange); margin-left: 0.5rem;">v0.4.2</span></div>
+                <div class="tagline">Find & Fix Your Last.fm Data <span style="color: var(--accent-orange); margin-left: 0.5rem;">v0.5.0</span></div>
             </div>
         </div>
         <div class="header-stats" id="header-stats" style="display: none;">
@@ -769,6 +841,12 @@
                     <span>Invisible Characters</span>
                     <span class="count" id="count-invisible">0</span>
                 </div>
+                <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border);">
+                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.85rem; color: var(--text-secondary);">
+                        <input type="checkbox" id="show-dismissed-toggle" style="cursor: pointer;">
+                        <span>View dismissed only (<span id="count-dismissed">0</span>)</span>
+                    </label>
+                </div>
             </div>
 
             <div class="sidebar-section" id="artist-filter-section" style="display: none;">
@@ -784,7 +862,39 @@
             <div class="empty-state" id="empty-state">
                 <div class="empty-state-icon">🎵</div>
                 <h2>Upload Your Scrobble Data</h2>
-                <p>Export your scrobble history from Last.fm and drop the CSV file here to analyze it for inconsistencies and errors.</p>
+                <p>Analyze your Last.fm history for duplicate artists, album variations, and other data quality issues.</p>
+                
+                <div style="text-align: left; max-width: 600px; margin: 2rem auto 0; padding: 1.5rem; background: var(--bg-card); border-radius: 8px; border: 1px solid var(--border);">
+                    <h3 style="font-size: 1rem; color: var(--accent-orange); margin-bottom: 1rem;">📁 How to Get Your Export File</h3>
+                    <ol style="color: var(--text-secondary); font-size: 0.9rem; padding-left: 1.25rem; margin-bottom: 1.5rem;">
+                        <li style="margin-bottom: 0.5rem;">Go to <a href="https://lastfmstats.com" target="_blank" style="color: var(--accent-blue);">lastfmstats.com</a></li>
+                        <li style="margin-bottom: 0.5rem;">Enter your Last.fm username and wait for data to load</li>
+                        <li style="margin-bottom: 0.5rem;">Click the <strong>Export</strong> button to download your CSV</li>
+                        <li>Drag the file to the upload box in the sidebar, or click the box to browse</li>
+                    </ol>
+                    
+                    <h3 style="font-size: 1rem; color: var(--accent-orange); margin-bottom: 1rem;">🆕 What's New in v0.5.0</h3>
+                    <ul style="color: var(--text-secondary); font-size: 0.9rem; padding-left: 1.25rem; margin-bottom: 1.5rem;">
+                        <li style="margin-bottom: 0.5rem;"><strong>Dismiss issues</strong> - Mark items as fixed or ignored, with persistence</li>
+                        <li style="margin-bottom: 0.5rem;">Smart quote detection (Unicode vs ASCII apostrophes)</li>
+                        <li style="margin-bottom: 0.5rem;">Fixed click-drag issue when selecting text</li>
+                        <li style="margin-bottom: 0.5rem;">Improved empty state with instructions</li>
+                        <li style="margin-bottom: 0.5rem;">Better error messages for invalid files</li>
+                    </ul>
+                    
+                    <h3 style="font-size: 1rem; color: var(--accent-orange); margin-bottom: 1rem;">💬 Feedback & Support</h3>
+                    <ul style="color: var(--text-secondary); font-size: 0.9rem; padding-left: 1.25rem; margin-bottom: 1.5rem;">
+                        <li style="margin-bottom: 0.5rem;">Found a bug? <a href="https://github.com/scoblitz/scrobble-analyzer/issues" target="_blank" style="color: var(--accent-blue);">Open an Issue</a></li>
+                        <li style="margin-bottom: 0.5rem;">Have an idea? <a href="https://github.com/scoblitz/scrobble-analyzer/discussions" target="_blank" style="color: var(--accent-blue);">Start a Discussion</a></li>
+                    </ul>
+                    
+                    <h3 style="font-size: 1rem; color: var(--accent-orange); margin-bottom: 1rem;">📬 Stay Updated</h3>
+                    <form action="https://buttondown.com/api/emails/embed-subscribe/scrobble-analyzer" method="post" style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+                        <input type="email" name="email" placeholder="your@email.com" required style="flex: 1; min-width: 200px; padding: 0.5rem 0.75rem; background: var(--bg-dark); border: 1px solid var(--border); border-radius: 4px; color: var(--text-primary); font-family: inherit; font-size: 0.85rem;">
+                        <input type="submit" value="Subscribe" style="padding: 0.5rem 1rem; background: var(--accent-orange); border: none; border-radius: 4px; color: white; cursor: pointer; font-family: inherit; font-size: 0.85rem;">
+                    </form>
+                    <p style="color: var(--text-muted); font-size: 0.75rem; margin-top: 0.5rem;">Get notified about new features and releases. No spam.</p>
+                </div>
             </div>
 
             <!-- Loading state -->
@@ -878,11 +988,54 @@
         const state = {
             scrobbles: [],
             issues: [],
+            dismissedIds: new Set(),
+            showDismissed: false,
+            fileHash: null,
             currentFilter: 'all',
             currentArtist: '',
             searchQuery: '',
             sortBy: 'count'
         };
+
+        // Generate a simple hash of file contents for persistence
+        function hashString(str) {
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) {
+                const char = str.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash = hash & hash; // Convert to 32bit integer
+            }
+            return hash.toString(16);
+        }
+
+        // Generate unique ID for an issue
+        function getIssueId(issue) {
+            return `${issue.type}-${issue.title}`.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
+        }
+
+        // Save dismissed state to localStorage
+        function saveDismissedState() {
+            if (!state.fileHash) return;
+            const data = {
+                dismissed: Array.from(state.dismissedIds),
+                savedAt: Date.now()
+            };
+            localStorage.setItem(`scrobble-analyzer-${state.fileHash}`, JSON.stringify(data));
+        }
+
+        // Load dismissed state from localStorage
+        function loadDismissedState(fileHash) {
+            const stored = localStorage.getItem(`scrobble-analyzer-${fileHash}`);
+            if (stored) {
+                try {
+                    const data = JSON.parse(stored);
+                    return new Set(data.dismissed || []);
+                } catch (e) {
+                    console.error('Error loading dismissed state:', e);
+                }
+            }
+            return new Set();
+        }
 
         // DOM Elements
         const uploadZone = document.getElementById('upload-zone');
@@ -951,6 +1104,19 @@
             console.log('Raw headers:', rawHeaders);
             console.log('Mapped headers:', headerMap);
             
+            // Validate that we have required headers
+            const mappedValues = Object.values(headerMap);
+            const hasArtist = mappedValues.includes('Artist');
+            const hasTrack = mappedValues.includes('Track');
+            
+            if (!hasArtist || !hasTrack) {
+                const missingHeaders = [];
+                if (!hasArtist) missingHeaders.push('Artist');
+                if (!hasTrack) missingHeaders.push('Track');
+                
+                throw new Error(`INVALID_HEADERS:Missing required columns: ${missingHeaders.join(', ')}. Expected a CSV with Artist, Album, and Track columns. See the README for supported export formats.`);
+            }
+            
             const data = [];
             for (let i = 1; i < lines.length; i++) {
                 if (!lines[i].trim()) continue; // Skip empty lines
@@ -1005,65 +1171,101 @@
             const reader = new FileReader();
             
             reader.onload = async (e) => {
-                progressText.textContent = 'Parsing CSV...';
-                progressFill.style.width = '10%';
-                
-                // Remove BOM if present (handle multiple possible BOMs)
-                let text = e.target.result;
-                text = text.replace(/^\uFEFF/, ''); // UTF-8 BOM
-                text = text.replace(/^\u00EF\u00BB\u00BF/, ''); // UTF-8 BOM as separate chars
-                text = text.replace(/^\xEF\xBB\xBF/, ''); // UTF-8 BOM as bytes
-                
-                console.log('First 100 chars of file:', text.substring(0, 100));
-                
-                state.scrobbles = parseCSV(text);
-                
-                console.log('Parsed scrobbles count:', state.scrobbles.length);
-                console.log('Sample scrobble:', state.scrobbles[0]);
-                
-                progressText.textContent = 'Analyzing artist variations...';
-                progressFill.style.width = '20%';
-                await sleep(50);
-                
-                const artistIssues = findArtistVariations(state.scrobbles);
-                
-                progressText.textContent = 'Analyzing album variations...';
-                progressFill.style.width = '35%';
-                await sleep(50);
-                
-                const albumIssues = findAlbumVariations(state.scrobbles);
-                
-                progressText.textContent = 'Analyzing track variations...';
-                progressFill.style.width = '50%';
-                await sleep(50);
-                
-                const trackIssues = findTrackVariations(state.scrobbles);
-                
-                progressText.textContent = 'Finding missing albums...';
-                progressFill.style.width = '65%';
-                await sleep(50);
-                
-                const missingIssues = findMissingAlbums(state.scrobbles);
-                
-                progressText.textContent = 'Detecting compilations...';
-                progressFill.style.width = '80%';
-                await sleep(50);
-                
-                const compilationIssues = findCompilations(state.scrobbles);
-                
-                progressText.textContent = 'Detecting invisible characters...';
-                progressFill.style.width = '92%';
-                await sleep(50);
-                
-                const invisibleIssues = findInvisibleCharacterIssues(state.scrobbles);
-                
-                progressText.textContent = 'Finalizing...';
-                progressFill.style.width = '100%';
-                await sleep(100);
-                
-                state.issues = [...artistIssues, ...albumIssues, ...trackIssues, ...missingIssues, ...compilationIssues, ...invisibleIssues];
-                
-                displayResults();
+                try {
+                    progressText.textContent = 'Parsing CSV...';
+                    progressFill.style.width = '10%';
+                    
+                    // Remove BOM if present (handle multiple possible BOMs)
+                    let text = e.target.result;
+                    text = text.replace(/^\uFEFF/, ''); // UTF-8 BOM
+                    text = text.replace(/^\u00EF\u00BB\u00BF/, ''); // UTF-8 BOM as separate chars
+                    text = text.replace(/^\xEF\xBB\xBF/, ''); // UTF-8 BOM as bytes
+                    
+                    // Hash the file for persistence
+                    state.fileHash = hashString(text);
+                    console.log('File hash:', state.fileHash);
+                    
+                    // Load any previously dismissed issues for this file
+                    state.dismissedIds = loadDismissedState(state.fileHash);
+                    state.showDismissed = false;
+                    document.getElementById('show-dismissed-toggle').checked = false;
+                    console.log('Loaded dismissed issues:', state.dismissedIds.size);
+                    
+                    console.log('First 100 chars of file:', text.substring(0, 100));
+                    
+                    state.scrobbles = parseCSV(text);
+                    
+                    console.log('Parsed scrobbles count:', state.scrobbles.length);
+                    console.log('Sample scrobble:', state.scrobbles[0]);
+                    
+                    progressText.textContent = 'Analyzing artist variations...';
+                    progressFill.style.width = '20%';
+                    await sleep(50);
+                    
+                    const artistIssues = findArtistVariations(state.scrobbles);
+                    
+                    progressText.textContent = 'Analyzing album variations...';
+                    progressFill.style.width = '35%';
+                    await sleep(50);
+                    
+                    const albumIssues = findAlbumVariations(state.scrobbles);
+                    
+                    progressText.textContent = 'Analyzing track variations...';
+                    progressFill.style.width = '50%';
+                    await sleep(50);
+                    
+                    const trackIssues = findTrackVariations(state.scrobbles);
+                    
+                    progressText.textContent = 'Finding missing albums...';
+                    progressFill.style.width = '65%';
+                    await sleep(50);
+                    
+                    const missingIssues = findMissingAlbums(state.scrobbles);
+                    
+                    progressText.textContent = 'Detecting compilations...';
+                    progressFill.style.width = '80%';
+                    await sleep(50);
+                    
+                    const compilationIssues = findCompilations(state.scrobbles);
+                    
+                    progressText.textContent = 'Detecting invisible characters...';
+                    progressFill.style.width = '92%';
+                    await sleep(50);
+                    
+                    const invisibleIssues = findInvisibleCharacterIssues(state.scrobbles);
+                    
+                    progressText.textContent = 'Finalizing...';
+                    progressFill.style.width = '100%';
+                    await sleep(100);
+                    
+                    state.issues = [...artistIssues, ...albumIssues, ...trackIssues, ...missingIssues, ...compilationIssues, ...invisibleIssues];
+                    
+                    displayResults();
+                } catch (error) {
+                    console.error('Error processing file:', error);
+                    loadingState.style.display = 'none';
+                    emptyState.style.display = 'flex';
+                    
+                    // Check if it's our custom header error
+                    if (error.message.startsWith('INVALID_HEADERS:')) {
+                        const errorMsg = error.message.replace('INVALID_HEADERS:', '');
+                        emptyState.innerHTML = `
+                            <div class="empty-state-icon">⚠️</div>
+                            <h2>Invalid File Format</h2>
+                            <p style="color: var(--accent-red); max-width: 500px; margin: 1rem auto;">${errorMsg}</p>
+                            <p style="max-width: 500px; margin: 1rem auto;">Please export your data from <a href="https://lastfmstats.com" target="_blank" style="color: var(--accent-blue);">lastfmstats.com</a> which provides the correct format.</p>
+                            <p style="margin-top: 1rem;"><a href="https://github.com/scoblitz/scrobble-analyzer#getting-your-data" target="_blank" style="color: var(--accent-blue);">See the README for more details →</a></p>
+                            <button onclick="location.reload()" style="margin-top: 1.5rem; padding: 0.75rem 1.5rem; background: var(--accent-orange); border: none; border-radius: 6px; color: white; cursor: pointer; font-family: inherit;">Try Again</button>
+                        `;
+                    } else {
+                        emptyState.innerHTML = `
+                            <div class="empty-state-icon">❌</div>
+                            <h2>Error Processing File</h2>
+                            <p style="color: var(--accent-red);">${error.message}</p>
+                            <button onclick="location.reload()" style="margin-top: 1.5rem; padding: 0.75rem 1.5rem; background: var(--accent-orange); border: none; border-radius: 6px; color: white; cursor: pointer; font-family: inherit;">Try Again</button>
+                        `;
+                    }
+                }
             };
             
             reader.readAsText(file);
@@ -1101,12 +1303,14 @@
             Object.keys(artistCounts).forEach(artist => {
                 let norm = artist.toLowerCase().trim();
                 norm = norm.replace(/\u00a0/g, ' ');  // Replace non-breaking spaces
+                norm = norm.replace(/[\u2018\u2019]/g, "'");  // Smart single quotes → ASCII
+                norm = norm.replace(/[\u201C\u201D]/g, '"');  // Smart double quotes → ASCII
                 if (norm.startsWith('the ')) norm = norm.slice(4);
                 norm = norm.replace(/\s*&\s*/g, ' and ');
                 norm = norm.replace(/\s+/g, ' ').trim();
                 
                 if (!normalized.has(norm)) normalized.set(norm, []);
-                normalized.get(norm).push({ name: artist, count: artistCounts[artist] });
+                normalized.get(norm).push({ name: artist, count: artistCounts[artist], hasSmartQuotes: /[\u2018\u2019\u201C\u201D]/.test(artist) });
             });
 
             const issues = [];
@@ -1152,6 +1356,8 @@
                 if (!album) return '';
                 let norm = album.toLowerCase();
                 norm = norm.replace(/\u00a0/g, ' ');  // Replace non-breaking spaces
+                norm = norm.replace(/[\u2018\u2019]/g, "'");  // Smart single quotes → ASCII
+                norm = norm.replace(/[\u201C\u201D]/g, '"');  // Smart double quotes → ASCII
                 // Remove remaster/deluxe/edition suffixes
                 norm = norm.replace(/\s*[\(\[].*?(remaster|deluxe|edition|bonus|expanded|anniversary|version|disc \d).*?[\)\]]/gi, '');
                 norm = norm.replace(/\s*-\s*(remaster|deluxe|expanded).*$/i, '');
@@ -1169,7 +1375,8 @@
                 grouped.get(groupKey).push({ 
                     name: album, 
                     count: albumCounts[key],
-                    artist: artist
+                    artist: artist,
+                    hasSmartQuotes: /[\u2018\u2019\u201C\u201D]/.test(album)
                 });
             });
 
@@ -1336,6 +1543,8 @@
                 if (!track) return '';
                 let norm = track.toLowerCase();
                 norm = norm.replace(/\u00a0/g, ' ');  // Replace non-breaking spaces
+                norm = norm.replace(/[\u2018\u2019]/g, "'");  // Smart single quotes → ASCII
+                norm = norm.replace(/[\u201C\u201D]/g, '"');  // Smart double quotes → ASCII
                 // Remove common suffixes
                 norm = norm.replace(/\s*[\(\[].*?(remaster|live|remix|edit|version|mix|demo|acoustic|mono|stereo|single|radio|extended|instrumental|reprise|take \d+|alternate|alt\.|bonus).*?[\)\]]/gi, '');
                 norm = norm.replace(/\s*-\s*(remaster|live|remix|edit|version|demo|acoustic|mono|stereo|single|radio|extended).*$/i, '');
@@ -1354,7 +1563,8 @@
                 grouped.get(groupKey).push({ 
                     name: track, 
                     count: trackCounts[key],
-                    artist: artist
+                    artist: artist,
+                    hasSmartQuotes: /[\u2018\u2019\u201C\u201D]/.test(track)
                 });
             });
 
@@ -1565,24 +1775,8 @@
                 vuMeter.appendChild(bar);
             }
 
-            // Update counts
-            const counts = {
-                all: state.issues.length,
-                artist: state.issues.filter(i => i.type === 'artist').length,
-                album: state.issues.filter(i => i.type === 'album').length,
-                track: state.issues.filter(i => i.type === 'track').length,
-                missing: state.issues.filter(i => i.type === 'missing').length,
-                compilation: state.issues.filter(i => i.type === 'compilation').length,
-                invisible: state.issues.filter(i => i.type === 'invisible').length
-            };
-
-            Object.entries(counts).forEach(([key, value]) => {
-                const el = document.getElementById(`count-${key}`);
-                if (el) el.textContent = value;
-                
-                const summaryEl = document.getElementById(`summary-${key}`);
-                if (summaryEl) summaryEl.textContent = value;
-            });
+            // Update counts (call the function that handles dismissed)
+            updateCounts();
 
             // Populate artist filter - get artist from either .artist property or extract from .title
             const artistsSet = new Set();
@@ -1606,14 +1800,125 @@
             renderIssues();
         }
 
+        // Update counts accounting for dismissed issues
+        function updateCounts() {
+            // Count issue-level dismissals
+            let issueLevelDismissed = 0;
+            
+            // Count item-level dismissals (for missing/compilation)
+            let itemLevelDismissed = 0;
+            
+            // Calculate which issues have active items remaining
+            const activeIssues = state.issues.filter(issue => {
+                const issueId = getIssueId(issue);
+                
+                // Check if entire issue is dismissed
+                if (state.dismissedIds.has(issueId)) {
+                    issueLevelDismissed++;
+                    return false;
+                }
+                
+                // For missing/compilation, check if all items are dismissed
+                if (['missing', 'compilation'].includes(issue.type)) {
+                    const variations = issue.variations || [];
+                    let activeItems = 0;
+                    variations.forEach((v, i) => {
+                        const itemId = `${issueId}-item-${i}`;
+                        if (state.dismissedIds.has(itemId)) {
+                            itemLevelDismissed++;
+                        } else {
+                            activeItems++;
+                        }
+                    });
+                    // Only include issue if it has active items
+                    return activeItems > 0;
+                }
+                
+                return true;
+            });
+            
+            const totalDismissed = issueLevelDismissed + itemLevelDismissed;
+            
+            // Update header stat to show active issues only
+            document.getElementById('stat-issues').textContent = activeIssues.length.toLocaleString();
+            
+            // Update sidebar counts
+            const counts = {
+                all: activeIssues.length,
+                artist: activeIssues.filter(i => i.type === 'artist').length,
+                album: activeIssues.filter(i => i.type === 'album').length,
+                track: activeIssues.filter(i => i.type === 'track').length,
+                missing: activeIssues.filter(i => i.type === 'missing').length,
+                compilation: activeIssues.filter(i => i.type === 'compilation').length,
+                invisible: activeIssues.filter(i => i.type === 'invisible').length
+            };
+
+            Object.entries(counts).forEach(([key, value]) => {
+                const el = document.getElementById(`count-${key}`);
+                if (el) el.textContent = value;
+                
+                const summaryEl = document.getElementById(`summary-${key}`);
+                if (summaryEl) summaryEl.textContent = value;
+            });
+            
+            // Update dismissed count (total of issue-level + item-level)
+            document.getElementById('count-dismissed').textContent = totalDismissed;
+        }
+
         // Render issue cards
         function renderIssues() {
             console.log('Rendering issues...');
             console.log('Current filter:', state.currentFilter);
             console.log('Current artist:', state.currentArtist);
             console.log('Search query:', state.searchQuery);
+            console.log('Show dismissed:', state.showDismissed);
             
             let filtered = [...state.issues];  // Create a copy
+            
+            // Add issue IDs and dismissed status
+            filtered = filtered.map(issue => {
+                const issueId = getIssueId(issue);
+                const isIssueDismissed = state.dismissedIds.has(issueId);
+                
+                // For missing/compilation, check if any items are dismissed
+                let hasDismissedItems = false;
+                let hasActiveItems = false;
+                if (['missing', 'compilation'].includes(issue.type)) {
+                    (issue.variations || []).forEach((v, i) => {
+                        const itemId = `${issueId}-item-${i}`;
+                        if (state.dismissedIds.has(itemId)) {
+                            hasDismissedItems = true;
+                        } else {
+                            hasActiveItems = true;
+                        }
+                    });
+                }
+                
+                return {
+                    ...issue,
+                    _id: issueId,
+                    _isDismissed: isIssueDismissed,
+                    _hasDismissedItems: hasDismissedItems,
+                    _hasActiveItems: hasActiveItems
+                };
+            });
+            
+            // Filter based on dismissed toggle
+            if (state.showDismissed) {
+                // Show issues that are dismissed OR have dismissed items
+                filtered = filtered.filter(i => {
+                    if (i._isDismissed) return true;
+                    if (['missing', 'compilation'].includes(i.type) && i._hasDismissedItems) return true;
+                    return false;
+                });
+            } else {
+                // Show issues that are not dismissed AND have active items (for missing/compilation)
+                filtered = filtered.filter(i => {
+                    if (i._isDismissed) return false;
+                    if (['missing', 'compilation'].includes(i.type) && !i._hasActiveItems) return false;
+                    return true;
+                });
+            }
             
             console.log('Starting with issues:', filtered.length);
 
@@ -1680,9 +1985,30 @@
             toRender.forEach((issue, index) => {
                 const card = document.createElement('div');
                 card.className = 'issue-card';
+                card.dataset.issueId = issue._id; // For finding card after re-render
                 
                 // Build variations HTML with Last.fm links
-                const variationsHtml = (issue.variations || []).map((v, i) => {
+                // For missing/compilation, filter items based on dismissed state
+                let variationsToRender = issue.variations || [];
+                
+                if (['missing', 'compilation'].includes(issue.type)) {
+                    variationsToRender = variationsToRender.map((v, i) => ({
+                        ...v,
+                        _itemId: `${issue._id}-item-${i}`,
+                        _isItemDismissed: state.dismissedIds.has(`${issue._id}-item-${i}`)
+                    }));
+                    
+                    // Filter based on view mode
+                    if (state.showDismissed) {
+                        // Show only dismissed items
+                        variationsToRender = variationsToRender.filter(v => v._isItemDismissed);
+                    } else {
+                        // Show only active items
+                        variationsToRender = variationsToRender.filter(v => !v._isItemDismissed);
+                    }
+                }
+                
+                const variationsHtml = variationsToRender.map((v, i) => {
                     // Determine the Last.fm URL based on issue type
                     let lastFmUrl = '';
                     const artistName = v.artist || issue.artist || (issue.type === 'artist' ? v.name : null);
@@ -1707,29 +2033,71 @@
                         ? '<span class="invisible-warning">⚠️ invisible chars</span>' 
                         : '';
                     
-                    // Don't show canonical buttons for missing albums or compilations
-                    // - those are lists of items to fix, not variations to choose between
-                    const showCanonicalButtons = !['missing', 'compilation'].includes(issue.type);
-                    const canonicalButtonHtml = showCanonicalButtons
-                        ? (i === 0 ? '<button class="variation-action primary">Canonical</button>' : '<button class="variation-action">Set as canonical</button>')
+                    const smartQuoteWarning = v.hasSmartQuotes 
+                        ? '<span class="smart-quote-warning">⚠️ smart quote</span>' 
                         : '';
+                    
+                    // Per-item dismiss for missing albums and compilations
+                    let itemDismissHtml = '';
+                    if (['missing', 'compilation'].includes(issue.type) && v._itemId) {
+                        if (v._isItemDismissed) {
+                            itemDismissHtml = `<button class="dismiss-btn-small restore" data-item-id="${v._itemId}">↩️</button>`;
+                        } else {
+                            itemDismissHtml = `<button class="dismiss-btn-small" data-item-id="${v._itemId}">✓</button>`;
+                        }
+                    }
                     
                     return `
                         <div class="variation-item">
-                            <span class="variation-value">${escapeHtml(v.name || '(empty)')}${invisibleWarning}</span>
+                            <span class="variation-value">${escapeHtml(v.name || '(empty)')}${invisibleWarning}${smartQuoteWarning}</span>
                             ${v.count ? `<span class="variation-count">${v.count}</span>` : ''}
                             ${lastFmLinkHtml}
-                            ${canonicalButtonHtml}
+                            ${itemDismissHtml}
                         </div>
                     `;
                 }).join('');
+                
+                // Skip this card if it's a missing/compilation with no visible items
+                if (['missing', 'compilation'].includes(issue.type) && variationsToRender.length === 0) {
+                    return; // Skip this card entirely
+                }
+                
+                // For missing/compilation, update the description to show remaining count
+                let displayDescription = issue.description || '';
+                if (['missing', 'compilation'].includes(issue.type)) {
+                    const totalItems = (issue.variations || []).length;
+                    const visibleItems = variationsToRender.length;
+                    if (state.showDismissed) {
+                        displayDescription = `${visibleItems} dismissed track${visibleItems !== 1 ? 's' : ''}`;
+                    } else {
+                        const dismissedCount = totalItems - visibleItems;
+                        if (dismissedCount > 0) {
+                            displayDescription = `${visibleItems} track${visibleItems !== 1 ? 's' : ''} remaining (${dismissedCount} dismissed)`;
+                        } else {
+                            displayDescription = `${visibleItems} track${visibleItems !== 1 ? 's' : ''}`;
+                        }
+                    }
+                }
+                
+                // Dismiss button - show "Restore" if dismissed, "Dismiss" if not
+                // For missing/compilation, also offer "Dismiss All" option
+                const isDismissed = issue._isDismissed;
+                let dismissButtonHtml;
+                if (['missing', 'compilation'].includes(issue.type)) {
+                    // No issue-level dismiss for these - they use per-item dismissal
+                    dismissButtonHtml = '';
+                } else {
+                    dismissButtonHtml = isDismissed 
+                        ? `<button class="dismiss-btn restore" data-issue-id="${issue._id}">↩️ Restore</button>`
+                        : `<button class="dismiss-btn" data-issue-id="${issue._id}">✓ Dismiss</button>`;
+                }
                 
                 card.innerHTML = `
                     <div class="issue-header">
                         <span class="issue-type ${issue.type}">${issue.type}</span>
                         <div class="issue-content">
-                            <div class="issue-title">${escapeHtml(issue.title || 'Unknown')}</div>
-                            <div class="issue-description">${escapeHtml(issue.description || '')}</div>
+                            <div class="issue-title">${escapeHtml(issue.title || 'Unknown')}${isDismissed ? ' <span style="color: var(--text-muted); font-size: 0.75rem;">(dismissed)</span>' : ''}</div>
+                            <div class="issue-description">${escapeHtml(displayDescription)}</div>
                         </div>
                         <div class="issue-meta">
                             <div>
@@ -1742,11 +2110,74 @@
                         <div class="variation-list">
                             ${variationsHtml}
                         </div>
+                        ${dismissButtonHtml ? `<div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border); text-align: right;">
+                            ${dismissButtonHtml}
+                        </div>` : ''}
                     </div>
                 `;
 
+                // Track mousedown position to distinguish click from drag
+                let mouseDownX, mouseDownY;
+                
+                card.addEventListener('mousedown', (e) => {
+                    mouseDownX = e.clientX;
+                    mouseDownY = e.clientY;
+                });
+                
                 card.addEventListener('click', (e) => {
-                    if (e.target.classList.contains('variation-action')) return;
+                    // Handle issue-level dismiss button click
+                    if (e.target.classList.contains('dismiss-btn')) {
+                        const issueId = e.target.dataset.issueId;
+                        if (e.target.classList.contains('restore')) {
+                            // Restore: remove from dismissed
+                            state.dismissedIds.delete(issueId);
+                        } else {
+                            // Dismiss: add to dismissed
+                            state.dismissedIds.add(issueId);
+                        }
+                        saveDismissedState();
+                        updateCounts();
+                        renderIssues();
+                        return;
+                    }
+                    
+                    // Handle item-level dismiss button click (for missing/compilation items)
+                    if (e.target.classList.contains('dismiss-btn-small')) {
+                        const itemId = e.target.dataset.itemId;
+                        if (e.target.classList.contains('restore')) {
+                            state.dismissedIds.delete(itemId);
+                        } else {
+                            state.dismissedIds.add(itemId);
+                        }
+                        saveDismissedState();
+                        updateCounts();
+                        
+                        // Re-render but preserve expanded state of this card
+                        const wasExpanded = card.classList.contains('expanded');
+                        const cardIssueId = issue._id;
+                        renderIssues();
+                        
+                        // Find and re-expand the card if it was expanded
+                        if (wasExpanded) {
+                            const newCard = issueGrid.querySelector(`[data-issue-id="${cardIssueId}"]`);
+                            if (newCard) {
+                                newCard.classList.add('expanded');
+                            }
+                        }
+                        return;
+                    }
+                    
+                    // Don't toggle if clicking action buttons or links
+                    if (e.target.classList.contains('variation-action') || 
+                        e.target.classList.contains('lastfm-link') ||
+                        e.target.tagName === 'A') return;
+                    
+                    // Don't toggle if this was a drag (mouse moved more than 5px)
+                    const dragThreshold = 5;
+                    const deltaX = Math.abs(e.clientX - mouseDownX);
+                    const deltaY = Math.abs(e.clientY - mouseDownY);
+                    if (deltaX > dragThreshold || deltaY > dragThreshold) return;
+                    
                     card.classList.toggle('expanded');
                 });
 
@@ -1791,6 +2222,12 @@
 
         artistFilter.addEventListener('change', (e) => {
             state.currentArtist = e.target.value;
+            renderIssues();
+        });
+
+        // Show dismissed toggle
+        document.getElementById('show-dismissed-toggle').addEventListener('change', (e) => {
+            state.showDismissed = e.target.checked;
             renderIssues();
         });
 

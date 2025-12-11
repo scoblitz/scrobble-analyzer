@@ -6,7 +6,7 @@ After 20 years of scrobbling and 150,000+ plays, I discovered my Last.fm data wa
 
 I couldn't find any tool that surfaced these problems, so I built one.
 
-![Scrobble Analyzer Screenshot](scrobbleanalyzer-fullscreen.jpg)
+![Scrobble Analyzer Screenshot](screenshot.png)
 
 ## What It Does
 
@@ -18,6 +18,7 @@ Scrobble Analyzer examines your Last.fm export and identifies:
 - **Missing Albums** - Tracks that were scrobbled without album information
 - **Compilations** - Plays on "Greatest Hits" albums that could be reassigned to original releases
 - **Invisible Characters** - Entries that look identical but contain non-breaking spaces or other hidden Unicode characters
+- **Smart Quote Variations** - "Don't" (Unicode) vs "Don't" (ASCII) - common when copying from MusicBrainz
 
 Issues are sorted by impact (scrobble count) so you can fix the biggest problems first.
 
@@ -35,7 +36,7 @@ Or [download index.html](index.html) to run locally (note: you won't receive upd
 1. Go to [lastfmstats.com](https://lastfmstats.com/) 
 2. Enter your Last.fm username and let it load your data
 3. Use the Export feature to download your scrobble history as CSV
-4. Drop the CSV file into Scrobble Analyzer
+4. Drop the CSV file into the upload area in Scrobble Analyzer
 
 **Required CSV format:** Must have a header row with columns for `Artist`, `Album`, `Track`. The `AlbumId` column is optional but enables additional features.
 
@@ -53,19 +54,38 @@ I had no idea it was this messy. If you've been scrobbling for years, yours prob
 
 ## Current Status
 
-**Version 0.4.2** - Working proof of concept
+**Version 0.5.0** - Now with dismiss & persistence!
 
-This is functional and useful right now, but still evolving. Current limitations:
+### What's New in v0.5.0
+
+- **Dismiss issues** - Mark items as fixed or "won't fix" to hide them from view
+- **Per-track dismissal** - For Missing Albums and Compilations, dismiss individual tracks (great for working through long lists over multiple sessions)
+- **Persistence** - Dismissed items are remembered when you re-import the same file
+- **View dismissed** - Toggle to review and restore dismissed items
+- **Smart quote detection** - Catches Unicode vs ASCII apostrophe/quote variations
+- **Better onboarding** - Instructions and "What's New" shown before file upload
+- **Improved error handling** - Friendly messages for invalid file formats
+
+### Current Limitations
 
 - Analysis only (doesn't modify your Last.fm data directly - you'll use Last.fm's edit interface)
 - Shows first 100 issues per category (use search/filters to find more)
+- Persistence is per-file (importing a new export starts fresh)
 
 ## Roadmap Ideas
 
-- [ ] Personal "discography" - mark canonical versions to check against future exports
-- [ ] Direct Last.fm API integration (skip the export step)
 - [ ] MusicBrainz integration for canonical album/artist lookups
+- [ ] Direct Last.fm API integration (skip the export step)
+- [ ] Personal "discography" - mark canonical versions to check against future exports
 - [ ] More detection patterns based on community feedback
+
+## Stay Updated
+
+Get notified when new versions are released:
+
+📬 **[Subscribe to updates](https://buttondown.com/scrobble-analyzer)**
+
+No spam, just release announcements and occasional project news.
 
 ## Feedback Welcome
 
