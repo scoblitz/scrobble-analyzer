@@ -6,7 +6,7 @@ After 20 years of scrobbling and 150,000+ plays, I discovered my Last.fm data wa
 
 I couldn't find any tool that surfaced these problems, so I built one.
 
-![Scrobble Analyzer Screenshot](screenshot.png)
+![Scrobble Analyzer Screenshot](scrobbleanalyzer-fullscreen.jpg)
 
 ## What It Does
 
