@@ -469,6 +469,66 @@
             color: var(--bg-dark);
         }
 
+        /* Lookup button - card level */
+        .lookup-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.4rem 0.8rem;
+            background: rgba(74, 158, 255, 0.1);
+            border: 1px solid rgba(74, 158, 255, 0.3);
+            border-radius: 4px;
+            color: var(--accent-blue);
+            font-size: 0.8rem;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+        
+        .lookup-btn:hover {
+            background: rgba(74, 158, 255, 0.2);
+            border-color: var(--accent-blue);
+        }
+
+        /* Small lookup button for individual items */
+        .lookup-btn-small {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.2rem 0.4rem;
+            background: rgba(74, 158, 255, 0.1);
+            border: 1px solid rgba(74, 158, 255, 0.25);
+            border-radius: 3px;
+            color: var(--accent-blue);
+            font-size: 0.65rem;
+            text-decoration: none;
+            margin-left: 0.5rem;
+            transition: all 0.2s;
+        }
+        
+        .lookup-btn-small:hover {
+            background: rgba(74, 158, 255, 0.2);
+            border-color: var(--accent-blue);
+        }
+
+        /* Ko-fi support button */
+        .kofi-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.5rem 1rem;
+            background: var(--accent-orange);
+            border-radius: 6px;
+            color: white;
+            font-size: 0.85rem;
+            font-weight: 500;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+        
+        .kofi-btn:hover {
+            background: var(--accent-orange-dim);
+            transform: translateY(-1px);
+        }
+
         .issue-content {
             flex: 1;
         }
@@ -768,7 +828,7 @@
             <div class="logo-icon">📊</div>
             <div class="logo-text">
                 <h1>Scrobble Analyzer</h1>
-                <div class="tagline">Find & Fix Your Last.fm Data <span style="color: var(--accent-orange); margin-left: 0.5rem;">v0.5.0</span></div>
+                <div class="tagline">Find & Fix Your Last.fm Data <span style="color: var(--accent-orange); margin-left: 0.5rem;">v0.5.1</span></div>
             </div>
         </div>
         <div class="header-stats" id="header-stats" style="display: none;">
@@ -777,16 +837,13 @@
                 <div class="stat-label">Scrobbles</div>
             </div>
             <div class="stat-block">
-                <div class="stat-value" id="stat-artists">0</div>
-                <div class="stat-label">Artists</div>
-            </div>
-            <div class="stat-block">
                 <div class="stat-value" id="stat-issues">0</div>
                 <div class="stat-label">Issues Found</div>
             </div>
             <div class="vu-meter" id="vu-meter">
                 <!-- VU meter bars will be added dynamically -->
             </div>
+            <a href="https://ko-fi.com/scoblitz" target="_blank" class="kofi-btn" title="Buy me a month of Last.fm Pro">☕ Buy me a month of Last.fm Pro</a>
         </div>
     </header>
 
@@ -828,12 +885,12 @@
                 </div>
                 <div class="nav-item" data-filter="missing">
                     <span class="nav-icon">❓</span>
-                    <span>Missing Albums</span>
+                    <span>Tracks Missing Albums</span>
                     <span class="count" id="count-missing">0</span>
                 </div>
                 <div class="nav-item" data-filter="compilation">
                     <span class="nav-icon">📀</span>
-                    <span>Compilations</span>
+                    <span>Tracks on Compilations</span>
                     <span class="count" id="count-compilation">0</span>
                 </div>
                 <div class="nav-item" data-filter="invisible">
@@ -873,13 +930,12 @@
                         <li>Drag the file to the upload box in the sidebar, or click the box to browse</li>
                     </ol>
                     
-                    <h3 style="font-size: 1rem; color: var(--accent-orange); margin-bottom: 1rem;">🆕 What's New in v0.5.0</h3>
+                    <h3 style="font-size: 1rem; color: var(--accent-orange); margin-bottom: 1rem;">🆕 What's New in v0.5.1</h3>
                     <ul style="color: var(--text-secondary); font-size: 0.9rem; padding-left: 1.25rem; margin-bottom: 1.5rem;">
-                        <li style="margin-bottom: 0.5rem;"><strong>Dismiss issues</strong> - Mark items as fixed or ignored, with persistence</li>
-                        <li style="margin-bottom: 0.5rem;">Smart quote detection (Unicode vs ASCII apostrophes)</li>
-                        <li style="margin-bottom: 0.5rem;">Fixed click-drag issue when selecting text</li>
-                        <li style="margin-bottom: 0.5rem;">Improved empty state with instructions</li>
-                        <li style="margin-bottom: 0.5rem;">Better error messages for invalid files</li>
+                        <li style="margin-bottom: 0.5rem;"><strong>Google Search lookup</strong> - Research buttons for ambiguous variations</li>
+                        <li style="margin-bottom: 0.5rem;"><strong>Improved counts</strong> - Tracks Missing Albums & Compilations now count tracks</li>
+                        <li style="margin-bottom: 0.5rem;"><strong>Smoother dismissals</strong> - No more page jumps when dismissing items</li>
+                        <li style="margin-bottom: 0.5rem;"><strong>Compilation track counts</strong> - Now shows scrobble count per track</li>
                     </ul>
                     
                     <h3 style="font-size: 1rem; color: var(--accent-orange); margin-bottom: 1rem;">💬 Feedback & Support</h3>
@@ -887,6 +943,12 @@
                         <li style="margin-bottom: 0.5rem;">Found a bug? <a href="https://github.com/scoblitz/scrobble-analyzer/issues" target="_blank" style="color: var(--accent-blue);">Open an Issue</a></li>
                         <li style="margin-bottom: 0.5rem;">Have an idea? <a href="https://github.com/scoblitz/scrobble-analyzer/discussions" target="_blank" style="color: var(--accent-blue);">Start a Discussion</a></li>
                     </ul>
+                    
+                    <h3 style="font-size: 1rem; color: var(--accent-orange); margin-bottom: 1rem;">☕ Support This Project</h3>
+                    <p style="color: var(--text-secondary); font-size: 0.9rem; margin: 0 0 1rem 0;">If you find this tool useful, consider supporting its development!</p>
+                    <div style="margin-bottom: 1.5rem;">
+                        <a href="https://ko-fi.com/scoblitz" target="_blank" style="display: inline-block; padding: 0.5rem 1rem; background: var(--accent-orange); color: white; text-decoration: none; border-radius: 4px; font-size: 0.9rem; font-weight: 500;">☕ Buy me a month of Last.fm Pro</a>
+                    </div>
                     
                     <h3 style="font-size: 1rem; color: var(--accent-orange); margin-bottom: 1rem;">📬 Stay Updated</h3>
                     <form action="https://buttondown.com/api/emails/embed-subscribe/scrobble-analyzer" method="post" style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
@@ -1275,6 +1337,67 @@
             return new Promise(resolve => setTimeout(resolve, ms));
         }
 
+        // Generate Google search URL for different issue types
+        function getGoogleSearchUrl(issue) {
+            const encode = encodeURIComponent;
+            
+            if (issue.type === 'missing' || issue.type === 'compilation') {
+                // For individual track lookup
+                const query = `What album was "${issue.trackName}" by ${issue.artist} originally released on?`;
+                return `https://www.google.com/search?q=${encode(query)}`;
+            }
+            
+            if (issue.type === 'artist') {
+                const variations = issue.variations || [];
+                if (variations.length === 2) {
+                    const query = `Is the correct spelling "${variations[0].name}" or "${variations[1].name}" for the musical artist?`;
+                    return `https://www.google.com/search?q=${encode(query)}`;
+                } else {
+                    // More than 2 variations - use most common one
+                    const mostCommon = variations[0]?.name || issue.title;
+                    const query = `What is the correct name for the band "${mostCommon}"?`;
+                    return `https://www.google.com/search?q=${encode(query)}`;
+                }
+            }
+            
+            if (issue.type === 'album' || issue.type === 'track') {
+                const variations = issue.variations || [];
+                if (variations.length >= 2) {
+                    const v1 = variations[0]?.name || '';
+                    const v2 = variations[1]?.name || '';
+                    const typeLabel = issue.type === 'album' ? 'album title' : 'song title';
+                    const query = `What is the correct ${typeLabel}: "${v1}" or "${v2}" by ${issue.artist}?`;
+                    return `https://www.google.com/search?q=${encode(query)}`;
+                }
+            }
+            
+            return null;
+        }
+
+        // Normalize variation name for comparison (strip parentheticals, common suffixes)
+        function normalizeForLookupCheck(name) {
+            if (!name) return '';
+            return name
+                .toLowerCase()
+                .replace(/\s*\([^)]*\)\s*/g, '')  // Remove parenthetical content
+                .replace(/\s*\[[^\]]*\]\s*/g, '') // Remove bracketed content
+                .replace(/\s*-\s*(remaster|remastered|deluxe|expanded|anniversary|edition|version|live|mono|stereo|single|bonus|remix|mix|edit|radio|explicit|clean)\b.*$/gi, '')
+                .replace(/\s*(remaster|remastered|deluxe|expanded|anniversary|edition|version|live|mono|stereo|single|bonus|remix|mix|edit|radio|explicit|clean)\s*$/gi, '')
+                .trim();
+        }
+
+        // Check if album/track variations need a lookup button
+        // Returns true if variations differ even after normalization
+        function variationsNeedLookup(variations) {
+            if (!variations || variations.length < 2) return false;
+            
+            const normalized = variations.map(v => normalizeForLookupCheck(v.name));
+            const uniqueNormalized = new Set(normalized);
+            
+            // If more than one unique normalized value, they genuinely differ
+            return uniqueNormalized.size > 1;
+        }
+
         // Normalize strings for comparison
         function normalize(str) {
             if (!str) return '';
@@ -1495,11 +1618,15 @@
                         compilations[key] = { 
                             artist: s.Artist, 
                             album: s.Album, 
-                            tracks: new Set(),
+                            tracks: {},  // Changed from Set to object for counting
                             count: 0 
                         };
                     }
-                    compilations[key].tracks.add(s.Track);
+                    // Track per-song counts
+                    if (!compilations[key].tracks[s.Track]) {
+                        compilations[key].tracks[s.Track] = 0;
+                    }
+                    compilations[key].tracks[s.Track]++;
                     compilations[key].count++;
                 }
             });
@@ -1509,13 +1636,18 @@
             const issues = [];
             Object.values(compilations).forEach(c => {
                 if (c.count >= 3) {
+                    // Convert tracks object to array with counts, sorted by count
+                    const tracksArray = Object.entries(c.tracks)
+                        .map(([name, count]) => ({ name, count }))
+                        .sort((a, b) => b.count - a.count);
+                    
                     issues.push({
                         type: 'compilation',
                         title: `${c.artist} - ${c.album}`,
                         artist: c.artist,
-                        description: `${c.tracks.size} tracks from compilation`,
+                        description: `${tracksArray.length} tracks from compilation`,
                         totalCount: c.count,
-                        variations: Array.from(c.tracks).map(t => ({ name: t, count: '' }))
+                        variations: tracksArray
                     });
                 }
             });
@@ -1758,10 +1890,7 @@
 
             // Update header stats
             document.getElementById('stat-scrobbles').textContent = state.scrobbles.length.toLocaleString();
-            
-            const uniqueArtists = new Set(state.scrobbles.map(s => s.Artist).filter(a => a)).size;
-            document.getElementById('stat-artists').textContent = uniqueArtists.toLocaleString();
-            document.getElementById('stat-issues').textContent = state.issues.length.toLocaleString();
+            // Note: stat-issues is updated by updateCounts() to reflect proper track-based counting
 
             // Create VU meter
             const vuMeter = document.getElementById('vu-meter');
@@ -1839,19 +1968,48 @@
             
             const totalDismissed = issueLevelDismissed + itemLevelDismissed;
             
-            // Update header stat to show active issues only
-            document.getElementById('stat-issues').textContent = activeIssues.length.toLocaleString();
-            
             // Update sidebar counts
+            // For missing/compilation, count individual tracks (not artist groups)
+            let missingTrackCount = 0;
+            let compilationTrackCount = 0;
+            
+            activeIssues.forEach(issue => {
+                if (issue.type === 'missing') {
+                    const issueId = getIssueId(issue);
+                    (issue.variations || []).forEach((v, i) => {
+                        const itemId = `${issueId}-item-${i}`;
+                        if (!state.dismissedIds.has(itemId)) {
+                            missingTrackCount++;
+                        }
+                    });
+                } else if (issue.type === 'compilation') {
+                    const issueId = getIssueId(issue);
+                    (issue.variations || []).forEach((v, i) => {
+                        const itemId = `${issueId}-item-${i}`;
+                        if (!state.dismissedIds.has(itemId)) {
+                            compilationTrackCount++;
+                        }
+                    });
+                }
+            });
+            
             const counts = {
-                all: activeIssues.length,
+                all: activeIssues.filter(i => i.type === 'artist').length +
+                     activeIssues.filter(i => i.type === 'album').length +
+                     activeIssues.filter(i => i.type === 'track').length +
+                     missingTrackCount +
+                     compilationTrackCount +
+                     activeIssues.filter(i => i.type === 'invisible').length,
                 artist: activeIssues.filter(i => i.type === 'artist').length,
                 album: activeIssues.filter(i => i.type === 'album').length,
                 track: activeIssues.filter(i => i.type === 'track').length,
-                missing: activeIssues.filter(i => i.type === 'missing').length,
-                compilation: activeIssues.filter(i => i.type === 'compilation').length,
+                missing: missingTrackCount,
+                compilation: compilationTrackCount,
                 invisible: activeIssues.filter(i => i.type === 'invisible').length
             };
+            
+            // Update header stat to show total issues (with track-based counting)
+            document.getElementById('stat-issues').textContent = counts.all.toLocaleString();
 
             Object.entries(counts).forEach(([key, value]) => {
                 const el = document.getElementById(`count-${key}`);
@@ -1963,12 +2121,28 @@
                 artist: 'Artist Variations',
                 album: 'Album Variations',
                 track: 'Track Variations',
-                missing: 'Missing Albums',
-                compilation: 'Compilations',
+                missing: 'Tracks Missing Albums',
+                compilation: 'Tracks on Compilations',
                 invisible: 'Invisible Characters'
             };
             document.getElementById('results-title').textContent = filterNames[state.currentFilter] || 'All Issues';
-            document.getElementById('results-subtitle').textContent = `${filtered.length} issues found`;
+            
+            // Calculate display count - for missing/compilation (or all), count tracks not cards
+            let displayCount = 0;
+            filtered.forEach(issue => {
+                if (issue.type === 'missing' || issue.type === 'compilation') {
+                    const issueId = getIssueId(issue);
+                    (issue.variations || []).forEach((v, i) => {
+                        const itemId = `${issueId}-item-${i}`;
+                        if (!state.dismissedIds.has(itemId)) {
+                            displayCount++;
+                        }
+                    });
+                } else {
+                    displayCount++;
+                }
+            });
+            document.getElementById('results-subtitle').textContent = `${displayCount} issues found`;
 
             // Render
             issueGrid.innerHTML = '';
@@ -1978,9 +2152,9 @@
                 return;
             }
             
-            // Limit to first 100 for performance, add "load more" later if needed
+            // Limit to first 100 for performance
             const toRender = filtered.slice(0, 100);
-            console.log('Rendering', toRender.length, 'issues');
+            console.log('Rendering', toRender.length, 'of', filtered.length, 'issues');
             
             toRender.forEach((issue, index) => {
                 const card = document.createElement('div');
@@ -2037,6 +2211,19 @@
                         ? '<span class="smart-quote-warning">⚠️ smart quote</span>' 
                         : '';
                     
+                    // Per-item lookup button for missing albums and compilations
+                    let itemLookupHtml = '';
+                    if (['missing', 'compilation'].includes(issue.type)) {
+                        const trackSearchUrl = getGoogleSearchUrl({
+                            type: issue.type,
+                            artist: issue.artist,
+                            trackName: v.name
+                        });
+                        if (trackSearchUrl) {
+                            itemLookupHtml = `<a href="${trackSearchUrl}" target="_blank" class="lookup-btn-small" onclick="event.stopPropagation()" title="Look up original album">🔍</a>`;
+                        }
+                    }
+                    
                     // Per-item dismiss for missing albums and compilations
                     let itemDismissHtml = '';
                     if (['missing', 'compilation'].includes(issue.type) && v._itemId) {
@@ -2052,6 +2239,7 @@
                             <span class="variation-value">${escapeHtml(v.name || '(empty)')}${invisibleWarning}${smartQuoteWarning}</span>
                             ${v.count ? `<span class="variation-count">${v.count}</span>` : ''}
                             ${lastFmLinkHtml}
+                            ${itemLookupHtml}
                             ${itemDismissHtml}
                         </div>
                     `;
@@ -2092,6 +2280,29 @@
                         : `<button class="dismiss-btn" data-issue-id="${issue._id}">✓ Dismiss</button>`;
                 }
                 
+                // Lookup button - for artist variations always show, for album/track only if needed
+                let lookupButtonHtml = '';
+                if (issue.type === 'artist') {
+                    const searchUrl = getGoogleSearchUrl(issue);
+                    if (searchUrl) {
+                        lookupButtonHtml = `<a href="${searchUrl}" target="_blank" class="lookup-btn" onclick="event.stopPropagation()">🔍 Look up</a>`;
+                    }
+                } else if ((issue.type === 'album' || issue.type === 'track') && variationsNeedLookup(issue.variations)) {
+                    const searchUrl = getGoogleSearchUrl(issue);
+                    if (searchUrl) {
+                        lookupButtonHtml = `<a href="${searchUrl}" target="_blank" class="lookup-btn" onclick="event.stopPropagation()">🔍 Look up</a>`;
+                    }
+                }
+                
+                // Combine buttons
+                let buttonsHtml = '';
+                if (lookupButtonHtml || dismissButtonHtml) {
+                    buttonsHtml = `<div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
+                        <div>${lookupButtonHtml}</div>
+                        <div>${dismissButtonHtml}</div>
+                    </div>`;
+                }
+                
                 card.innerHTML = `
                     <div class="issue-header">
                         <span class="issue-type ${issue.type}">${issue.type}</span>
@@ -2110,9 +2321,7 @@
                         <div class="variation-list">
                             ${variationsHtml}
                         </div>
-                        ${dismissButtonHtml ? `<div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border); text-align: right;">
-                            ${dismissButtonHtml}
-                        </div>` : ''}
+                        ${buttonsHtml}
                     </div>
                 `;
 
@@ -2137,31 +2346,81 @@
                         }
                         saveDismissedState();
                         updateCounts();
+                        
+                        // Save scroll position, re-render, restore scroll
+                        const scrollTop = document.querySelector('.content').scrollTop;
                         renderIssues();
+                        document.querySelector('.content').scrollTop = scrollTop;
                         return;
                     }
                     
                     // Handle item-level dismiss button click (for missing/compilation items)
                     if (e.target.classList.contains('dismiss-btn-small')) {
                         const itemId = e.target.dataset.itemId;
-                        if (e.target.classList.contains('restore')) {
+                        const isRestore = e.target.classList.contains('restore');
+                        
+                        if (isRestore) {
                             state.dismissedIds.delete(itemId);
                         } else {
                             state.dismissedIds.add(itemId);
                         }
                         saveDismissedState();
-                        updateCounts();
                         
-                        // Re-render but preserve expanded state of this card
-                        const wasExpanded = card.classList.contains('expanded');
-                        const cardIssueId = issue._id;
-                        renderIssues();
+                        // Find the variation item element
+                        const variationItem = e.target.closest('.variation-item');
+                        const variationList = card.querySelector('.variation-list');
+                        const remainingItems = variationList.querySelectorAll('.variation-item');
                         
-                        // Find and re-expand the card if it was expanded
-                        if (wasExpanded) {
-                            const newCard = issueGrid.querySelector(`[data-issue-id="${cardIssueId}"]`);
-                            if (newCard) {
-                                newCard.classList.add('expanded');
+                        // Count how many items will remain after this action
+                        const currentCount = remainingItems.length;
+                        const isLastItem = currentCount === 1 && !isRestore;
+                        
+                        if (isLastItem) {
+                            // Last item being dismissed - need full re-render to pull in new cards
+                            const scrollTop = document.querySelector('.content').scrollTop;
+                            updateCounts();
+                            renderIssues();
+                            document.querySelector('.content').scrollTop = scrollTop;
+                        } else {
+                            // Just update this item in place
+                            if (isRestore) {
+                                // This shouldn't happen in normal view, but handle it
+                                updateCounts();
+                                const scrollTop = document.querySelector('.content').scrollTop;
+                                renderIssues();
+                                document.querySelector('.content').scrollTop = scrollTop;
+                            } else {
+                                // Hide the item with animation
+                                variationItem.style.transition = 'opacity 0.2s, height 0.2s, margin 0.2s, padding 0.2s';
+                                variationItem.style.opacity = '0';
+                                variationItem.style.height = '0';
+                                variationItem.style.margin = '0';
+                                variationItem.style.padding = '0';
+                                variationItem.style.overflow = 'hidden';
+                                
+                                setTimeout(() => {
+                                    variationItem.remove();
+                                    
+                                    // Update the card's description (e.g., "3 tracks" -> "2 tracks")
+                                    const descEl = card.querySelector('.issue-description');
+                                    if (descEl) {
+                                        const newCount = variationList.querySelectorAll('.variation-item').length;
+                                        descEl.textContent = `${newCount} track${newCount !== 1 ? 's' : ''} remaining`;
+                                    }
+                                    
+                                    // Update the card's scrobble count
+                                    const countEl = card.querySelector('.issue-count');
+                                    if (countEl && issue.type === 'missing' || issue.type === 'compilation') {
+                                        // Calculate remaining scrobbles
+                                        let remainingScrobbles = 0;
+                                        variationList.querySelectorAll('.variation-count').forEach(vc => {
+                                            remainingScrobbles += parseInt(vc.textContent) || 0;
+                                        });
+                                        countEl.textContent = remainingScrobbles.toLocaleString();
+                                    }
+                                }, 200);
+                                
+                                updateCounts();
                             }
                         }
                         return;
@@ -2170,6 +2429,8 @@
                     // Don't toggle if clicking action buttons or links
                     if (e.target.classList.contains('variation-action') || 
                         e.target.classList.contains('lastfm-link') ||
+                        e.target.classList.contains('lookup-btn') ||
+                        e.target.classList.contains('lookup-btn-small') ||
                         e.target.tagName === 'A') return;
                     
                     // Don't toggle if this was a drag (mouse moved more than 5px)
@@ -2184,11 +2445,11 @@
                 issueGrid.appendChild(card);
             });
             
-            // Show message if there are more
+            // Show message if there are more cards than we're displaying
             if (filtered.length > 100) {
                 const moreMsg = document.createElement('div');
                 moreMsg.style.cssText = 'text-align: center; padding: 1rem; color: var(--text-secondary);';
-                moreMsg.textContent = `Showing first 100 of ${filtered.length} issues. Use search or filters to narrow down.`;
+                moreMsg.textContent = `Showing first 100 issue cards of ${displayCount} total issues. Use search or filters to narrow down.`;
                 issueGrid.appendChild(moreMsg);
             }
         }
