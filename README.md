@@ -1,3 +1,6 @@
+---
+title: README
+---
 # Scrobble Analyzer
 
 **Find and fix data quality issues in your Last.fm scrobble history.**
@@ -6,7 +9,7 @@ After 20 years of scrobbling and 150,000+ plays, I discovered my Last.fm data wa
 
 I couldn't find any tool that surfaced these problems, so I built one.
 
-![Scrobble Analyzer Screenshot](scrobbleanalyzer-fullscreen.jpg)
+![Scrobble Analyzer Screenshot](scrobbleanalyzer-fullscreen.png)
 
 ## What It Does
 
@@ -40,31 +43,22 @@ Or [download index.html](index.html) to run locally (note: you won't receive upd
 
 **Required CSV format:** Must have a header row with columns for `Artist`, `Album`, `Track`. The `AlbumId` column is optional but enables additional features.
 
-## What It Found In My Data
-
-From ~150,000 scrobbles over 20 years:
-
-- **77 artist variation issues** - Including 7 entries with invisible characters
-- **488 album variation issues** - Remasters, deluxe editions, and typos
-- **600+ track variations** - 11 different versions of "Statesboro Blues" alone!
-- **494 artists with missing album data** - ~6% of all scrobbles
-- **637 compilation albums** - Plays that could be reassigned to original releases
-
-I had no idea it was this messy. If you've been scrobbling for years, yours probably is too.
-
 ## Current Status
 
-**Version 0.5.0** - Now with dismiss & persistence!
+**Version 0.5.1** 
 
-### What's New in v0.5.0
+**v0.5.1 Release Summary**
 
-- **Dismiss issues** - Mark items as fixed or "won't fix" to hide them from view
-- **Per-track dismissal** - For Missing Albums and Compilations, dismiss individual tracks (great for working through long lists over multiple sessions)
-- **Persistence** - Dismissed items are remembered when you re-import the same file
-- **View dismissed** - Toggle to review and restore dismissed items
-- **Smart quote detection** - Catches Unicode vs ASCII apostrophe/quote variations
-- **Better onboarding** - Instructions and "What's New" shown before file upload
-- **Improved error handling** - Friendly messages for invalid file formats
+**New Features:**
+  - **Google Search lookup buttons** - 🔍 Research buttons for artist variations (always shown) and album/track variations (only when they genuinely differ after stripping parenthetical items). Per-track lookup for Missing Albums and Compilations to find original album.
+  - **Ko-fi support button** - "Buy me a month of Last.fm Pro" in header (after file load) and empty state
+
+**Improvements:**
+  - **Renamed sidebar items** - "Missing Albums" → "Tracks Missing Albums", "Compilations" → "Tracks on Compilations"
+  - **Track-based counting** - Missing Albums and Compilations now count individual tracks, not artist groups. Header and sidebar totals updated accordingly.
+  - **Compilation track counts** - Now shows scrobble count next to each track in compilation cards
+  - **Smoother dismissals** - Item-level dismissals animate out without full page re-render; scroll position preserved on card dismissals
+  - **Removed Artists stat from header** - Streamlined to just Scrobbles and Issues Found
 
 ### Current Limitations
 
@@ -107,4 +101,3 @@ MIT License - Do whatever you want with it. If you build something cool, I'd lov
 
 ---
 
-*"It combines a few of my favorite things: music and data."*
