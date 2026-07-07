@@ -12,20 +12,20 @@
             --bg-dark: #0a0a0f;
             --bg-card: #12121a;
             --bg-hover: #1a1a25;
-            --border: #2a2a3a;
-            --text-primary: #e8e8f0;
-            --text-secondary: #8888a0;
+            --border: #232330;
+            --text-primary: #e9e5dd;   /* warm cream - silkscreen lettering on a black faceplate */
+            --text-secondary: #9a97a5;
             --text-muted: #555570;
-            --accent-orange: #ff6b35;
+            --accent-orange: #ff6b35;  /* the LED display - reserved for readouts and actions */
             --accent-orange-dim: #cc5528;
             --accent-blue: #4a9eff;
             --accent-green: #4ade80;
             --accent-yellow: #fbbf24;
             --accent-red: #ef4444;
             --accent-purple: #a78bfa;
-            --vu-green: #22c55e;
-            --vu-yellow: #eab308;
-            --vu-red: #dc2626;
+            --vu-green: #5f926f;
+            --vu-yellow: #c39a45;
+            --vu-red: #c25e4a;
         }
 
         * {
@@ -158,6 +158,7 @@
             gap: 0.75rem;
             padding: 0.75rem 1rem;
             border-radius: 6px;
+            border-left: 3px solid transparent; /* reserves space so .active doesn't shift layout */
             cursor: pointer;
             transition: all 0.15s ease;
             margin-bottom: 0.25rem;
@@ -168,8 +169,9 @@
         }
 
         .nav-item.active {
-            background: var(--accent-orange);
-            color: white;
+            background: rgba(255, 107, 53, 0.10);
+            border-left-color: var(--accent-orange);
+            color: var(--accent-orange);
         }
 
         .nav-item .count {
@@ -180,7 +182,7 @@
         }
 
         .nav-item.active .count {
-            color: rgba(255,255,255,0.8);
+            color: var(--accent-orange);
         }
 
         .nav-icon {
@@ -283,6 +285,60 @@
             transform: translateY(-50%);
             font-size: 0.9rem;
         }
+        .search-clear {
+            position: absolute;
+            right: 0.5rem;
+            top: 50%;
+            transform: translateY(-50%);
+            display: none; /* shown via JS when the box has text */
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1rem;
+            line-height: 1;
+            padding: 0.25rem 0.4rem;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        .search-clear:hover {
+            color: var(--text-primary);
+            background: var(--border);
+        }
+        .filter-row {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+        .filter-clear {
+            display: none; /* shown via JS when a filter is active */
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            line-height: 1;
+            padding: 0.5rem 0.6rem;
+            cursor: pointer;
+            border-radius: 4px;
+            flex-shrink: 0;
+        }
+        .filter-clear:hover {
+            color: var(--text-primary);
+            border-color: var(--text-secondary);
+        }
+        .char-chip {
+            display: inline-block;
+            padding: 0 0.3rem;
+            margin: 0 0.1rem;
+            background: var(--accent-red);
+            color: white;
+            font-size: 0.65rem;
+            font-weight: 600;
+            line-height: 1.4;
+            border-radius: 3px;
+            vertical-align: 1px;
+            letter-spacing: 0.03em;
+            cursor: help;
+        }
 
         .filter-btn {
             padding: 0.75rem 1.25rem;
@@ -305,9 +361,9 @@
         }
 
         .filter-btn.active {
-            background: var(--accent-orange);
+            background: rgba(255, 107, 53, 0.12);
             border-color: var(--accent-orange);
-            color: white;
+            color: var(--accent-orange);
         }
 
         /* Issue cards */
@@ -320,19 +376,19 @@
         .issue-card {
             background: var(--bg-card);
             border: 1px solid var(--border);
-            border-radius: 8px;
+            border-radius: 10px;
             padding: 1.25rem;
             cursor: pointer;
             transition: all 0.15s ease;
         }
 
         .issue-card:hover {
-            border-color: var(--accent-orange);
+            border-color: #3d3d52;
             transform: translateX(4px);
         }
 
         .issue-card.expanded {
-            border-color: var(--accent-orange);
+            border-color: rgba(255, 107, 53, 0.45);
         }
 
         .issue-header {
@@ -555,7 +611,7 @@
             font-family: 'JetBrains Mono', monospace;
             font-size: 1.1rem;
             font-weight: 600;
-            color: var(--accent-orange);
+            color: var(--text-primary);
         }
 
         .issue-count-label {
@@ -587,7 +643,7 @@
             gap: 1rem;
             padding: 0.75rem 1rem;
             background: var(--bg-dark);
-            border-radius: 6px;
+            border-radius: 8px;
             font-family: 'JetBrains Mono', monospace;
             font-size: 0.85rem;
         }
@@ -598,7 +654,7 @@
         }
 
         .variation-count {
-            color: var(--accent-orange);
+            color: var(--text-primary);
             font-weight: 600;
         }
 
@@ -730,7 +786,7 @@
             gap: 1.5rem;
             padding: 1rem 1.5rem;
             background: var(--bg-card);
-            border-radius: 8px;
+            border-radius: 10px;
             margin-bottom: 1.5rem;
         }
 
@@ -786,8 +842,8 @@
         }
 
         .tab.active {
-            background: var(--accent-orange);
-            color: white;
+            background: rgba(255, 107, 53, 0.12);
+            color: var(--accent-orange);
         }
 
         /* Export button */
@@ -810,16 +866,6 @@
         .export-btn:hover {
             background: var(--accent-orange-dim);
         }
-
-        /* Badge */
-        .badge {
-            padding: 0.2rem 0.5rem;
-            background: var(--accent-orange);
-            border-radius: 10px;
-            font-size: 0.7rem;
-            font-weight: 600;
-            color: white;
-        }
     </style>
 </head>
 <body>
@@ -828,7 +874,7 @@
             <div class="logo-icon">📊</div>
             <div class="logo-text">
                 <h1>Scrobble Analyzer</h1>
-                <div class="tagline">Find & Fix Your Last.fm Data <span style="color: var(--accent-orange); margin-left: 0.5rem;">v0.5.1</span></div>
+                <div class="tagline">Find & Fix Your Last.fm Data <span style="color: var(--accent-orange); margin-left: 0.5rem;">v0.6.0</span></div>
             </div>
         </div>
         <div class="header-stats" id="header-stats" style="display: none;">
@@ -908,9 +954,12 @@
 
             <div class="sidebar-section" id="artist-filter-section" style="display: none;">
                 <div class="sidebar-title">Filter by Artist</div>
-                <select id="artist-filter" style="width: 100%; padding: 0.5rem; background: var(--bg-dark); border: 1px solid var(--border); border-radius: 4px; color: var(--text-primary); font-family: inherit;">
-                    <option value="">All Artists</option>
-                </select>
+                <div class="filter-row">
+                    <select id="artist-filter" style="width: 100%; padding: 0.5rem; background: var(--bg-dark); border: 1px solid var(--border); border-radius: 4px; color: var(--text-primary); font-family: inherit;">
+                        <option value="">All Artists</option>
+                    </select>
+                    <button class="filter-clear" id="artist-filter-clear" title="Show all artists" aria-label="Clear artist filter">✕</button>
+                </div>
             </div>
         </aside>
 
@@ -930,12 +979,14 @@
                         <li>Drag the file to the upload box in the sidebar, or click the box to browse</li>
                     </ol>
                     
-                    <h3 style="font-size: 1rem; color: var(--accent-orange); margin-bottom: 1rem;">🆕 What's New in v0.5.1</h3>
+                    <h3 style="font-size: 1rem; color: var(--accent-orange); margin-bottom: 1rem;">🆕 What's New in v0.6.0</h3>
                     <ul style="color: var(--text-secondary); font-size: 0.9rem; padding-left: 1.25rem; margin-bottom: 1.5rem;">
-                        <li style="margin-bottom: 0.5rem;"><strong>Google Search lookup</strong> - Research buttons for ambiguous variations</li>
-                        <li style="margin-bottom: 0.5rem;"><strong>Improved counts</strong> - Tracks Missing Albums & Compilations now count tracks</li>
-                        <li style="margin-bottom: 0.5rem;"><strong>Smoother dismissals</strong> - No more page jumps when dismissing items</li>
-                        <li style="margin-bottom: 0.5rem;"><strong>Compilation track counts</strong> - Now shows scrobble count per track</li>
+                        <li style="margin-bottom: 0.5rem;"><strong>Dismissals survive new exports</strong> - Now tied to your Last.fm username instead of the uploaded file. Existing dismissals migrate automatically.</li>
+                        <li style="margin-bottom: 0.5rem;"><strong>Character reveal</strong> - Invisible characters and stray spaces now show as labeled chips, so you can see exactly what's different</li>
+                        <li style="margin-bottom: 0.5rem;"><strong>Track-level invisible detection</strong> - Tracks now get the same invisible-character scan as artists and albums</li>
+                        <li style="margin-bottom: 0.5rem;"><strong>One issue, one category</strong> - Variations that differ only by invisible characters now appear only under Invisible Characters</li>
+                        <li style="margin-bottom: 0.5rem;"><strong>Export options</strong> - Choose whether reports include dismissed items</li>
+                        <li style="margin-bottom: 0.5rem;"><strong>Fixes & polish</strong> - Titles with quotes parse correctly, "Gold" compilations are detected again, plus search/filter clear buttons and a calmer look</li>
                     </ul>
                     
                     <h3 style="font-size: 1rem; color: var(--accent-orange); margin-bottom: 1rem;">💬 Feedback & Support</h3>
@@ -978,7 +1029,7 @@
                         <div class="content-title" id="results-title">All Issues</div>
                         <div class="content-subtitle" id="results-subtitle">Sorted by impact (scrobble count)</div>
                     </div>
-                    <div style="display: flex; gap: 1rem; align-items: center;">
+                    <div style="display: flex; gap: 1rem; align-items: flex-start;">
                         <div class="sort-controls">
                             <span>Sort by:</span>
                             <select id="sort-select">
@@ -987,15 +1038,22 @@
                                 <option value="name">Name</option>
                             </select>
                         </div>
-                        <button class="export-btn" id="export-btn">
-                            <span>📥</span> Export Report
-                        </button>
+                        <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 0.35rem;">
+                            <button class="export-btn" id="export-btn">
+                                <span>📥</span> Export Report
+                            </button>
+                            <label style="display: flex; align-items: center; gap: 0.35rem; cursor: pointer; font-size: 0.75rem; color: var(--text-secondary); white-space: nowrap;">
+                                <input type="checkbox" id="export-include-dismissed" style="cursor: pointer;">
+                                <span>Include dismissed items</span>
+                            </label>
+                        </div>
                     </div>
                 </div>
 
                 <div class="toolbar">
                     <div class="search-box">
                         <input type="text" id="search-input" placeholder="Search artists, albums, tracks...">
+                        <button class="search-clear" id="search-clear" title="Clear search" aria-label="Clear search">✕</button>
                     </div>
                 </div>
 
@@ -1052,14 +1110,15 @@
             issues: [],
             dismissedIds: new Set(),
             showDismissed: false,
-            fileHash: null,
+            fileHash: null,   // still computed - used to match old-format storage for migration
+            username: null,   // parsed from the CSV's Date#username header
             currentFilter: 'all',
             currentArtist: '',
             searchQuery: '',
             sortBy: 'count'
         };
 
-        // Generate a simple hash of file contents for persistence
+        // Generate a simple hash of file contents (used to locate old-format saved state)
         function hashString(str) {
             let hash = 0;
             for (let i = 0; i < str.length; i++) {
@@ -1075,19 +1134,36 @@
             return `${issue.type}-${issue.title}`.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
         }
 
-        // Save dismissed state to localStorage
+        // Generate unique ID for an item within an issue (missing/compilation tracks).
+        // Keyed by track NAME, not array position, so dismissals stay pinned to the
+        // right track even when play counts (and therefore sort order) change
+        // between exports.
+        function getItemId(issueId, itemName) {
+            const namePart = String(itemName || '').replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
+            return `${issueId}-item-${namePart}`;
+        }
+
+        // --- Persistence -----------------------------------------------------
+        // Dismissals are stored per Last.fm username (parsed from the export),
+        // so they survive fresh exports of the same account.
+        // Old format (pre-v0.6.0): scrobble-analyzer-{fileHash}
+        // New format:              scrobble-analyzer-user-{username}
+
+        function userStorageKey(username) {
+            return `scrobble-analyzer-user-${username || 'default'}`;
+        }
+
         function saveDismissedState() {
-            if (!state.fileHash) return;
+            if (!state.username) return;
             const data = {
                 dismissed: Array.from(state.dismissedIds),
                 savedAt: Date.now()
             };
-            localStorage.setItem(`scrobble-analyzer-${state.fileHash}`, JSON.stringify(data));
+            localStorage.setItem(userStorageKey(state.username), JSON.stringify(data));
         }
 
-        // Load dismissed state from localStorage
-        function loadDismissedState(fileHash) {
-            const stored = localStorage.getItem(`scrobble-analyzer-${fileHash}`);
+        function loadDismissedState(username) {
+            const stored = localStorage.getItem(userStorageKey(username));
             if (stored) {
                 try {
                     const data = JSON.parse(stored);
@@ -1097,6 +1173,76 @@
                 }
             }
             return new Set();
+        }
+
+        // Migrate dismissals saved by pre-v0.6.0 versions (keyed by file hash).
+        //
+        // Issue-level IDs are content-based ("artist-the-beatles"), so they're
+        // safe to import from ANY old key. Item-level IDs were keyed by array
+        // POSITION ("...-item-3"), which is only meaningful against the exact
+        // file they were saved for - so those are translated to name-based IDs
+        // only when the currently loaded file's hash matches an old key, and
+        // dropped otherwise. A wrongly-dismissed item (hidden from view) is
+        // worse than a re-shown one.
+        function migrateOldDismissals(currentFileHash, issues) {
+            let migratedIssueLevel = 0;
+            let migratedItemLevel = 0;
+            const consumedKeys = [];
+
+            // Pre-build index->name translation table from the current issues
+            const itemIdTranslation = {};
+            issues.forEach(issue => {
+                if (!['missing', 'compilation'].includes(issue.type)) return;
+                const issueId = getIssueId(issue);
+                (issue.variations || []).forEach((v, i) => {
+                    itemIdTranslation[`${issueId}-item-${i}`] = getItemId(issueId, v.name);
+                });
+            });
+
+            for (let k = 0; k < localStorage.length; k++) {
+                const key = localStorage.key(k);
+                if (!key || !key.startsWith('scrobble-analyzer-')) continue;
+                if (key.startsWith('scrobble-analyzer-user-')) continue; // already new format
+
+                let oldData;
+                try {
+                    oldData = JSON.parse(localStorage.getItem(key));
+                } catch (e) {
+                    continue;
+                }
+                const oldIds = oldData && Array.isArray(oldData.dismissed) ? oldData.dismissed : [];
+                const isMatchingFile = key === `scrobble-analyzer-${currentFileHash}`;
+
+                oldIds.forEach(id => {
+                    const isItemLevel = /-item-\d+$/.test(id);
+                    if (!isItemLevel) {
+                        // Issue-level: content-based, safe from any old key
+                        if (!state.dismissedIds.has(id)) {
+                            state.dismissedIds.add(id);
+                            migratedIssueLevel++;
+                        }
+                    } else if (isMatchingFile) {
+                        // Item-level: only translatable against the matching file
+                        const newId = itemIdTranslation[id];
+                        if (newId && !state.dismissedIds.has(newId)) {
+                            state.dismissedIds.add(newId);
+                            migratedItemLevel++;
+                        }
+                    }
+                    // Item-level from non-matching files: intentionally dropped
+                });
+
+                // The matching file's key is fully consumed; others keep their
+                // item-level data in case that file gets loaded later.
+                if (isMatchingFile) consumedKeys.push(key);
+            }
+
+            consumedKeys.forEach(key => localStorage.removeItem(key));
+
+            if (migratedIssueLevel || migratedItemLevel) {
+                console.log(`Migrated dismissals from old storage: ${migratedIssueLevel} issue-level, ${migratedItemLevel} item-level`);
+                saveDismissedState();
+            }
         }
 
         // DOM Elements
@@ -1138,6 +1284,8 @@
         fileInput.addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (file) processFile(file);
+            // Reset so selecting the same file again still fires 'change'
+            fileInput.value = '';
         });
 
         // Parse CSV
@@ -1150,15 +1298,22 @@
             
             const rawHeaders = parseCSVLine(firstLine.replace(/^\uFEFF/, ''), delimiter);
             
-            // Normalize headers - map various possible names to our standard names
+            // Normalize headers - map various possible names to our standard names.
+            // The lastfmstats.com export embeds the username in the date header
+            // ("Date#scoblitz") - capture it for per-user dismissal storage.
             const headerMap = {};
+            let username = null;
             rawHeaders.forEach((header, index) => {
                 const h = header.trim().toLowerCase();
                 if (h.includes('artist')) headerMap[index] = 'Artist';
                 else if (h.includes('album') && h.includes('id')) headerMap[index] = 'AlbumId';
                 else if (h.includes('album')) headerMap[index] = 'Album';
                 else if (h.includes('track') || h.includes('song') || h.includes('title')) headerMap[index] = 'Track';
-                else if (h.includes('date') || h.includes('time')) headerMap[index] = 'Date';
+                else if (h.includes('date') || h.includes('time')) {
+                    headerMap[index] = 'Date';
+                    const usernameMatch = header.trim().match(/#(.+)$/);
+                    if (usernameMatch) username = usernameMatch[1].trim().toLowerCase();
+                }
                 else headerMap[index] = header.trim(); // Keep original if no match
             });
             
@@ -1193,8 +1348,9 @@
             
             // Debug: log first few rows
             console.log('First 3 rows:', data.slice(0, 3));
+            console.log('Username from header:', username || '(none found, using default)');
             
-            return data;
+            return { rows: data, username: username };
         }
 
         function parseCSVLine(line, delimiter = ',') {
@@ -1221,7 +1377,10 @@
             }
             result.push(current);
             
-            return result.map(v => v.replace(/^"|"$/g, ''));
+            // Note: no quote-stripping pass here. The loop above already handles
+            // quoting/escaping, so stripping again would corrupt values that
+            // legitimately begin/end with quotes (e.g. Bowie's "Heroes").
+            return result;
         }
 
         // Process uploaded file
@@ -1243,19 +1402,19 @@
                     text = text.replace(/^\u00EF\u00BB\u00BF/, ''); // UTF-8 BOM as separate chars
                     text = text.replace(/^\xEF\xBB\xBF/, ''); // UTF-8 BOM as bytes
                     
-                    // Hash the file for persistence
+                    // Hash the file - used to locate old-format saved state for migration
                     state.fileHash = hashString(text);
                     console.log('File hash:', state.fileHash);
                     
-                    // Load any previously dismissed issues for this file
-                    state.dismissedIds = loadDismissedState(state.fileHash);
+                    const parsed = parseCSV(text);
+                    state.scrobbles = parsed.rows;
+                    state.username = parsed.username || 'default';
+                    
+                    // Load this user's dismissals (keyed by username, survives new exports)
+                    state.dismissedIds = loadDismissedState(state.username);
                     state.showDismissed = false;
                     document.getElementById('show-dismissed-toggle').checked = false;
-                    console.log('Loaded dismissed issues:', state.dismissedIds.size);
-                    
-                    console.log('First 100 chars of file:', text.substring(0, 100));
-                    
-                    state.scrobbles = parseCSV(text);
+                    console.log('Loaded dismissed issues for', state.username + ':', state.dismissedIds.size);
                     
                     console.log('Parsed scrobbles count:', state.scrobbles.length);
                     console.log('Sample scrobble:', state.scrobbles[0]);
@@ -1302,6 +1461,11 @@
                     
                     state.issues = [...artistIssues, ...albumIssues, ...trackIssues, ...missingIssues, ...compilationIssues, ...invisibleIssues];
                     
+                    // Migrate any dismissals saved by pre-v0.6.0 versions.
+                    // Must run after issues are built (item-level translation
+                    // needs the current variation lists).
+                    migrateOldDismissals(state.fileHash, state.issues);
+                    
                     displayResults();
                 } catch (error) {
                     console.error('Error processing file:', error);
@@ -1330,6 +1494,18 @@
                 }
             };
             
+            reader.onerror = () => {
+                console.error('FileReader error:', reader.error);
+                loadingState.style.display = 'none';
+                emptyState.style.display = 'flex';
+                emptyState.innerHTML = `
+                    <div class="empty-state-icon">❌</div>
+                    <h2>Could Not Read File</h2>
+                    <p style="color: var(--accent-red); max-width: 500px; margin: 1rem auto;">The file could not be read from disk. It may have moved, or your browser may not have permission to access it.</p>
+                    <button onclick="location.reload()" style="margin-top: 1.5rem; padding: 0.75rem 1.5rem; background: var(--accent-orange); border: none; border-radius: 6px; color: white; cursor: pointer; font-family: inherit;">Try Again</button>
+                `;
+            };
+
             reader.readAsText(file);
         }
 
@@ -1398,15 +1574,38 @@
             return uniqueNormalized.size > 1;
         }
 
-        // Normalize strings for comparison
-        function normalize(str) {
-            if (!str) return '';
-            return str.toLowerCase()
-                .replace(/\u00a0/g, ' ')  // Replace non-breaking spaces
+        // --- Invisible character helpers (used by all finders) ---------------
+        // "Visible" version of a string: invisible characters stripped/replaced
+        // so two strings that LOOK identical compare as equal.
+        function getVisibleString(str) {
+            return str
+                .replace(/\u00a0/g, ' ')  // non-breaking space
+                .replace(/\u200b/g, '')   // zero-width space
+                .replace(/\u200c/g, '')   // zero-width non-joiner
+                .replace(/\u200d/g, '')   // zero-width joiner
+                .replace(/\u2060/g, '')   // word joiner
+                .replace(/\ufeff/g, '')   // BOM
                 .replace(/\s+/g, ' ')
-                .replace(/[^\w\s]/g, '')
-                .replace(/\b(the|and)\b/g, '')
                 .trim();
+        }
+
+        // Does the string contain characters that could make two names look
+        // identical while being different data? Covers zero-width characters,
+        // any whitespace that isn't a plain ASCII space (NBSP, thin space,
+        // tab, ...), and runs of 2+ spaces (HTML collapses those on display).
+        // NOTE: this predicate must stay at least as wide as the grouping in
+        // getVisibleString, or flagged groups can't explain themselves.
+        function hasInvisibleChars(str) {
+            return /[\u200b\u200c\u200d\u2060]/.test(str)  // zero-width set
+                || /[^\S ]/.test(str)                       // whitespace other than plain space
+                || / {2,}/.test(str);                       // doubled spaces
+        }
+
+        // Variation groups whose members differ ONLY by invisible characters
+        // belong to the Invisible Characters category, not to the variation
+        // finders - this predicate lets the finders skip them.
+        function differsOnlyInvisibly(names) {
+            return new Set(names.map(getVisibleString)).size === 1;
         }
 
         // Find artist variations (like "The Beatles" vs "Beatles")
@@ -1433,12 +1632,15 @@
                 norm = norm.replace(/\s+/g, ' ').trim();
                 
                 if (!normalized.has(norm)) normalized.set(norm, []);
-                normalized.get(norm).push({ name: artist, count: artistCounts[artist], hasSmartQuotes: /[\u2018\u2019\u201C\u201D]/.test(artist) });
+                normalized.get(norm).push({ name: artist, count: artistCounts[artist], hasSmartQuotes: /[\u2018\u2019\u201C\u201D]/.test(artist), hasInvisible: hasInvisibleChars(artist) });
             });
 
             const issues = [];
             normalized.forEach((artists, norm) => {
                 if (artists.length > 1) {
+                    // Groups that differ only by invisible characters are routed
+                    // to the Invisible Characters category instead
+                    if (differsOnlyInvisibly(artists.map(a => a.name))) return;
                     const total = artists.reduce((sum, a) => sum + a.count, 0);
                     if (total >= 10) {
                         issues.push({
@@ -1499,13 +1701,16 @@
                     name: album, 
                     count: albumCounts[key],
                     artist: artist,
-                    hasSmartQuotes: /[\u2018\u2019\u201C\u201D]/.test(album)
+                    hasSmartQuotes: /[\u2018\u2019\u201C\u201D]/.test(album),
+                    hasInvisible: hasInvisibleChars(album)
                 });
             });
 
             const issues = [];
             grouped.forEach((albums, groupKey) => {
                 if (albums.length > 1) {
+                    // Invisible-only differences are routed to Invisible Characters
+                    if (differsOnlyInvisibly(albums.map(a => a.name))) return;
                     const total = albums.reduce((sum, a) => sum + a.count, 0);
                     if (total >= 5) {
                         const [artist, normAlbum] = groupKey.split('|||');
@@ -1606,8 +1811,9 @@
                 if (!s.Album || !s.Artist) return;
                 const albumLower = s.Album.toLowerCase();
                 
-                // Skip known false positives
-                if (falsePositives.some(fp => albumLower === fp || albumLower.includes(fp))) {
+                // Skip known false positives (exact match only — a substring check
+                // would wrongly exclude real compilations like ABBA's "Gold: Greatest Hits")
+                if (falsePositives.includes(albumLower)) {
                     return;
                 }
 
@@ -1696,13 +1902,16 @@
                     name: track, 
                     count: trackCounts[key],
                     artist: artist,
-                    hasSmartQuotes: /[\u2018\u2019\u201C\u201D]/.test(track)
+                    hasSmartQuotes: /[\u2018\u2019\u201C\u201D]/.test(track),
+                    hasInvisible: hasInvisibleChars(track)
                 });
             });
 
             const issues = [];
             grouped.forEach((tracks, groupKey) => {
                 if (tracks.length > 1) {
+                    // Invisible-only differences are routed to Invisible Characters
+                    if (differsOnlyInvisibly(tracks.map(t => t.name))) return;
                     const total = tracks.reduce((sum, t) => sum + t.count, 0);
                     if (total >= 3) {
                         const [artist, normTrack] = groupKey.split('|||');
@@ -1731,6 +1940,7 @@
             // Get all unique artists, albums, and tracks
             const artists = {};
             const albums = {};
+            const tracks = {};
             
             scrobbles.forEach(s => {
                 if (s.Artist) {
@@ -1740,25 +1950,11 @@
                     const key = `${s.Artist}|||${s.Album}`;
                     albums[key] = (albums[key] || 0) + 1;
                 }
+                if (s.Track && s.Artist) {
+                    const key = `${s.Artist}|||${s.Track}`;
+                    tracks[key] = (tracks[key] || 0) + 1;
+                }
             });
-
-            // Function to get "visible" version (replace invisible chars with spaces)
-            function getVisibleString(str) {
-                return str
-                    .replace(/\u00a0/g, ' ')  // non-breaking space
-                    .replace(/\u200b/g, '')   // zero-width space
-                    .replace(/\u200c/g, '')   // zero-width non-joiner
-                    .replace(/\u200d/g, '')   // zero-width joiner
-                    .replace(/\u2060/g, '')   // word joiner
-                    .replace(/\ufeff/g, '')   // BOM
-                    .replace(/\s+/g, ' ')
-                    .trim();
-            }
-
-            // Function to detect invisible characters
-            function hasInvisibleChars(str) {
-                return /[\u00a0\u200b\u200c\u200d\u2060\ufeff]/.test(str);
-            }
 
             // Group artists by visible string
             const artistGroups = new Map();
@@ -1784,6 +1980,20 @@
                     artist: artist,
                     count: albums[key],
                     hasInvisible: hasInvisibleChars(album) || hasInvisibleChars(artist)
+                });
+            });
+
+            // Group tracks by visible string (same pattern as albums)
+            const trackGroups = new Map();
+            Object.keys(tracks).forEach(key => {
+                const [artist, track] = key.split('|||');
+                const visible = `${getVisibleString(artist)}|||${getVisibleString(track)}`;
+                if (!trackGroups.has(visible)) trackGroups.set(visible, []);
+                trackGroups.get(visible).push({ 
+                    name: track,
+                    artist: artist,
+                    count: tracks[key],
+                    hasInvisible: hasInvisibleChars(track) || hasInvisibleChars(artist)
                 });
             });
 
@@ -1826,6 +2036,32 @@
                             title: `${visArtist} - ${visAlbum}`,
                             artist: items[0].artist,
                             description: `${items.length} visually identical albums with different characters`,
+                            totalCount: total,
+                            variations: items.sort((a, b) => b.count - a.count).map(i => ({
+                                name: i.name,
+                                count: i.count,
+                                artist: i.artist,
+                                hasInvisible: i.hasInvisible
+                            }))
+                        });
+                    }
+                }
+            });
+
+            // Find track issues (only where there are actual duplicates,
+            // same rule as albums - a lone track with an invisible char but
+            // no visually-identical twin isn't splitting any stats)
+            trackGroups.forEach((items, visible) => {
+                if (items.length > 1) {
+                    const total = items.reduce((sum, i) => sum + i.count, 0);
+                    if (total >= 3) {
+                        const [visArtist, visTrack] = visible.split('|||');
+                        issues.push({
+                            type: 'invisible',
+                            subtype: 'track',
+                            title: `${visArtist} - ${visTrack}`,
+                            artist: items[0].artist,
+                            description: `${items.length} visually identical tracks with different characters`,
                             totalCount: total,
                             variations: items.sort((a, b) => b.count - a.count).map(i => ({
                                 name: i.name,
@@ -1919,6 +2155,10 @@
             const artists = [...artistsSet].sort();
             
             artistFilter.innerHTML = '<option value="">All Artists</option>';
+            // Reset filter state - the rebuilt dropdown displays "All Artists",
+            // so the state must match or results get silently filtered
+            state.currentArtist = '';
+            document.getElementById('artist-filter-clear').style.display = 'none';
             artists.forEach(artist => {
                 const option = document.createElement('option');
                 option.value = artist;
@@ -1952,7 +2192,7 @@
                     const variations = issue.variations || [];
                     let activeItems = 0;
                     variations.forEach((v, i) => {
-                        const itemId = `${issueId}-item-${i}`;
+                        const itemId = getItemId(issueId, v.name);
                         if (state.dismissedIds.has(itemId)) {
                             itemLevelDismissed++;
                         } else {
@@ -1977,7 +2217,7 @@
                 if (issue.type === 'missing') {
                     const issueId = getIssueId(issue);
                     (issue.variations || []).forEach((v, i) => {
-                        const itemId = `${issueId}-item-${i}`;
+                        const itemId = getItemId(issueId, v.name);
                         if (!state.dismissedIds.has(itemId)) {
                             missingTrackCount++;
                         }
@@ -1985,7 +2225,7 @@
                 } else if (issue.type === 'compilation') {
                     const issueId = getIssueId(issue);
                     (issue.variations || []).forEach((v, i) => {
-                        const itemId = `${issueId}-item-${i}`;
+                        const itemId = getItemId(issueId, v.name);
                         if (!state.dismissedIds.has(itemId)) {
                             compilationTrackCount++;
                         }
@@ -2043,7 +2283,7 @@
                 let hasActiveItems = false;
                 if (['missing', 'compilation'].includes(issue.type)) {
                     (issue.variations || []).forEach((v, i) => {
-                        const itemId = `${issueId}-item-${i}`;
+                        const itemId = getItemId(issueId, v.name);
                         if (state.dismissedIds.has(itemId)) {
                             hasDismissedItems = true;
                         } else {
@@ -2133,7 +2373,7 @@
                 if (issue.type === 'missing' || issue.type === 'compilation') {
                     const issueId = getIssueId(issue);
                     (issue.variations || []).forEach((v, i) => {
-                        const itemId = `${issueId}-item-${i}`;
+                        const itemId = getItemId(issueId, v.name);
                         if (!state.dismissedIds.has(itemId)) {
                             displayCount++;
                         }
@@ -2168,8 +2408,8 @@
                 if (['missing', 'compilation'].includes(issue.type)) {
                     variationsToRender = variationsToRender.map((v, i) => ({
                         ...v,
-                        _itemId: `${issue._id}-item-${i}`,
-                        _isItemDismissed: state.dismissedIds.has(`${issue._id}-item-${i}`)
+                        _itemId: getItemId(issue._id, v.name),
+                        _isItemDismissed: state.dismissedIds.has(getItemId(issue._id, v.name))
                     }));
                     
                     // Filter based on view mode
@@ -2187,11 +2427,11 @@
                     let lastFmUrl = '';
                     const artistName = v.artist || issue.artist || (issue.type === 'artist' ? v.name : null);
                     
-                    if (issue.type === 'artist' || issue.type === 'invisible' && issue.subtype === 'artist') {
+                    if (issue.type === 'artist' || (issue.type === 'invisible' && issue.subtype === 'artist')) {
                         lastFmUrl = getLastFmUrl(v.name, null, null);
-                    } else if (issue.type === 'album' || issue.type === 'invisible' && issue.subtype === 'album') {
+                    } else if (issue.type === 'album' || (issue.type === 'invisible' && issue.subtype === 'album')) {
                         lastFmUrl = getLastFmUrl(artistName, v.name, null);
-                    } else if (issue.type === 'track') {
+                    } else if (issue.type === 'track' || (issue.type === 'invisible' && issue.subtype === 'track')) {
                         lastFmUrl = getLastFmUrl(artistName, null, v.name);
                     } else if (issue.type === 'missing') {
                         lastFmUrl = getLastFmUrl(issue.artist, null, v.name);
@@ -2234,9 +2474,15 @@
                         }
                     }
                     
+                    // Names containing invisible characters get rendered with
+                    // the characters exposed as labeled chips
+                    const nameHtml = v.hasInvisible
+                        ? revealInvisibleChars(v.name)
+                        : escapeHtml(v.name || '(empty)');
+                    
                     return `
                         <div class="variation-item">
-                            <span class="variation-value">${escapeHtml(v.name || '(empty)')}${invisibleWarning}${smartQuoteWarning}</span>
+                            <span class="variation-value">${nameHtml}${invisibleWarning}${smartQuoteWarning}</span>
                             ${v.count ? `<span class="variation-count">${v.count}</span>` : ''}
                             ${lastFmLinkHtml}
                             ${itemLookupHtml}
@@ -2410,7 +2656,7 @@
                                     
                                     // Update the card's scrobble count
                                     const countEl = card.querySelector('.issue-count');
-                                    if (countEl && issue.type === 'missing' || issue.type === 'compilation') {
+                                    if (countEl && (issue.type === 'missing' || issue.type === 'compilation')) {
                                         // Calculate remaining scrobbles
                                         let remainingScrobbles = 0;
                                         variationList.querySelectorAll('.variation-count').forEach(vc => {
@@ -2461,6 +2707,48 @@
             return div.innerHTML;
         }
 
+        // Render a name with invisible characters exposed as labeled chips,
+        // e.g. "The⟨NBSP⟩Beatles" - so the user can see exactly which
+        // character is hiding where instead of guessing.
+        const INVISIBLE_CHAR_LABELS = {
+            '\u00a0': 'NBSP',    // non-breaking space
+            '\u200b': 'ZWSP',    // zero-width space
+            '\u200c': 'ZWNJ',    // zero-width non-joiner
+            '\u200d': 'ZWJ',     // zero-width joiner
+            '\u2060': 'WJ',      // word joiner
+            '\ufeff': 'BOM',     // byte order mark
+            '\t':     'TAB',
+            '\u2009': 'THIN SP', // thin space
+            '\u202f': 'NNBSP',   // narrow no-break space
+            '\u2002': 'EN SP',
+            '\u2003': 'EM SP',
+            '\u2007': 'FIG SP',  // figure space
+            '\u3000': 'IDEO SP'  // ideographic space
+        };
+
+        function charChip(label, title) {
+            return `<span class="char-chip" title="${escapeHtml(title)}">${escapeHtml(label)}</span>`;
+        }
+
+        function revealInvisibleChars(str) {
+            if (!str) return '';
+            // Split out: runs of 2+ plain spaces, zero-width chars, and any
+            // whitespace that isn't a plain space - everything the
+            // hasInvisibleChars predicate can flag.
+            const parts = str.split(/((?: {2,})|[\u200b\u200c\u200d\u2060]|[^\S ])/);
+            return parts.map(part => {
+                if (!part) return '';
+                if (/^ {2,}$/.test(part)) {
+                    return charChip(`${part.length}\u00d7SP`, `${part.length} consecutive spaces`);
+                }
+                if (part.length === 1 && (INVISIBLE_CHAR_LABELS[part] || /[\u200b\u200c\u200d\u2060]/.test(part) || /[^\S ]/.test(part))) {
+                    const hex = 'U+' + part.codePointAt(0).toString(16).toUpperCase().padStart(4, '0');
+                    return charChip(INVISIBLE_CHAR_LABELS[part] || hex, hex);
+                }
+                return escapeHtml(part);
+            }).join('');
+        }
+
         // Event listeners
         document.querySelectorAll('.nav-item').forEach(item => {
             item.addEventListener('click', () => {
@@ -2471,9 +2759,23 @@
             });
         });
 
+        // Debounced so we don't rebuild up to 100 cards on every keystroke
+        const searchClearBtn = document.getElementById('search-clear');
+        let searchDebounceTimer = null;
         searchInput.addEventListener('input', (e) => {
             state.searchQuery = e.target.value;
+            searchClearBtn.style.display = e.target.value ? 'block' : 'none';
+            clearTimeout(searchDebounceTimer);
+            searchDebounceTimer = setTimeout(renderIssues, 200);
+        });
+
+        searchClearBtn.addEventListener('click', () => {
+            searchInput.value = '';
+            state.searchQuery = '';
+            searchClearBtn.style.display = 'none';
+            clearTimeout(searchDebounceTimer); // clearing is instant, no debounce
             renderIssues();
+            searchInput.focus();
         });
 
         sortSelect.addEventListener('change', (e) => {
@@ -2481,8 +2783,17 @@
             renderIssues();
         });
 
+        const artistFilterClearBtn = document.getElementById('artist-filter-clear');
         artistFilter.addEventListener('change', (e) => {
             state.currentArtist = e.target.value;
+            artistFilterClearBtn.style.display = e.target.value ? 'block' : 'none';
+            renderIssues();
+        });
+
+        artistFilterClearBtn.addEventListener('click', () => {
+            artistFilter.value = '';
+            state.currentArtist = '';
+            artistFilterClearBtn.style.display = 'none';
             renderIssues();
         });
 
@@ -2494,17 +2805,18 @@
 
         // Export functionality
         exportBtn.addEventListener('click', () => {
+            const includeDismissed = document.getElementById('export-include-dismissed').checked;
+            
             let report = 'SCROBBLE ANALYZER REPORT\n';
             report += '========================\n\n';
             report += `Generated: ${new Date().toLocaleString()}\n`;
             report += `Total Scrobbles: ${state.scrobbles.length.toLocaleString()}\n`;
-            report += `Issues Found: ${state.issues.length}\n\n`;
+            report += includeDismissed
+                ? 'Dismissed items: included (tagged [DISMISSED])\n\n'
+                : 'Dismissed items: excluded\n\n';
 
             const types = ['artist', 'album', 'track', 'missing', 'compilation', 'invisible'];
             types.forEach(type => {
-                const typeIssues = state.issues.filter(i => i.type === type);
-                if (typeIssues.length === 0) return;
-
                 const typeNames = {
                     artist: 'ARTIST VARIATIONS',
                     album: 'ALBUM VARIATIONS',
@@ -2513,17 +2825,43 @@
                     compilation: 'COMPILATIONS',
                     invisible: 'INVISIBLE CHARACTER ISSUES'
                 };
+                
+                // Build the printable entries for this type, applying dismissed rules
+                const entries = [];
+                state.issues.filter(i => i.type === type).forEach(issue => {
+                    const issueId = getIssueId(issue);
+                    const issueDismissed = state.dismissedIds.has(issueId);
+                    if (issueDismissed && !includeDismissed) return;
+                    
+                    let variations = (issue.variations || []).map(v => ({
+                        ...v,
+                        _dismissed: ['missing', 'compilation'].includes(type)
+                            ? state.dismissedIds.has(getItemId(issueId, v.name))
+                            : false
+                    }));
+                    
+                    if (!includeDismissed) {
+                        variations = variations.filter(v => !v._dismissed);
+                        // Per-item types: skip the card entirely if nothing remains
+                        if (['missing', 'compilation'].includes(type) && variations.length === 0) return;
+                    }
+                    
+                    entries.push({ issue, issueDismissed, variations });
+                });
+                
+                if (entries.length === 0) return;
 
                 report += `\n${'='.repeat(50)}\n`;
-                report += `${typeNames[type]} (${typeIssues.length})\n`;
+                report += `${typeNames[type]} (${entries.length})\n`;
                 report += `${'='.repeat(50)}\n\n`;
 
-                typeIssues.sort((a, b) => b.totalCount - a.totalCount).forEach(issue => {
-                    report += `${issue.title}\n`;
+                entries.sort((a, b) => b.issue.totalCount - a.issue.totalCount).forEach(({ issue, issueDismissed, variations }) => {
+                    report += `${issue.title}${issueDismissed ? ' [DISMISSED]' : ''}\n`;
                     report += `  ${issue.description} | ${issue.totalCount} scrobbles\n`;
-                    issue.variations.forEach(v => {
+                    variations.forEach(v => {
                         const invisibleNote = v.hasInvisible ? ' [HAS INVISIBLE CHARS]' : '';
-                        report += `    - ${v.name}${v.count ? ` (${v.count})` : ''}${invisibleNote}\n`;
+                        const dismissedNote = v._dismissed ? ' [DISMISSED]' : '';
+                        report += `    - ${v.name}${v.count ? ` (${v.count})` : ''}${invisibleNote}${dismissedNote}\n`;
                     });
                     report += '\n';
                 });
