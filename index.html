@@ -12,20 +12,20 @@
             --bg-dark: #0a0a0f;
             --bg-card: #12121a;
             --bg-hover: #1a1a25;
-            --border: #2a2a3a;
-            --text-primary: #e8e8f0;
-            --text-secondary: #8888a0;
+            --border: #232330;
+            --text-primary: #e9e5dd;   /* warm cream - silkscreen lettering on a black faceplate */
+            --text-secondary: #9a97a5;
             --text-muted: #555570;
-            --accent-orange: #ff6b35;
+            --accent-orange: #ff6b35;  /* the LED display - reserved for readouts and actions */
             --accent-orange-dim: #cc5528;
             --accent-blue: #4a9eff;
             --accent-green: #4ade80;
             --accent-yellow: #fbbf24;
             --accent-red: #ef4444;
             --accent-purple: #a78bfa;
-            --vu-green: #22c55e;
-            --vu-yellow: #eab308;
-            --vu-red: #dc2626;
+            --vu-green: #5f926f;
+            --vu-yellow: #c39a45;
+            --vu-red: #c25e4a;
         }
 
         * {
@@ -158,6 +158,7 @@
             gap: 0.75rem;
             padding: 0.75rem 1rem;
             border-radius: 6px;
+            border-left: 3px solid transparent; /* reserves space so .active doesn't shift layout */
             cursor: pointer;
             transition: all 0.15s ease;
             margin-bottom: 0.25rem;
@@ -168,8 +169,9 @@
         }
 
         .nav-item.active {
-            background: var(--accent-orange);
-            color: white;
+            background: rgba(255, 107, 53, 0.10);
+            border-left-color: var(--accent-orange);
+            color: var(--accent-orange);
         }
 
         .nav-item .count {
@@ -180,7 +182,7 @@
         }
 
         .nav-item.active .count {
-            color: rgba(255,255,255,0.8);
+            color: var(--accent-orange);
         }
 
         .nav-icon {
@@ -359,9 +361,9 @@
         }
 
         .filter-btn.active {
-            background: var(--accent-orange);
+            background: rgba(255, 107, 53, 0.12);
             border-color: var(--accent-orange);
-            color: white;
+            color: var(--accent-orange);
         }
 
         /* Issue cards */
@@ -374,19 +376,19 @@
         .issue-card {
             background: var(--bg-card);
             border: 1px solid var(--border);
-            border-radius: 8px;
+            border-radius: 10px;
             padding: 1.25rem;
             cursor: pointer;
             transition: all 0.15s ease;
         }
 
         .issue-card:hover {
-            border-color: var(--accent-orange);
+            border-color: #3d3d52;
             transform: translateX(4px);
         }
 
         .issue-card.expanded {
-            border-color: var(--accent-orange);
+            border-color: rgba(255, 107, 53, 0.45);
         }
 
         .issue-header {
@@ -609,7 +611,7 @@
             font-family: 'JetBrains Mono', monospace;
             font-size: 1.1rem;
             font-weight: 600;
-            color: var(--accent-orange);
+            color: var(--text-primary);
         }
 
         .issue-count-label {
@@ -641,7 +643,7 @@
             gap: 1rem;
             padding: 0.75rem 1rem;
             background: var(--bg-dark);
-            border-radius: 6px;
+            border-radius: 8px;
             font-family: 'JetBrains Mono', monospace;
             font-size: 0.85rem;
         }
@@ -652,7 +654,7 @@
         }
 
         .variation-count {
-            color: var(--accent-orange);
+            color: var(--text-primary);
             font-weight: 600;
         }
 
@@ -784,7 +786,7 @@
             gap: 1.5rem;
             padding: 1rem 1.5rem;
             background: var(--bg-card);
-            border-radius: 8px;
+            border-radius: 10px;
             margin-bottom: 1.5rem;
         }
 
@@ -840,8 +842,8 @@
         }
 
         .tab.active {
-            background: var(--accent-orange);
-            color: white;
+            background: rgba(255, 107, 53, 0.12);
+            color: var(--accent-orange);
         }
 
         /* Export button */
@@ -864,16 +866,6 @@
         .export-btn:hover {
             background: var(--accent-orange-dim);
         }
-
-        /* Badge */
-        .badge {
-            padding: 0.2rem 0.5rem;
-            background: var(--accent-orange);
-            border-radius: 10px;
-            font-size: 0.7rem;
-            font-weight: 600;
-            color: white;
-        }
     </style>
 </head>
 <body>
@@ -882,7 +874,7 @@
             <div class="logo-icon">📊</div>
             <div class="logo-text">
                 <h1>Scrobble Analyzer</h1>
-                <div class="tagline">Find & Fix Your Last.fm Data <span style="color: var(--accent-orange); margin-left: 0.5rem;">v0.5.1</span></div>
+                <div class="tagline">Find & Fix Your Last.fm Data <span style="color: var(--accent-orange); margin-left: 0.5rem;">v0.6.0</span></div>
             </div>
         </div>
         <div class="header-stats" id="header-stats" style="display: none;">
@@ -987,12 +979,14 @@
                         <li>Drag the file to the upload box in the sidebar, or click the box to browse</li>
                     </ol>
                     
-                    <h3 style="font-size: 1rem; color: var(--accent-orange); margin-bottom: 1rem;">🆕 What's New in v0.5.1</h3>
+                    <h3 style="font-size: 1rem; color: var(--accent-orange); margin-bottom: 1rem;">🆕 What's New in v0.6.0</h3>
                     <ul style="color: var(--text-secondary); font-size: 0.9rem; padding-left: 1.25rem; margin-bottom: 1.5rem;">
-                        <li style="margin-bottom: 0.5rem;"><strong>Google Search lookup</strong> - Research buttons for ambiguous variations</li>
-                        <li style="margin-bottom: 0.5rem;"><strong>Improved counts</strong> - Tracks Missing Albums & Compilations now count tracks</li>
-                        <li style="margin-bottom: 0.5rem;"><strong>Smoother dismissals</strong> - No more page jumps when dismissing items</li>
-                        <li style="margin-bottom: 0.5rem;"><strong>Compilation track counts</strong> - Now shows scrobble count per track</li>
+                        <li style="margin-bottom: 0.5rem;"><strong>Dismissals survive new exports</strong> - Now tied to your Last.fm username instead of the uploaded file. Existing dismissals migrate automatically.</li>
+                        <li style="margin-bottom: 0.5rem;"><strong>Character reveal</strong> - Invisible characters and stray spaces now show as labeled chips, so you can see exactly what's different</li>
+                        <li style="margin-bottom: 0.5rem;"><strong>Track-level invisible detection</strong> - Tracks now get the same invisible-character scan as artists and albums</li>
+                        <li style="margin-bottom: 0.5rem;"><strong>One issue, one category</strong> - Variations that differ only by invisible characters now appear only under Invisible Characters</li>
+                        <li style="margin-bottom: 0.5rem;"><strong>Export options</strong> - Choose whether reports include dismissed items</li>
+                        <li style="margin-bottom: 0.5rem;"><strong>Fixes & polish</strong> - Titles with quotes parse correctly, "Gold" compilations are detected again, plus search/filter clear buttons and a calmer look</li>
                     </ul>
                     
                     <h3 style="font-size: 1rem; color: var(--accent-orange); margin-bottom: 1rem;">💬 Feedback & Support</h3>
