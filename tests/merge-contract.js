@@ -87,6 +87,16 @@ const MUST_MERGE = [
     ['track',  'Midtown - 2023 Remaster', 'Midtown',         'dangling separator (disc. #7 Spotify shape)'],
     ['track',  'Always Then - 2017 Version', 'Always Then',  'same, with "version"'],
     ['album',  'Aja - 1999 Remaster', 'Aja',                 'same rule on the album normalizer'],
+
+    // --- v0.6.1 item 2: featured-artist parentheticals ---
+    ['track',  'Young Love [ft. Laura Marling]', 'Young Love (feat. Laura Marling)',
+        'issue #17 - ft. and feat. both stripped, so container type stops mattering'],
+    ['track',  'A Real Hero (feat. Electric Youth)', 'A Real Hero',
+        'discussion #4 - featured artist in the title'],
+    ['track',  'Cruel Intentions (featuring Beth Ditto)', 'Cruel Intentions',
+        '"featuring" spelled out - feat(uring)? is one token'],
+    ['track',  'Machina (feat. Mariana Saldaña)', 'Machina (ft. Mariana Saldaña)',
+        'the two abbreviations agree with each other'],
 ];
 
 const MUST_NOT_MERGE = [
@@ -107,6 +117,13 @@ const MUST_NOT_MERGE = [
     ['track',  '1991',              '1983',              'numeric titles both became "" and wrongly merged'],
     ['track',  '80186',             '80286',             'trailing \\d{4} matched inside a 5-digit title'],
     ['track',  '555-5555',          '555-1234',          'Lorn - phone-number titles must stay distinct'],
+
+    // --- v0.6.1 item 2: "ft" must not match inside ordinary words. These are
+    //     real titles from a real library that a boundary-less \bft\b eats. ---
+    ['track',  'Quattro (World Drifts In)',            'Quattro',            '"ft" inside "Drifts"'],
+    ['track',  'Debase (Soft Palate)',                 'Debase',             '"ft" inside "Soft"'],
+    ['track',  'Winter (What We Never Were After All)','Winter',             '"ft" inside "After"'],
+    ['track',  'Mars and the Artist (after Cy Twombly)','Mars and the Artist','"ft" inside "after"'],
 ];
 
 // Assertions about a single key, not a pair.
@@ -138,8 +155,6 @@ const KNOWN_MISS = [
         'issue #14 - diacritics not folded yet (v0.6.1 item 4)'],
     ['track',  '9th & Hennepin', '9th and Hennepin', true,
         'discussion #10 - no ampersand rule on tracks yet (v0.6.1 item 5)'],
-    ['track',  'Young Love [ft. Laura Marling]', 'Young Love (feat. Laura Marling)', true,
-        'issue #17 - feat/ft not in the track keyword list yet (v0.6.1 item 2)'],
     ['track',  'Ramalama [Bang Bang]', 'Ramalama (Bang Bang)', true,
         'issue #17 - bracket/paren containers not canonicalised yet (v0.6.1 item 7)'],
     ['track',  'Someone´s in the Wolf', "Someone's in the Wolf", true,

@@ -1659,7 +1659,12 @@
             norm = norm.replace(/[\u2018\u2019]/g, "'");  // Smart single quotes → ASCII
             norm = norm.replace(/[\u201C\u201D]/g, '"');  // Smart double quotes → ASCII
             // Remove common suffixes
-            norm = norm.replace(/\s*[\(\[].*?(remaster|live|remix|edit|version|mix|demo|acoustic|mono|stereo|single|radio|extended|instrumental|reprise|take \d+|alternate|alt\.|bonus).*?[\)\]]/gi, '');
+            // The \b around feat/ft are load-bearing: without them "ft" matches
+            // inside ordinary words and strips real titles - "Quattro (World
+            // Drifts In)", "Debase (Soft Palate)", "Winter (What We Never Were
+            // After All)" all lose their parenthetical. "feat(uring)?" is one
+            // token so "(Featuring Beth Ditto)" is caught too.
+            norm = norm.replace(/\s*[\(\[].*?(remaster|live|remix|edit|version|mix|demo|acoustic|mono|stereo|single|radio|extended|instrumental|reprise|take \d+|alternate|alt\.|bonus|\bfeat(?:uring)?\b|\bft\b).*?[\)\]]/gi, '');
             // A year may sit between the dash and the keyword ("Midtown - 2023
             // Remaster" - the common Spotify shape). Without the optional year
             // group the rule below strips "2023 Remaster" and orphans the dash,
