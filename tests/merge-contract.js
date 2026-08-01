@@ -113,6 +113,12 @@ const MUST_MERGE = [
     ['track',  'Skin & Bones',   'Skin And Bones',   'same, mixed case'],
     ['album',  'Young & Old',    'Young and Old',    'the rule reaches albums too'],
     ['album',  'X&Y',            'X & Y',            'no spaces around the ampersand'],
+
+    // --- v0.6.1 item 6: apostrophe-like characters (issue #12) ---
+    ['track',  'Someone´s in the Wolf',  "Someone's in the Wolf",  'U+00B4 acute, the reported case'],
+    ['track',  'She Don`t Use Jelly',    "She Don't Use Jelly",    'U+0060 backtick'],
+    ['track',  'Love Ainʼt No Stranger', "Love Ain't No Stranger", 'U+02BC modifier-letter apostrophe'],
+    ['track',  'Goin’ Out West',         "Goin' Out West",         'U+2019, unchanged by this item'],
 ];
 
 const MUST_NOT_MERGE = [
@@ -169,8 +175,6 @@ const KNOWN_MISS = [
         'issue #14 - diacritics not folded yet (v0.6.1 item 4)'],
     ['track',  'Ramalama [Bang Bang]', 'Ramalama (Bang Bang)', true,
         'issue #17 - bracket/paren containers not canonicalised yet (v0.6.1 item 7)'],
-    ['track',  'Someone´s in the Wolf', "Someone's in the Wolf", true,
-        'issue #12 - U+00B4 not in the apostrophe class yet (v0.6.1 item 6)'],
 
     // --- no viable detector, not scoped to any release (DESIGN.md 3.7) ---
     ['track',  'Cartoons and Macramé Wounds', 'Cartoons and Macreme Wounds', true,

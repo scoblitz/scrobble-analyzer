@@ -1627,7 +1627,11 @@
             if (!artist) return '';
             let norm = artist.toLowerCase().trim();
             norm = norm.replace(/\u00a0/g, ' ');  // Replace non-breaking spaces
-            norm = norm.replace(/[\u2018\u2019]/g, "'");  // Smart single quotes → ASCII
+            // Apostrophe-like characters → ASCII. Beyond the smart quotes this
+            // covers U+00B4 acute, U+0060 backtick and U+02BC modifier-letter
+            // apostrophe. File-sharing-era tags used all three as apostrophes,
+            // so Last.fm split them onto separate pages (issue #12).
+            norm = norm.replace(/[\u2018\u2019\u00B4\u0060\u02BC]/g, "'");
             norm = norm.replace(/[\u201C\u201D]/g, '"');  // Smart double quotes → ASCII
             if (norm.startsWith('the ')) norm = norm.slice(4);
             norm = norm.replace(/\s*&\s*/g, ' and ');
@@ -1646,7 +1650,11 @@
             if (!album) return '';
             let norm = album.toLowerCase();
             norm = norm.replace(/\u00a0/g, ' ');  // Replace non-breaking spaces
-            norm = norm.replace(/[\u2018\u2019]/g, "'");  // Smart single quotes → ASCII
+            // Apostrophe-like characters → ASCII. Beyond the smart quotes this
+            // covers U+00B4 acute, U+0060 backtick and U+02BC modifier-letter
+            // apostrophe. File-sharing-era tags used all three as apostrophes,
+            // so Last.fm split them onto separate pages (issue #12).
+            norm = norm.replace(/[\u2018\u2019\u00B4\u0060\u02BC]/g, "'");
             norm = norm.replace(/[\u201C\u201D]/g, '"');  // Smart double quotes → ASCII
             // Remove remaster/deluxe/edition suffixes
             norm = norm.replace(/\s*[\(\[].*?(remaster|deluxe|edition|bonus|expanded|anniversary|version|disc \d).*?[\)\]]/gi, '');
@@ -1666,7 +1674,11 @@
             if (!track) return '';
             let norm = track.toLowerCase();
             norm = norm.replace(/\u00a0/g, ' ');  // Replace non-breaking spaces
-            norm = norm.replace(/[\u2018\u2019]/g, "'");  // Smart single quotes → ASCII
+            // Apostrophe-like characters → ASCII. Beyond the smart quotes this
+            // covers U+00B4 acute, U+0060 backtick and U+02BC modifier-letter
+            // apostrophe. File-sharing-era tags used all three as apostrophes,
+            // so Last.fm split them onto separate pages (issue #12).
+            norm = norm.replace(/[\u2018\u2019\u00B4\u0060\u02BC]/g, "'");
             norm = norm.replace(/[\u201C\u201D]/g, '"');  // Smart double quotes → ASCII
             // Remove common suffixes
             // The \b around feat/ft are load-bearing: without them "ft" matches
@@ -1714,7 +1726,7 @@
                 const norm = normalizeArtist(artist);
 
                 if (!normalized.has(norm)) normalized.set(norm, []);
-                normalized.get(norm).push({ name: artist, count: artistCounts[artist], hasSmartQuotes: /[\u2018\u2019\u201C\u201D]/.test(artist), hasInvisible: hasInvisibleChars(artist) });
+                normalized.get(norm).push({ name: artist, count: artistCounts[artist], hasSmartQuotes: /[\u2018\u2019\u201C\u201D\u00B4\u0060\u02BC]/.test(artist), hasInvisible: hasInvisibleChars(artist) });
             });
 
             const issues = [];
@@ -1770,7 +1782,7 @@
                     name: album, 
                     count: albumCounts[key],
                     artist: artist,
-                    hasSmartQuotes: /[\u2018\u2019\u201C\u201D]/.test(album),
+                    hasSmartQuotes: /[\u2018\u2019\u201C\u201D\u00B4\u0060\u02BC]/.test(album),
                     hasInvisible: hasInvisibleChars(album)
                 });
             });
@@ -1957,7 +1969,7 @@
                     name: track, 
                     count: trackCounts[key],
                     artist: artist,
-                    hasSmartQuotes: /[\u2018\u2019\u201C\u201D]/.test(track),
+                    hasSmartQuotes: /[\u2018\u2019\u201C\u201D\u00B4\u0060\u02BC]/.test(track),
                     hasInvisible: hasInvisibleChars(track)
                 });
             });
