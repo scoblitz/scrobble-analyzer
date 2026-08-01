@@ -1652,6 +1652,9 @@
             norm = norm.replace(/\s*[\(\[].*?(remaster|deluxe|edition|bonus|expanded|anniversary|version|disc \d).*?[\)\]]/gi, '');
             // Optional year, as in normalizeTrack ("Aja - 1999 Remaster")
             norm = norm.replace(/\s*-\s*(\d{4}\s+)?(remaster|deluxe|expanded).*$/i, '');
+            // Same &/and unification the artist normalizer has always had. Its
+            // absence here (and on tracks) is why discussion #10 went unflagged.
+            norm = norm.replace(/\s*&\s*/g, ' and ');
             // Punctuation to a space, never deleted - see normalizeArtist.
             norm = norm.replace(/[.,]/g, ' ');
             norm = norm.replace(/\s+/g, ' ').trim();
@@ -1682,6 +1685,10 @@
             // ("1991" and "1983" both became "" and wrongly merged; "19-2000"
             // became "19-").
             norm = norm.replace(/\s*\d{4}\s*(remaster|remix|version)$/i, '');
+            // Same &/and unification the artist normalizer has always had. Its
+            // absence here is the whole of discussion #10: "9th & Hennepin" and
+            // "9th and Hennepin" both existed and never grouped.
+            norm = norm.replace(/\s*&\s*/g, ' and ');
             // Punctuation to a space, never deleted - see normalizeArtist. This
             // is the normalizer the 3.15.20 guard is aimed at.
             norm = norm.replace(/[.,]/g, ' ');

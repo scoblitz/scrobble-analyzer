@@ -107,6 +107,12 @@ const MUST_MERGE = [
     ['track',  'You, Appearing',      'You Appearing',      'comma to a space, not to nothing'],
     ['album',  'Endtroducing.....',   'Endtroducing',       'ellipsis run'],
     ['album',  'Attack, Decay, Sustain, Release', 'Attack Decay Sustain Release', 'serial commas'],
+
+    // --- v0.6.1 item 5: &/and on tracks and albums, as artists always had ---
+    ['track',  '9th & Hennepin', '9th and Hennepin', 'discussion #10, the reported case'],
+    ['track',  'Skin & Bones',   'Skin And Bones',   'same, mixed case'],
+    ['album',  'Young & Old',    'Young and Old',    'the rule reaches albums too'],
+    ['album',  'X&Y',            'X & Y',            'no spaces around the ampersand'],
 ];
 
 const MUST_NOT_MERGE = [
@@ -161,8 +167,6 @@ const KNOWN_MISS = [
     // --- scoped for v0.6.1, expected to flip as items land ---
     ['artist', 'Motörhead', 'Motorhead', true,
         'issue #14 - diacritics not folded yet (v0.6.1 item 4)'],
-    ['track',  '9th & Hennepin', '9th and Hennepin', true,
-        'discussion #10 - no ampersand rule on tracks yet (v0.6.1 item 5)'],
     ['track',  'Ramalama [Bang Bang]', 'Ramalama (Bang Bang)', true,
         'issue #17 - bracket/paren containers not canonicalised yet (v0.6.1 item 7)'],
     ['track',  'Someone´s in the Wolf', "Someone's in the Wolf", true,
