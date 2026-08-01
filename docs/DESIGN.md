@@ -169,7 +169,7 @@ Theme: "the normalizer catches what you reported."
 
 | # | Change | Artist | Track | Closes |
 |---|---|:---:|:---:|---|
-| 1 | **Merge contract** test file | — | — | build first |
+| 1 | **Merge contract** — hoist normalizers, then test file | — | — | build first |
 | 2 | `feat`/`ft` added to track suffix keywords | — | **+59** | #17, part of disc. #4 |
 | 3 | Punctuation `.` `,` → **space**, all three normalizers | +3 | **+54** | #11 |
 | 4 | Diacritic folding (NFD), all three | **+8** | +24 | #14 class |
@@ -210,6 +210,29 @@ const MUST_NOT_MERGE = [
 ```
 
 Run it with `node`; it normalizes each pair and asserts the keys match (or don't). That's the whole thing. Its value is that the MUST-NOT list makes overmerge regressions *loud* — the failure mode that actually corrupts a user's triage — and that every future normalizer proposal has a concrete place to add its cases before any code changes. The throwaway harness used to produce the table above is a working prototype of it (§2).
+
+**What it is not.** It is a developer-side test, not a rule set the application applies, and it is **never exposed to users**. It does not ship, does not run in the browser, and has no effect on the single-file artifact — users still download one HTML file. `merge-contract.js` simply sits beside it in the repo and is run from a terminal. It cannot "prevent" a change at runtime; it fails loudly at development time when an edit breaks a case previously judged to matter. The normalizers in `index.html` remain the only things doing real work.
+
+**It asserts grouping, not correctness** — an important distinction given §1.3. `MUST_MERGE` on `['Albert Hammond, Jr.', 'Albert Hammond Jr']` claims only that the two belong on the same card; it says nothing about which spelling is right, and the tool still leaves that to the user. `MUST_NOT_MERGE` is the mirror image: Elvis Costello and Elvis Costello & The Attractions stay on separate cards because they are different credits, not because either is wrong.
+
+**How rules are added or updated:** by editing the file, in the same commit as the change that motivated it. The workflow is where the value lives:
+
+1. A miss is reported (say #11). Add the pair to `MUST_MERGE`, with the issue number in a comment.
+2. Run it — **watch it fail.** This step is what proves the report was actually reproduced.
+3. Change the normalizer.
+4. Run again: the new case passes and nothing in `MUST_NOT_MERGE` broke.
+5. Commit contract and normalizer together.
+
+`MUST_NOT_MERGE` grows whenever an overmerge risk is discovered — `Song for the Dead` / `Song for the Deaf` earned its entry from the analysis in §3.7. The `KNOWN_MISS` class holds cases deliberately not fixed yet: recorded and visible, but not failing the run.
+
+**Prerequisite — the normalizers are not currently reachable from Node.** All three live inline in `index.html`:
+
+- **Artist** has no function at all; the logic is inline inside a `forEach` (`index.html:1624-1634`).
+- **Album** (`normalizeAlbum:1680`) and **track** (`normalizeTrack:1880`) are named but nested *inside* `findAlbumVariations` / `findTrackVariations`, so nothing outside can call them.
+
+So item 1 is really two steps: **hoist all three to top-level named functions** (a pure refactor, no behaviour change), then write the contract against them. The contract reads `index.html`, extracts those function bodies and evals them — mildly ugly, but it keeps one source of truth and adds no build step. Copy-pasting the logic into the test file is the tempting shortcut and must be avoided: the copy drifts from the original silently, and you end up testing code you are not shipping. Extracting the normalizers to a separate `.js` loaded via `<script src>` would be cleaner and is what most projects would do, but it breaks §1.2 and is therefore out.
+
+Sequencing consequence: do the hoist **first**. Items 2–7 all modify the same three functions, so hoisting afterwards means reworking every one of them.
 
 #### 4.1.2 Confusable-character chip — a dependency of item 4, not a nicety
 
