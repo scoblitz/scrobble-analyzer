@@ -45,7 +45,8 @@ const HTML = path.join(__dirname, '..', 'index.html');
 // --- load the real normalizers straight out of index.html --------------------
 function loadNormalizers() {
     const html = fs.readFileSync(HTML, 'utf8');
-    const names = ['normalizeArtist', 'normalizeAlbum', 'normalizeTrack'];
+    const names = ['normalizeArtist', 'normalizeAlbum', 'normalizeTrack',
+                   'baseProfile', 'confusableMarkChars'];
     const sources = names.map(name => {
         const open = `        function ${name}(`;
         const start = html.indexOf(open);
@@ -66,7 +67,7 @@ function loadNormalizers() {
     return factory();
 }
 
-const { normalizeArtist, normalizeAlbum, normalizeTrack } = loadNormalizers();
+const { normalizeArtist, normalizeAlbum, normalizeTrack, confusableMarkChars } = loadNormalizers();
 
 const FN = { artist: normalizeArtist, album: normalizeAlbum, track: normalizeTrack };
 
@@ -124,6 +125,13 @@ const MUST_MERGE = [
     ['track',  'Ramalama [Bang Bang]', 'Ramalama (Bang Bang)', 'issue #17, the general class'],
     ['track',  'Track [Interlude]',    'Track (Interlude)',    'no keyword inside, so only the container differs (DESIGN.md 3.6)'],
     ['album',  'Noise [Reprise]',      'Noise (Reprise)',       'the rule reaches albums too'],
+
+    // --- v0.6.1 item 4: diacritic folding ---
+    ['artist', 'Motörhead',     'Motorhead',     'issue #14, the reported case'],
+    ['artist', 'Subcarpați',    'Subcarpaţi',    'comma-below vs cedilla, U+021B vs U+0163'],
+    ['artist', 'Ștefan Hrușcă', 'Stefan Hrusca', 'three-way split in the wild, 61/16/15 plays'],
+    ['track',  'Naïve',         'Naive',         'diaeresis'],
+    ['album',  'Oxygène',       'Oxygene',       'grave accent, album normalizer'],
 ];
 
 const MUST_NOT_MERGE = [
@@ -169,6 +177,31 @@ const KEY_MUST_NOT_BE = [
     ['album', '3.15.20', '31520', 'same guard on the album normalizer'],
 ];
 
+// Which rows get a confusable-diacritic chip (DESIGN.md 1.9 / 4.1.2).
+//
+// Folding diacritics groups names the eye may not be able to separate. The chip
+// says what differs - but only where the difference is genuinely invisible. The
+// test is perceptual, not by character class: mark-vs-different-mark gets a
+// chip, mark-vs-bare-letter does not, because you can already see that one.
+//
+// [names in the group, expected chip? per name, why]
+const CHIP_EXPECT = [
+    [['Subcarpați', 'Subcarpaţi'], [true, true],
+        'comma-below vs cedilla - the same picture at body-text size'],
+    [['Zdob şi Zdub', 'Zdob și Zdub'], [true, true],
+        'same, mid-string'],
+    [['Ștefan Hrușcă', 'Stefan Hrusca', 'Ştefan Hruşcă'], [true, false, true],
+        'three-way: the two marked rows are confusable, the bare one is not'],
+    [['Motörhead', 'Motorhead'], [false, false],
+        'obvious at a glance, and the umlaut is the actual name - no chip'],
+    [['Șuie Paparude', 'Suie Paparude'], [false, false],
+        'mark vs bare letter is visible'],
+    [['Naive', 'Naïve'], [false, false],
+        'same, and a reminder that character class is not the criterion'],
+    [['Song for the Dead', 'Song for the Deaf'], [false, false],
+        'different letters entirely, no marks involved'],
+];
+
 // Cases that behave wrongly today and have deliberately not been fixed.
 // Reported, visible, never fatal. The 4th field is what CORRECT behaviour would
 // be, so this list covers both directions: pairs that should merge and don't,
@@ -176,8 +209,6 @@ const KEY_MUST_NOT_BE = [
 // runner says so - promote it to MUST_MERGE or MUST_NOT_MERGE.
 const KNOWN_MISS = [
     // --- scoped for v0.6.1, expected to flip as items land ---
-    ['artist', 'Motörhead', 'Motorhead', true,
-        'issue #14 - diacritics not folded yet (v0.6.1 item 4)'],
 
     // --- no viable detector, not scoped to any release (DESIGN.md 3.7) ---
     ['track',  'Cartoons and Macramé Wounds', 'Cartoons and Macreme Wounds', true,
@@ -216,6 +247,14 @@ KEY_MUST_NOT_BE.forEach(([field, input, forbidden, why]) => {
     else passed++;
 });
 
+const chipFailures = [];
+CHIP_EXPECT.forEach(([names, expected, why]) => {
+    const got = confusableMarkChars(names).map(chips => chips.length > 0);
+    const ok = got.length === expected.length && got.every((g, i) => g === expected[i]);
+    if (ok) passed++;
+    else chipFailures.push({ names, expected, got, why });
+});
+
 // KNOWN_MISS is reported, never fatal.
 const fixed = [];
 KNOWN_MISS.forEach(([f, a, b, shouldMatch, why]) => {
@@ -224,7 +263,7 @@ KNOWN_MISS.forEach(([f, a, b, shouldMatch, why]) => {
 
 console.log('\nmerge contract  ' + DIM + '(normalizers read live from index.html)' + OFF + '\n');
 
-const totalFailures = failures.length + keyFailures.length;
+const totalFailures = failures.length + keyFailures.length + chipFailures.length;
 
 if (totalFailures === 0) {
     console.log(`  ${GREEN}PASS${OFF}  ${passed} assertions`);
@@ -240,6 +279,16 @@ if (totalFailures === 0) {
     keyFailures.forEach(f => {
         console.log(`  ${RED}x${OFF} [${f.field}] key guard violated`);
         console.log(`      ${JSON.stringify(f.input)}  ->  ${JSON.stringify(f.got)}  ${RED}(forbidden)${OFF}`);
+        console.log(`      ${DIM}${f.why}${OFF}\n`);
+    });
+    chipFailures.forEach(f => {
+        console.log(`  ${RED}x${OFF} [chip] wrong rows chipped`);
+        f.names.forEach((n, i) => {
+            const want = f.expected[i] ? 'chip' : 'no chip';
+            const got = f.got[i] ? 'chip' : 'no chip';
+            const mark = want === got ? ' ' : RED + '!' + OFF;
+            console.log(`      ${mark} ${JSON.stringify(n)}  want ${want}, got ${got}`);
+        });
         console.log(`      ${DIM}${f.why}${OFF}\n`);
     });
 }

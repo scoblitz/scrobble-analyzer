@@ -339,6 +339,14 @@
             letter-spacing: 0.03em;
             cursor: help;
         }
+        /* Diacritic chips say "here is what differs", not "this is wrong" - the
+           red reveal chip would read as an accusation against a spelling that is
+           very often the correct one. Blue keeps it informational. */
+        .char-chip.diacritic {
+            background: rgba(74, 158, 255, 0.2);
+            color: var(--accent-blue);
+            font-weight: 500;
+        }
 
         .filter-btn {
             padding: 0.75rem 1.25rem;
@@ -1614,6 +1622,53 @@
             return new Set(names.map(getVisibleString)).size === 1;
         }
 
+        // --- Confusable diacritics -------------------------------------------
+        // Folding diacritics (see the normalizers) groups names the user may not
+        // be able to tell apart: "Subcarpati" spelled with comma-below vs cedilla
+        // is the same picture at body-text size. Those rows need a chip saying
+        // what differs. "Motorhead" with and without the umlaut does not - the
+        // eye already does that work, and the umlaut is the band's actual name,
+        // so flagging it would imply the ASCII form is the fixed one. The
+        // criterion is perceptual, not by character class - docs/DESIGN.md 1.9.
+
+        // Split a string into one entry per base character, carrying whatever
+        // combining marks follow it.
+        function baseProfile(str) {
+            const out = [];
+            for (const ch of String(str || '').normalize('NFD')) {
+                if (/[\u0300-\u036f]/.test(ch)) {
+                    if (out.length) out[out.length - 1].marks += ch;
+                } else {
+                    out.push({ base: ch, marks: '' });
+                }
+            }
+            return out;
+        }
+
+        // For each name in a variation group, which of its characters differ from
+        // a sibling by carrying a DIFFERENT mark rather than by having one at all.
+        // Returns an array of arrays of composed characters, parallel to `names`.
+        // Only compares members whose base letters line up; anything differing in
+        // more than its marks is visibly different already.
+        function confusableMarkChars(names) {
+            const profiles = names.map(baseProfile);
+            const found = names.map(() => new Set());
+            for (let i = 0; i < names.length; i++) {
+                for (let j = i + 1; j < names.length; j++) {
+                    const a = profiles[i], b = profiles[j];
+                    if (a.length !== b.length) continue;
+                    for (let k = 0; k < a.length; k++) {
+                        if (a[k].base !== b[k].base) continue;    // different letter: visible
+                        if (!a[k].marks || !b[k].marks) continue; // one is bare: visible
+                        if (a[k].marks === b[k].marks) continue;  // identical: nothing to say
+                        found[i].add((a[k].base + a[k].marks).normalize('NFC'));
+                        found[j].add((b[k].base + b[k].marks).normalize('NFC'));
+                    }
+                }
+            }
+            return found.map(set => [...set]);
+        }
+
         // --- Normalization keys ----------------------------------------------
         // These three reduce a raw name to the key its variation group is
         // clustered under. They are the highest-risk code in the file: a change
@@ -1639,6 +1694,17 @@
             // so Last.fm split them onto separate pages (issue #12).
             norm = norm.replace(/[\u2018\u2019\u00B4\u0060\u02BC]/g, "'");
             norm = norm.replace(/[\u201C\u201D]/g, '"');  // Smart double quotes → ASCII
+            // Fold diacritics for GROUPING only - the original spelling is
+            // what gets displayed, and the user still picks the winner.
+            // NFD splits a letter into base + combining mark, then the marks
+            // are dropped. This is what lets Motorhead meet Motorhead, and
+            // more importantly what reconciles Romanian comma-below with
+            // cedilla (U+0219 vs U+015F), which look identical on screen.
+            // NFD is canonical-only on purpose: NFKD would also rewrite
+            // ligatures and superscripts, which is a different decision.
+            // Known limit - letters with a stroke rather than a mark do not
+            // decompose, so o-slash, l-stroke and d-stroke are left alone.
+            norm = norm.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
             if (norm.startsWith('the ')) norm = norm.slice(4);
             norm = norm.replace(/\s*&\s*/g, ' and ');
             // Punctuation maps to a SPACE, never to nothing. Deleting it would
@@ -1669,6 +1735,17 @@
             // so running before them changes nothing for them.
             norm = norm.replace(/\[/g, '(').replace(/\]/g, ')');
             norm = norm.replace(/[\u201C\u201D]/g, '"');  // Smart double quotes → ASCII
+            // Fold diacritics for GROUPING only - the original spelling is
+            // what gets displayed, and the user still picks the winner.
+            // NFD splits a letter into base + combining mark, then the marks
+            // are dropped. This is what lets Motorhead meet Motorhead, and
+            // more importantly what reconciles Romanian comma-below with
+            // cedilla (U+0219 vs U+015F), which look identical on screen.
+            // NFD is canonical-only on purpose: NFKD would also rewrite
+            // ligatures and superscripts, which is a different decision.
+            // Known limit - letters with a stroke rather than a mark do not
+            // decompose, so o-slash, l-stroke and d-stroke are left alone.
+            norm = norm.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
             // Remove remaster/deluxe/edition suffixes
             norm = norm.replace(/\s*[\(\[].*?(remaster|deluxe|edition|bonus|expanded|anniversary|version|disc \d).*?[\)\]]/gi, '');
             // Optional year, as in normalizeTrack ("Aja - 1999 Remaster")
@@ -1700,6 +1777,17 @@
             // so running before them changes nothing for them.
             norm = norm.replace(/\[/g, '(').replace(/\]/g, ')');
             norm = norm.replace(/[\u201C\u201D]/g, '"');  // Smart double quotes → ASCII
+            // Fold diacritics for GROUPING only - the original spelling is
+            // what gets displayed, and the user still picks the winner.
+            // NFD splits a letter into base + combining mark, then the marks
+            // are dropped. This is what lets Motorhead meet Motorhead, and
+            // more importantly what reconciles Romanian comma-below with
+            // cedilla (U+0219 vs U+015F), which look identical on screen.
+            // NFD is canonical-only on purpose: NFKD would also rewrite
+            // ligatures and superscripts, which is a different decision.
+            // Known limit - letters with a stroke rather than a mark do not
+            // decompose, so o-slash, l-stroke and d-stroke are left alone.
+            norm = norm.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
             // Remove common suffixes
             // The \b around feat/ft are load-bearing: without them "ft" matches
             // inside ordinary words and strips real titles - "Quattro (World
@@ -2509,6 +2597,10 @@
                     }
                 }
                 
+                // Which rows differ from a sibling only by which diacritic
+                // they carry - the ones the eye cannot separate (1.9).
+                const confusableByRow = confusableMarkChars(variationsToRender.map(v => v.name || ''));
+
                 const variationsHtml = variationsToRender.map((v, i) => {
                     // Determine the Last.fm URL based on issue type
                     let lastFmUrl = '';
@@ -2537,6 +2629,14 @@
                     const smartQuoteWarning = v.hasSmartQuotes 
                         ? '<span class="smart-quote-warning">⚠️ smart quote</span>' 
                         : '';
+
+                    // Informational, not a warning: this row is here because its
+                    // diacritic differs from a sibling's in a way you cannot see.
+                    // No warning glyph - see 1.9.
+                    const confusableHtml = (confusableByRow[i] || []).map(ch => {
+                        const hex = 'U+' + ch.codePointAt(0).toString(16).toUpperCase().padStart(4, '0');
+                        return `<span class="char-chip diacritic" title="${escapeHtml(ch + ' ' + hex)}">${escapeHtml(ch)} ${hex}</span>`;
+                    }).join('');
                     
                     // Per-item lookup button for missing albums and compilations
                     let itemLookupHtml = '';
@@ -2569,7 +2669,7 @@
                     
                     return `
                         <div class="variation-item">
-                            <span class="variation-value">${nameHtml}${invisibleWarning}${smartQuoteWarning}</span>
+                            <span class="variation-value">${nameHtml}${confusableHtml}${invisibleWarning}${smartQuoteWarning}</span>
                             ${v.count ? `<span class="variation-count">${v.count}</span>` : ''}
                             ${lastFmLinkHtml}
                             ${itemLookupHtml}
