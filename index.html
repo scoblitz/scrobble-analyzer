@@ -904,7 +904,13 @@
                         or click to browse
                     </div>
                 </div>
-                <input type="file" id="file-input" accept=".csv">
+                <!-- Android's picker filters on MIME type, and providers report
+                     CSV inconsistently (text/csv, text/plain, application/vnd.ms-excel).
+                     A bare ".csv" leaves every file greyed out on some devices
+                     (issue #5). Listing the types alongside the extension keeps
+                     desktop behaviour and unblocks those pickers. A wrong file
+                     still fails the format check after it is read. -->
+                <input type="file" id="file-input" accept=".csv,text/csv,text/comma-separated-values,application/csv,application/vnd.ms-excel,text/plain">
             </div>
 
             <div class="sidebar-section" id="nav-section" style="display: none;">
