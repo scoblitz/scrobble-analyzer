@@ -231,6 +231,8 @@ Required behaviour, following §1.9:
 
 > When two members of a group fold to the same key **and** the differing characters are both marked, chip the differing character in the reveal-chip style (`ș U+0219`, codepoint tooltip) — informational, **not** `⚠️`. When one member is plain ASCII, chip nothing; the difference is already visible.
 
+**Decision (2026-08-01): diacritic folding stays in v0.6.1, chip included.** The alternative considered and rejected was deferring folding to v0.7 to keep v0.6.1 purely mechanical — every other item in the release is a one-line normalizer edit, and this one pulls in rendering work. Rejected because folding is the second-largest detection win in the release (+8 artist, +24 track) and splitting it from the chip would ship the unreadable-card problem on purpose. v0.6.1 therefore contains exactly one piece of UI work; expect it in review.
+
 Scope note: this is Romanian/Turkish cedilla-vs-comma-below in practice, but the rule is written on perceptual grounds rather than per-script so it generalises. It is small — the reveal-chip renderer already exists and is reused. Measurement caveat for whoever picks this up: an early pass put the track-side count at 2, but both were artifacts of a crude heuristic (it tested whether *every row* contained any mark, not whether the *differing* character was mark-vs-mark, so `À Mon Âme` vs `A Mon Âme` was misbinned). Treat the affected population as artist-side only until re-measured with a positional comparison.
 
 ### 4.2 v0.7.0 — pattern-detector release (scoped, not built)
