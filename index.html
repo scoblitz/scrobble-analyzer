@@ -1608,6 +1608,63 @@
             return new Set(names.map(getVisibleString)).size === 1;
         }
 
+        // --- Normalization keys ----------------------------------------------
+        // These three reduce a raw name to the key its variation group is
+        // clustered under. They are the highest-risk code in the file: a change
+        // here silently changes what groups with what.
+        //
+        // They are top-level (rather than inline in the finders) so that
+        // tests/merge-contract.js can extract and exercise them directly. Keep
+        // them top-level, keep them pure, and add cases to the merge contract
+        // BEFORE changing behaviour here.
+        //
+        // The three are deliberately NOT interchangeable - see docs/DESIGN.md
+        // section 1.7 for the per-normalizer table of which rules apply where.
+
+        // Artist: strips a leading "the" and unifies &/and. Does NOT strip
+        // keyword suffixes - "(Remastered)" is meaningless on an artist.
+        function normalizeArtist(artist) {
+            if (!artist) return '';
+            let norm = artist.toLowerCase().trim();
+            norm = norm.replace(/\u00a0/g, ' ');  // Replace non-breaking spaces
+            norm = norm.replace(/[\u2018\u2019]/g, "'");  // Smart single quotes → ASCII
+            norm = norm.replace(/[\u201C\u201D]/g, '"');  // Smart double quotes → ASCII
+            if (norm.startsWith('the ')) norm = norm.slice(4);
+            norm = norm.replace(/\s*&\s*/g, ' and ');
+            norm = norm.replace(/\s+/g, ' ').trim();
+            return norm;
+        }
+
+        // Album: strips edition/remaster suffixes. Does NOT strip a leading
+        // "the" - "The Wall" and "Wall" are different albums.
+        function normalizeAlbum(album) {
+            if (!album) return '';
+            let norm = album.toLowerCase();
+            norm = norm.replace(/\u00a0/g, ' ');  // Replace non-breaking spaces
+            norm = norm.replace(/[\u2018\u2019]/g, "'");  // Smart single quotes → ASCII
+            norm = norm.replace(/[\u201C\u201D]/g, '"');  // Smart double quotes → ASCII
+            // Remove remaster/deluxe/edition suffixes
+            norm = norm.replace(/\s*[\(\[].*?(remaster|deluxe|edition|bonus|expanded|anniversary|version|disc \d).*?[\)\]]/gi, '');
+            norm = norm.replace(/\s*-\s*(remaster|deluxe|expanded).*$/i, '');
+            norm = norm.replace(/\s+/g, ' ').trim();
+            return norm;
+        }
+
+        // Track: as album, plus live/remix/edit/take and bare year suffixes.
+        function normalizeTrack(track) {
+            if (!track) return '';
+            let norm = track.toLowerCase();
+            norm = norm.replace(/\u00a0/g, ' ');  // Replace non-breaking spaces
+            norm = norm.replace(/[\u2018\u2019]/g, "'");  // Smart single quotes → ASCII
+            norm = norm.replace(/[\u201C\u201D]/g, '"');  // Smart double quotes → ASCII
+            // Remove common suffixes
+            norm = norm.replace(/\s*[\(\[].*?(remaster|live|remix|edit|version|mix|demo|acoustic|mono|stereo|single|radio|extended|instrumental|reprise|take \d+|alternate|alt\.|bonus).*?[\)\]]/gi, '');
+            norm = norm.replace(/\s*-\s*(remaster|live|remix|edit|version|demo|acoustic|mono|stereo|single|radio|extended).*$/i, '');
+            norm = norm.replace(/\s*\d{4}\s*(remaster|remix|version)?$/i, ''); // Year suffixes
+            norm = norm.replace(/\s+/g, ' ').trim();
+            return norm;
+        }
+
         // Find artist variations (like "The Beatles" vs "Beatles")
         function findArtistVariations(scrobbles) {
             console.log('Finding artist variations...');
@@ -1623,14 +1680,8 @@
 
             const normalized = new Map();
             Object.keys(artistCounts).forEach(artist => {
-                let norm = artist.toLowerCase().trim();
-                norm = norm.replace(/\u00a0/g, ' ');  // Replace non-breaking spaces
-                norm = norm.replace(/[\u2018\u2019]/g, "'");  // Smart single quotes → ASCII
-                norm = norm.replace(/[\u201C\u201D]/g, '"');  // Smart double quotes → ASCII
-                if (norm.startsWith('the ')) norm = norm.slice(4);
-                norm = norm.replace(/\s*&\s*/g, ' and ');
-                norm = norm.replace(/\s+/g, ' ').trim();
-                
+                const norm = normalizeArtist(artist);
+
                 if (!normalized.has(norm)) normalized.set(norm, []);
                 normalized.get(norm).push({ name: artist, count: artistCounts[artist], hasSmartQuotes: /[\u2018\u2019\u201C\u201D]/.test(artist), hasInvisible: hasInvisibleChars(artist) });
             });
@@ -1676,19 +1727,6 @@
             });
             
             console.log('Unique artist+album combos:', Object.keys(albumCounts).length);
-
-            function normalizeAlbum(album) {
-                if (!album) return '';
-                let norm = album.toLowerCase();
-                norm = norm.replace(/\u00a0/g, ' ');  // Replace non-breaking spaces
-                norm = norm.replace(/[\u2018\u2019]/g, "'");  // Smart single quotes → ASCII
-                norm = norm.replace(/[\u201C\u201D]/g, '"');  // Smart double quotes → ASCII
-                // Remove remaster/deluxe/edition suffixes
-                norm = norm.replace(/\s*[\(\[].*?(remaster|deluxe|edition|bonus|expanded|anniversary|version|disc \d).*?[\)\]]/gi, '');
-                norm = norm.replace(/\s*-\s*(remaster|deluxe|expanded).*$/i, '');
-                norm = norm.replace(/\s+/g, ' ').trim();
-                return norm;
-            }
 
             const grouped = new Map();
             Object.keys(albumCounts).forEach(key => {
@@ -1876,20 +1914,6 @@
             });
             
             console.log('Unique artist+track combos:', Object.keys(trackCounts).length);
-
-            function normalizeTrack(track) {
-                if (!track) return '';
-                let norm = track.toLowerCase();
-                norm = norm.replace(/\u00a0/g, ' ');  // Replace non-breaking spaces
-                norm = norm.replace(/[\u2018\u2019]/g, "'");  // Smart single quotes → ASCII
-                norm = norm.replace(/[\u201C\u201D]/g, '"');  // Smart double quotes → ASCII
-                // Remove common suffixes
-                norm = norm.replace(/\s*[\(\[].*?(remaster|live|remix|edit|version|mix|demo|acoustic|mono|stereo|single|radio|extended|instrumental|reprise|take \d+|alternate|alt\.|bonus).*?[\)\]]/gi, '');
-                norm = norm.replace(/\s*-\s*(remaster|live|remix|edit|version|demo|acoustic|mono|stereo|single|radio|extended).*$/i, '');
-                norm = norm.replace(/\s*\d{4}\s*(remaster|remix|version)?$/i, ''); // Year suffixes
-                norm = norm.replace(/\s+/g, ' ').trim();
-                return norm;
-            }
 
             const grouped = new Map();
             Object.keys(trackCounts).forEach(key => {
