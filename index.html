@@ -1645,7 +1645,8 @@
             norm = norm.replace(/[\u201C\u201D]/g, '"');  // Smart double quotes → ASCII
             // Remove remaster/deluxe/edition suffixes
             norm = norm.replace(/\s*[\(\[].*?(remaster|deluxe|edition|bonus|expanded|anniversary|version|disc \d).*?[\)\]]/gi, '');
-            norm = norm.replace(/\s*-\s*(remaster|deluxe|expanded).*$/i, '');
+            // Optional year, as in normalizeTrack ("Aja - 1999 Remaster")
+            norm = norm.replace(/\s*-\s*(\d{4}\s+)?(remaster|deluxe|expanded).*$/i, '');
             norm = norm.replace(/\s+/g, ' ').trim();
             return norm;
         }
@@ -1659,8 +1660,16 @@
             norm = norm.replace(/[\u201C\u201D]/g, '"');  // Smart double quotes → ASCII
             // Remove common suffixes
             norm = norm.replace(/\s*[\(\[].*?(remaster|live|remix|edit|version|mix|demo|acoustic|mono|stereo|single|radio|extended|instrumental|reprise|take \d+|alternate|alt\.|bonus).*?[\)\]]/gi, '');
-            norm = norm.replace(/\s*-\s*(remaster|live|remix|edit|version|demo|acoustic|mono|stereo|single|radio|extended).*$/i, '');
-            norm = norm.replace(/\s*\d{4}\s*(remaster|remix|version)?$/i, ''); // Year suffixes
+            // A year may sit between the dash and the keyword ("Midtown - 2023
+            // Remaster" - the common Spotify shape). Without the optional year
+            // group the rule below strips "2023 Remaster" and orphans the dash,
+            // leaving "midtown -" which groups with nothing.
+            norm = norm.replace(/\s*-\s*(\d{4}\s+)?(remaster|live|remix|edit|version|demo|acoustic|mono|stereo|single|radio|extended).*$/i, '');
+            // Year suffixes. The keyword is REQUIRED: a bare trailing number is
+            // part of the title, not a suffix. Without it this ate real titles
+            // ("1991" and "1983" both became "" and wrongly merged; "19-2000"
+            // became "19-").
+            norm = norm.replace(/\s*\d{4}\s*(remaster|remix|version)$/i, '');
             norm = norm.replace(/\s+/g, ' ').trim();
             return norm;
         }

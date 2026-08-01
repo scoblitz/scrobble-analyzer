@@ -82,6 +82,11 @@ const MUST_MERGE = [
     ['album',  'Aja (Remastered)',   'Aja',                  'edition suffix stripped'],
     ['track',  'Midtown - Remaster', 'Midtown',              'dash remaster suffix stripped'],
     ['track',  'Midtown (Instrumental)', 'Midtown',          'parenthetical keyword stripped'],
+
+    // --- v0.6.1 item 9: year between the dash and the keyword ---
+    ['track',  'Midtown - 2023 Remaster', 'Midtown',         'dangling separator (disc. #7 Spotify shape)'],
+    ['track',  'Always Then - 2017 Version', 'Always Then',  'same, with "version"'],
+    ['album',  'Aja - 1999 Remaster', 'Aja',                 'same rule on the album normalizer'],
 ];
 
 const MUST_NOT_MERGE = [
@@ -96,6 +101,12 @@ const MUST_NOT_MERGE = [
 
     // --- albums are not artists: no leading-"the" strip here ---
     ['album',  'The Wall',          'Wall',              'leading "the" is meaningful in album titles'],
+
+    // --- v0.6.1 item 10: a bare trailing number is part of the title ---
+    ['track',  '19-2000',           '19-2001',           'year rule must not eat digits belonging to the title'],
+    ['track',  '1991',              '1983',              'numeric titles both became "" and wrongly merged'],
+    ['track',  '80186',             '80286',             'trailing \\d{4} matched inside a 5-digit title'],
+    ['track',  '555-5555',          '555-1234',          'Lorn - phone-number titles must stay distinct'],
 ];
 
 // Assertions about a single key, not a pair.
@@ -140,14 +151,6 @@ const KNOWN_MISS = [
     ['track',  'Citizen Erased', 'Citzen Erased', true,
         'issue #16 - single-character typo; edit distance is not usable'],
 
-    // --- found 2026-08-01 while writing this contract, not yet triaged ---
-    ['track',  'Midtown - 2023 Remaster', 'Midtown', true,
-        'dangling separator: "X - YYYY Remaster" leaves "x -" because the dash rule ' +
-        'needs the keyword immediately after the dash, so the year rule strips the ' +
-        'year and leaves the dash behind. Common Spotify format (disc. #7).'],
-    ['track',  '19-2000', '19-2001', false,
-        'over-eager year strip: the trailing \\d{4} rule eats part of a legitimate ' +
-        'title, so both collapse to "19-". Same for Lorn "555-5555" -> "555-".'],
 ];
 
 // --- runner ------------------------------------------------------------------

@@ -55,9 +55,9 @@ A third class — **reference detectors**, comparing the library against an exte
 
 Punctuation stripping and diacritic folding are **not implemented anywhere**, and the `&`/`and` rule exists **only on artists**. Earlier drafts claimed punctuation stripping was part of the pipeline; it never was. Several open issues trace directly to these three gaps (§3.3). Each rule that *does* exist was driven by a real user report, not speculation. Two principles worth preserving:
 
-- Normalization changes are the highest-risk edits in the codebase — they silently change what groups with what. Hence the planned merge contract (§4.1).
-- The canonical MUST-NOT-merge example: **Elvis Costello vs. Elvis Costello & The Attractions** are different credits, correctly distinct. Any normalization change that merges them is wrong.
-- A dormant future guard exists conceptually for title normalization: numeric-punctuation titles like *3.15.20* must not normalize to "31520". Not yet enforced anywhere; encode it in the merge contract when title normalization is touched.
+- Normalization changes are the highest-risk edits in the codebase — they silently change what groups with what. Hence the merge contract, `tests/merge-contract.js` (§4.1.1) — **built as of 2026-08-01**. Add cases there before changing behaviour here.
+- The canonical MUST-NOT-merge example: **Elvis Costello vs. Elvis Costello & The Attractions** are different credits, correctly distinct. Any normalization change that merges them is wrong. Now enforced.
+- The title guard — numeric-punctuation titles like *3.15.20* must not normalize to "31520" — **is now enforced**, but not as a pair. It could not be: asserting that `3.15.20` and `31520` stay unmerged proves nothing, because the year rule rewrites `31520` to `3` and the two differ no matter what punctuation does. It lives in the contract's `KEY_MUST_NOT_BE` list as an assertion about the key itself. This was found by injecting the exact mistake the guard exists to catch and watching the pair form pass.
 
 ### 1.8 Git/release conventions (and why)
 
@@ -177,6 +177,8 @@ Theme: "the normalizer catches what you reported."
 | 6 | Apostrophes U+00B4, U+0060, U+02BC | 0 | +5 | #12 |
 | 7 | Bracket/paren container canonicalization | — | +1 | #17 general class |
 | 8 | Android file-input `accept` fix | — | — | #5 |
+| 9 | Year allowed between dash and keyword | — | +4 | see 4.1.3 |
+| 10 | Year suffix requires its keyword | — | **−6 false** | see 4.1.3 |
 | | **all combined** | **38→49** | **400→561** | |
 
 All 11 new artist groups and the top 40 new track groups were inspected by hand; no false positive was found. Notes:
@@ -257,6 +259,25 @@ Required behaviour, following §1.9:
 **Decision (2026-08-01): diacritic folding stays in v0.6.1, chip included.** The alternative considered and rejected was deferring folding to v0.7 to keep v0.6.1 purely mechanical — every other item in the release is a one-line normalizer edit, and this one pulls in rendering work. Rejected because folding is the second-largest detection win in the release (+8 artist, +24 track) and splitting it from the chip would ship the unreadable-card problem on purpose. v0.6.1 therefore contains exactly one piece of UI work; expect it in review.
 
 Scope note: this is Romanian/Turkish cedilla-vs-comma-below in practice, but the rule is written on perceptual grounds rather than per-script so it generalises. It is small — the reveal-chip renderer already exists and is reused. Measurement caveat for whoever picks this up: an early pass put the track-side count at 2, but both were artifacts of a crude heuristic (it tested whether *every row* contained any mark, not whether the *differing* character was mark-vs-mark, so `À Mon Âme` vs `A Mon Âme` was misbinned). Treat the affected population as artist-side only until re-measured with a positional comparison.
+
+#### 4.1.3 Items 9 and 10 — two suffix bugs found by the merge contract
+
+Neither was reported by a user. Both surfaced on 2026-08-01 while writing MUST_MERGE cases for behaviour assumed to already work, which is the merge contract earning its place before a single scoped item had been built. Added to v0.6.1 by decision the same day.
+
+**Item 9 — dangling separator.** `Midtown - 2023 Remaster` normalized to `midtown -`, so it grouped with nothing. The dash rule required its keyword *immediately* after the dash, so with a year in between it did not fire; the year rule then stripped `2023 Remaster` and abandoned the separator. This is the standard Spotify shape and exactly what discussion #7 raised. Fix: allow an optional `\d{4}` between the dash and the keyword, in the track *and* album normalizers. On the issue-#11 export: +4 groups, and track keys ending in an orphaned separator fall from 20 to 8 (the remainder are legitimate — Isis `-`, Mew `+ -`, a Morse-code artist).
+
+**Item 10 — over-eager year strip.** The trailing-year rule made its keyword optional, so it deleted *any* trailing four-digit run. This did real damage: it was not merely failing to group, it was **fabricating cards**. Every wholly numeric title normalized to the empty string and collapsed together:
+
+```
+"1991"(55)  | "1983"(1)                                     <- distinct tracks, merged
+"0001"(2)   | "0002"(2)  | "0003"(2) | "0004"(2)            <- distinct tracks, merged
+"80186"(1)  | "80286"(1) | ... | "80686"(1)                 <- \d{4} matched inside a 5-digit title
+"19-2000"   -> "19-"      "555-5555" -> "555-"              <- titles mangled
+```
+
+Fix: make the keyword required. On the export this removes **6 false-positive groups**. That is the reason items 9 and 10 read as `+4 / −6` in the table above: the headline count drops, and detection quality strictly improves. Do not read the −6 as a regression.
+
+Both fixes are guarded going forward — item 9 by MUST_MERGE cases, item 10 by MUST_NOT_MERGE cases including `1991`/`1983` and `80186`/`80286`.
 
 ### 4.2 v0.7.0 — pattern-detector release (scoped, not built)
 
