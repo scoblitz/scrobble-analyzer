@@ -97,6 +97,16 @@ const MUST_MERGE = [
         '"featuring" spelled out - feat(uring)? is one token'],
     ['track',  'Machina (feat. Mariana Saldaña)', 'Machina (ft. Mariana Saldaña)',
         'the two abbreviations agree with each other'],
+
+    // --- v0.6.1 item 3: punctuation to a space ---
+    ['artist', 'Albert Hammond, Jr.', 'Albert Hammond Jr',  'issue #11'],
+    ['artist', 'T. Rex',              'T.Rex',              'spacing around an initial'],
+    ['artist', 'Peter, Bjorn and John','Peter Bjorn and John','serial comma in a band name'],
+    ['track',  'D.A.N.C.E.',          'D.A.N.C.E',          'trailing period only'],
+    ['track',  'Blvd. Nights',        'Blvd Nights',        'abbreviation period'],
+    ['track',  'You, Appearing',      'You Appearing',      'comma to a space, not to nothing'],
+    ['album',  'Endtroducing.....',   'Endtroducing',       'ellipsis run'],
+    ['album',  'Attack, Decay, Sustain, Release', 'Attack Decay Sustain Release', 'serial commas'],
 ];
 
 const MUST_NOT_MERGE = [
@@ -149,8 +159,6 @@ const KEY_MUST_NOT_BE = [
 // runner says so - promote it to MUST_MERGE or MUST_NOT_MERGE.
 const KNOWN_MISS = [
     // --- scoped for v0.6.1, expected to flip as items land ---
-    ['artist', 'Albert Hammond, Jr.', 'Albert Hammond Jr', true,
-        'issue #11 - punctuation not stripped yet (v0.6.1 item 3)'],
     ['artist', 'Motörhead', 'Motorhead', true,
         'issue #14 - diacritics not folded yet (v0.6.1 item 4)'],
     ['track',  '9th & Hennepin', '9th and Hennepin', true,
