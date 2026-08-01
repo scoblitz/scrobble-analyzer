@@ -11,7 +11,7 @@ One HTML file. No build step, no dependencies, no server. This is intentional �
 Data flow:
 
 1. **Upload/parse** — user selects a lastfmstats.com CSV export. The Last.fm username is parsed from the `Date#username` header (used to key dismissals). All fields are read; the `AlbumId` column is *intentionally ignored* (MBIDs from Last.fm are unreliable — see DESIGN.md).
-2. **Normalization** — artist/album/track strings are reduced to normalization keys (lowercase, strip leading "the", unify &/and, strip punctuation, smart-quote → ASCII, etc.).
+2. **Normalization** — artist/album/track strings are reduced to normalization keys. The three normalizers differ and are *not* interchangeable: all lowercase, collapse whitespace, map NBSP → space and smart quotes → ASCII; only the artist normalizer strips a leading "the" and unifies &/and; only the album/track normalizers strip keyword suffixes (remaster/live/…). Punctuation stripping and diacritic folding are **not implemented anywhere** — see DESIGN.md §1.7 for the verified per-normalizer table before assuming a rule exists.
 3. **Detection** — two detector classes:
    - *Variation detectors*: cluster entities by normalization key; any cluster with >1 original spelling is flagged.
    - *Pattern detectors*: regex against individual entries, no variation needed (compilation detection, missing-album detection; more coming in v0.7).

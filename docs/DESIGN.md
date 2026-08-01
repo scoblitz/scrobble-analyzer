@@ -40,7 +40,20 @@ A third class — **reference detectors**, comparing the library against an exte
 
 ### 1.7 Normalization pipeline choices
 
-Current normalization for clustering: lowercase, strip leading "the", unify "&"/"and", strip punctuation, smart single/double quotes (U+2018/2019, U+201C/201D) → ASCII. Each addition was driven by a real user report, not speculation. Two principles worth preserving:
+**What is actually implemented today** — verified line-by-line against `index.html` on 2026-08-01. An earlier revision of this document (and of CLAUDE.md) described the pipeline inaccurately; this table is the corrected record.
+
+| Step | Artist | Album | Track |
+|---|:---:|:---:|:---:|
+| lowercase, trim, collapse whitespace | yes | yes | yes |
+| NBSP (U+00A0) → space | yes | yes | yes |
+| smart quotes U+2018/2019/201C/201D → ASCII | yes | yes | yes |
+| strip leading "the" | yes | — | — |
+| "&" → "and" | yes | **no** | **no** |
+| keyword suffix stripping (remaster/live/…) | — | yes | yes |
+| strip punctuation | **no** | **no** | **no** |
+| fold diacritics | **no** | **no** | **no** |
+
+Punctuation stripping and diacritic folding are **not implemented anywhere**, and the `&`/`and` rule exists **only on artists**. Earlier drafts claimed punctuation stripping was part of the pipeline; it never was. Several open issues trace directly to these three gaps (§3.3). Each rule that *does* exist was driven by a real user report, not speculation. Two principles worth preserving:
 
 - Normalization changes are the highest-risk edits in the codebase — they silently change what groups with what. Hence the planned merge contract (§4.1).
 - The canonical MUST-NOT-merge example: **Elvis Costello vs. Elvis Costello & The Attractions** are different credits, correctly distinct. Any normalization change that merges them is wrong.
@@ -66,7 +79,8 @@ Current normalization for clustering: lowercase, strip leading "the", unify "&"/
 - Visual refresh (orange reserved for header LED + action buttons; tinted rather than solid active states)
 
 **Scoped but not built:**
-- Everything in the roadmap (§4). Notably: **no automated tests exist**. The merge contract is the first planned test infrastructure.
+- Everything in the roadmap (§4). Notably: **no automated tests exist** — no test file has ever been committed to this repo, in any commit in its history. The merge contract (§4.1) is the first planned test infrastructure.
+- A throwaway Node harness replicating the three shipped normalizers was written to validate the v0.6.1 scope against a real export (§4.1). It is a *prototype of* the merge contract, not a substitute for it, and was deliberately not checked in.
 
 **Half-designed:**
 - Uniform-error / reference detection (§4.3) — problem well understood, no implementation design yet.
@@ -85,10 +99,13 @@ Compilations spanning multiple track artists split across Artist values in the e
 
 ### 3.3 Known normalization misses (user-reported, targeted by v0.6.1)
 
-- Diacritics not folded: Motörhead vs. Motorhead don't cluster (issue #14)
-- Artist punctuation variants: "Albert Hammond, Jr." vs. "Albert Hammond Jr" not flagged (issue #11 — has a real user export attached for testing)
-- Extended apostrophe variants beyond smart quotes: U+00B4 acute accent, U+0060 backtick, U+02BC modifier-letter apostrophe (issue #12)
-- A suspected additional bug in discussion #10 (verify against the attached export)
+All confirmed against the issue-#11 export on 2026-08-01 unless noted.
+
+- **Diacritics not folded** — no normalizer folds them (issue #14). Note: the reporter had already hand-corrected Motörhead before exporting, so that exact pair is *not* reproducible from the attached file. The gap is nonetheless real and abundantly evidenced elsewhere in the same library (Björk, Sigur Rós, and a three-way Romanian split — see §4.1).
+- **Artist punctuation variants** — "Albert Hammond, Jr." (11 plays) vs. "Albert Hammond Jr" (4) sit in separate groups, neither flagged (issue #11). Confirmed.
+- **Extended apostrophe variants** beyond smart quotes: U+00B4 acute, U+0060 backtick, U+02BC modifier-letter apostrophe (issue #12). The specific reported pair was already user-corrected, but other instances remain (e.g. GusGus, "When Your Lover´s Gone").
+- **`&`/`and` not unified on tracks or albums** (discussion #10). This was logged as "a suspected bug"; it is confirmed and the cause is mundane — the track normalizer has no `&` rule at all. `9th & Hennepin` (5) and `9th and Hennepin` (9) both exist in the export and do not group. See §4.2 for why this is *not* the hard ampersand problem.
+- **`feat.`/`ft.` absent from the track keyword list** (issue #17). Filed as a bracket-vs-parenthesis problem; it is not. See §3.6.
 
 ### 3.4 Platform
 
@@ -98,21 +115,85 @@ Compilations spanning multiple track artists split across Artist values in the e
 
 Last.fm normalizes case to its catalog entry server-side; nothing SA flags about pure case will be user-fixable. Keep case-only differences from generating flags.
 
+### 3.6 Container punctuation and the limits of suffix stripping
+
+The track/album suffix rule is `\s*[\(\[].*?(keyword…).*?[\)\]]`. The character classes make it *look* like brackets and parentheses are reconciled. They are not. The rule fires only when a **keyword** appears inside; when it fires it deletes the whole parenthetical including its container, and when it doesn't, both containers survive verbatim into the key:
+
+```
+"Song [Acoustic]"   vs "Song (Acoustic)"    -> "song" | "song"                           grouped
+"Track [Interlude]" vs "Track (Interlude)"  -> "track [interlude]" | "track (interlude)"  NOT grouped
+```
+
+There is no code path that treats `[` as equivalent to `(`. Consequence for issue #17: adding `feat`/`ft` to the keyword list fixes that reported pair by deleting both parentheticals, which **sidesteps** the container question rather than answering it. The two changes are independent; both are in v0.6.1 (§4.1 items 2 and 7).
+
+### 3.7 Near-miss / typo variations — no viable detector (issues #15, #16)
+
+Issue #15 ("Missing accent variations") is **mis-titled**: the pair is `Cartoons and Macramé Wounds` vs `Cartoons and Macreme Wounds`. Fold the accent and you still have `macrame` vs `macreme` — the strings genuinely differ by a letter. It is the same class as issue #16 (`Citizen Erased` vs `Citzen Erased`), a typo, and **diacritic folding will not fix either one**.
+
+Naive edit distance is not a usable answer, and this has been measured rather than assumed. Scanning the issue-#11 export for Levenshtein-distance-1 pairs among same-artist track keys yields **1,617 pairs**, and the highest-play ones are all legitimately distinct recordings:
+
+```
+[Queens of the Stone Age] "song for the dead"(94) ~ "song for the deaf"(64)
+[Dustin O'Halloran]       "opus 17"(85)           ~ "opus 37"(83)
+[Interpol]                "obstacle 1"(106)       ~ "obstacle 2"(29)
+[Moderat]                 "porc #2"(97)           ~ "porc #1"(58)
+```
+
+Real typos exist in that set but are buried by design: they are *rare* (`Citzen Erased` has 1 play against 26), while distinct-track near-misses are *common* and high-play. Any future attempt needs an asymmetry that plain edit distance lacks — e.g. requiring a large play-count ratio, excluding pairs whose differing characters are digits, or gating on an external reference (§4.3). **Not scoped to any release.** Do not ship distance-based clustering without acceptance criteria derived from these numbers.
+
 ---
 
 ## 4. Roadmap
 
 ### 4.1 v0.6.1 — normalization patch (scoped, not built)
 
-Theme: "the normalizer catches what you reported." Contents:
+Theme: "the normalizer catches what you reported."
 
-1. **Merge contract** — a checked-in, Node-runnable test file: MUST-merge pairs, MUST-NOT-merge pairs (Elvis Costello & The Attractions enshrined), documented KNOWN_MISS class, and a dormant title-guard section (*3.15.20* ≠ "31520"). **Build this first**; normalization changes land only after it passes.
-2. **Artist punctuation fix** — comma → space, period → removal (issue #11).
-3. **Apostrophe variants** — add U+00B4, U+0060, U+02BC to the smart-quote class in the artist/album/track normalizers (issue #12). Decision made to ride along in v0.6.1 rather than wait for v0.7.
-4. **Diacritic folding** (issue #14) — pending the philosophy question in §5.4.
-5. **Android file input fix** (issue #5).
+**Scope validated 2026-08-01** against the 380,877-scrobble export attached to issue #11 (§5.2), using a Node harness that replicated the three shipped normalizers verbatim. Baseline on that library, at the thresholds as shipped (artist ≥10 plays, track ≥3): **38 artist issues, 400 track issues**. Each change measured in isolation:
 
-Validation: run against the real user export attached to issue #11 ("Maeldun's export" — see §5.2).
+| # | Change | Artist | Track | Closes |
+|---|---|:---:|:---:|---|
+| 1 | **Merge contract** test file | — | — | build first |
+| 2 | `feat`/`ft` added to track suffix keywords | — | **+59** | #17, part of disc. #4 |
+| 3 | Punctuation `.` `,` → **space**, all three normalizers | +3 | **+54** | #11 |
+| 4 | Diacritic folding (NFD), all three | **+8** | +24 | #14 class |
+| 5 | `&` → `and` on track + album normalizers | — | +17 | disc. #10 |
+| 6 | Apostrophes U+00B4, U+0060, U+02BC | 0 | +5 | #12 |
+| 7 | Bracket/paren container canonicalization | — | +1 | #17 general class |
+| 8 | Android file-input `accept` fix | — | — | #5 |
+| | **all combined** | **38→49** | **400→561** | |
+
+All 11 new artist groups and the top 40 new track groups were inspected by hand; no false positive was found. Notes:
+
+1. **Merge contract** — a checked-in, Node-runnable test file: MUST-merge pairs, MUST-NOT-merge pairs (Elvis Costello & The Attractions enshrined), documented KNOWN_MISS class, and a dormant title-guard section (*3.15.20* ≠ "31520"). **Build this first**; normalization changes land only after it passes. Nothing of the kind exists yet — see §4.1.1.
+2. Routes `feat.`/`ft.` pairs into ordinary track-variation cards. Accepted deliberately as a first step to *surface* the issue, deferring the separate "Multiple Artists" category (disc. #4) to v0.7 once §5.3 is settled.
+3. **Period must map to a space, not to deletion.** This is exactly what preserves the §1.7 title guard: `3.15.20` → `3 15 20`, never `31520`. Verified.
+4. The dominant win on this library is Romanian cedilla-vs-comma-below (`ş` U+015F vs `ș` U+0219); `Ștefan Hrușcă` is currently split three ways at 61/16/15 plays and NFD folding reconciles all three. Note §5.4 still governs *display*: fold for grouping, never imply the ASCII form is correct.
+5. Not the hard ampersand problem — see §4.2.
+7. Marginal on this library (one surfacing card: `Ramalama [Bang Bang]` vs `Ramalama (Bang Bang)`; a second pair falls under the 3-play threshold). Included on the judgment that it may be more prevalent in other libraries and costs almost nothing. Safe by construction: canonicalizing container characters can only merge strings that already differ solely in container type.
+
+Guard check under the full combined change set: `Elvis Costello` and `Elvis Costello & The Attractions` remain distinct.
+
+#### 4.1.1 What the merge contract actually is
+
+It is a **proposal, not a pre-existing artifact** — no test file has ever been committed to this repo in any commit in its history, and it is unrelated to any other project. The name is just a label for the idea.
+
+The concept: normalization changes are the highest-risk edits in the codebase because they silently change what groups with what, and there is currently no way to make that change visible before shipping. A merge contract is the cheapest possible fix — a single plain Node script, no framework, holding two lists of string pairs:
+
+```js
+const MUST_MERGE = [
+  ['Albert Hammond, Jr.', 'Albert Hammond Jr'],   // #11
+  ['9th & Hennepin',      '9th and Hennepin'],    // disc. #10
+  ['Ramalama [Bang Bang]','Ramalama (Bang Bang)'],// #17 container class
+];
+const MUST_NOT_MERGE = [
+  ['Elvis Costello', 'Elvis Costello & The Attractions'],  // distinct credits
+  ['Song for the Dead', 'Song for the Deaf'],              // distinct tracks
+  ['3.15.20', '31520'],                                    // title guard
+];
+```
+
+Run it with `node`; it normalizes each pair and asserts the keys match (or don't). That's the whole thing. Its value is that the MUST-NOT list makes overmerge regressions *loud* — the failure mode that actually corrupts a user's triage — and that every future normalizer proposal has a concrete place to add its cases before any code changes. The throwaway harness used to produce the table above is a working prototype of it (§2).
 
 ### 4.2 v0.7.0 — pattern-detector release (scoped, not built)
 
@@ -121,6 +202,8 @@ An opt-in **pattern search mode** (UI shape unresolved — §5.3), comprising:
 1. **Remaster/deluxe/extended/instrumental flagging.** Same regex machinery as compilation detection, new category. Previously rejected as too noisy; unblocked by persistent dismissals (§1.5). Designed collaboratively in GitHub discussions #7/#10.
 2. **"Multiple Artists" detector** — feat./ft. terms in artist or title fields (discussion #4; a sketch exists in that thread).
 3. **Ampersand-drop grouping** — the Deezer-era artifact where "angus␣␣julia stone" should group with "Angus & Julia Stone". **This is the hard one.** It currently fails because the normalizer maps "&" → "and": one string normalizes to "angus and julia stone", the other to "angus julia stone" — different keys, no card. The fix is normalizing "&"/"and" to *nothing*, so all four spellings (&, and, missing, doubled-space) converge. That is a change to the grouping heart of the tool with real overmerge risk ("X and Y" as a distinct band name vs. "XY"); it must be tested against real libraries via the merge contract before shipping. Medium effort, not a regex tweak.
+
+   **Do not conflate this with discussion #10.** An earlier revision of this document filed the reported `9th & Hennepin` / `9th and Hennepin` case here, under "the hard one." That was wrong. Hennepin is a *track*, and the track normalizer has no `&` rule of any kind — so the reported miss is the plain `&`↔`and` gap, a one-line fix already scoped into v0.6.1 (§4.1 item 5). The ampersand-*drop* case (`angus julia stone`, where the connector is missing entirely) is the genuinely hard problem and stays here. Two different problems that happen to share a character.
 
 Also resolved during scoping: discussion #13 was closed by philosophy (no code needed), and the "AlbumId correctness chip" idea is dead (§1.4).
 
@@ -137,8 +220,8 @@ Cross-reference library entities against MusicBrainz to catch uniformly-wrong ta
 
 ## 5. Open questions — flag these to the maintainer, don't guess
 
-1. **Dismissal ID stability across normalization changes.** Item IDs are name-based; v0.6.1's normalizer changes may alter how items group, potentially orphaning existing dismissals. Unresolved: whether IDs derive from raw names (stable) or normalized keys (unstable under normalizer changes), and whether a migration is needed. Check the code, then confirm the intended behavior with the maintainer before shipping normalizer changes.
-2. **Test data access.** Validation of v0.6.1 depends on the user export attached to issue #11 (Maeldun's). Confirm it's obtainable and licensed for local testing.
+1. ~~**Dismissal ID stability across normalization changes.**~~ **RESOLVED 2026-08-01 — no migration needed.** `getIssueId()` (`index.html:1133`) derives from `issue.title`, which is the **raw display name of the highest-count member** of a group, not a normalized key. So normalizer changes orphan a dismissal only when they change *which member ranks first*. Measured across the full combined v0.6.1 change set on the issue-#11 export: **0 of 76** previously-flagged artist members change their top name, **2 of 878** track members do, and no previously-flagged group stops being flagged. The risk is negligible and v0.6.1 is unblocked on this question.
+2. ~~**Test data access.**~~ **RESOLVED.** `lastfmstats-Maeldun.zip` is attached to issue #11, downloads without authentication, and contains 380,877 scrobbles. The reporter supplied it explicitly for debugging. Fine for local validation — but it is a real person's complete listening history: do not commit it to the repo, redistribute it, or paste excerpts of it into public issues beyond the cases the reporter already published themselves.
 3. **v0.7 pattern-mode UI.** Checkbox within existing views vs. a separate tab. Explicitly undecided.
 4. **Diacritic folding philosophy.** Should diacritics follow the same "flag, human decides" model as smart quotes (fold for *grouping*, preserve originals for *display*, human picks the winner)? Leaning yes, but not confirmed — and Motörhead is a case where the diacritic form is canonical, so the tool must never imply the ASCII form is "correct."
 5. **Ampersand-drop overmerge risk.** No acceptance criteria yet for what real-library overmerge rate is tolerable. Define via merge-contract cases before implementing.
