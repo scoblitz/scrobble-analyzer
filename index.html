@@ -1655,6 +1655,13 @@
             // apostrophe. File-sharing-era tags used all three as apostrophes,
             // so Last.fm split them onto separate pages (issue #12).
             norm = norm.replace(/[\u2018\u2019\u00B4\u0060\u02BC]/g, "'");
+            // Square brackets and parentheses are interchangeable in the wild
+            // ("Ramalama [Bang Bang]" vs "Ramalama (Bang Bang)"). Canonicalise
+            // to parentheses so the container type stops mattering. Safe by
+            // construction: this can only merge strings that already differed
+            // nowhere else. The suffix rules below accept either form anyway,
+            // so running before them changes nothing for them.
+            norm = norm.replace(/\[/g, '(').replace(/\]/g, ')');
             norm = norm.replace(/[\u201C\u201D]/g, '"');  // Smart double quotes → ASCII
             // Remove remaster/deluxe/edition suffixes
             norm = norm.replace(/\s*[\(\[].*?(remaster|deluxe|edition|bonus|expanded|anniversary|version|disc \d).*?[\)\]]/gi, '');
@@ -1679,6 +1686,13 @@
             // apostrophe. File-sharing-era tags used all three as apostrophes,
             // so Last.fm split them onto separate pages (issue #12).
             norm = norm.replace(/[\u2018\u2019\u00B4\u0060\u02BC]/g, "'");
+            // Square brackets and parentheses are interchangeable in the wild
+            // ("Ramalama [Bang Bang]" vs "Ramalama (Bang Bang)"). Canonicalise
+            // to parentheses so the container type stops mattering. Safe by
+            // construction: this can only merge strings that already differed
+            // nowhere else. The suffix rules below accept either form anyway,
+            // so running before them changes nothing for them.
+            norm = norm.replace(/\[/g, '(').replace(/\]/g, ')');
             norm = norm.replace(/[\u201C\u201D]/g, '"');  // Smart double quotes → ASCII
             // Remove common suffixes
             // The \b around feat/ft are load-bearing: without them "ft" matches

@@ -119,6 +119,11 @@ const MUST_MERGE = [
     ['track',  'She Don`t Use Jelly',    "She Don't Use Jelly",    'U+0060 backtick'],
     ['track',  'Love Ainʼt No Stranger', "Love Ain't No Stranger", 'U+02BC modifier-letter apostrophe'],
     ['track',  'Goin’ Out West',         "Goin' Out West",         'U+2019, unchanged by this item'],
+
+    // --- v0.6.1 item 7: [ ] and ( ) are interchangeable ---
+    ['track',  'Ramalama [Bang Bang]', 'Ramalama (Bang Bang)', 'issue #17, the general class'],
+    ['track',  'Track [Interlude]',    'Track (Interlude)',    'no keyword inside, so only the container differs (DESIGN.md 3.6)'],
+    ['album',  'Noise [Reprise]',      'Noise (Reprise)',       'the rule reaches albums too'],
 ];
 
 const MUST_NOT_MERGE = [
@@ -173,8 +178,6 @@ const KNOWN_MISS = [
     // --- scoped for v0.6.1, expected to flip as items land ---
     ['artist', 'Motörhead', 'Motorhead', true,
         'issue #14 - diacritics not folded yet (v0.6.1 item 4)'],
-    ['track',  'Ramalama [Bang Bang]', 'Ramalama (Bang Bang)', true,
-        'issue #17 - bracket/paren containers not canonicalised yet (v0.6.1 item 7)'],
 
     // --- no viable detector, not scoped to any release (DESIGN.md 3.7) ---
     ['track',  'Cartoons and Macramé Wounds', 'Cartoons and Macreme Wounds', true,
