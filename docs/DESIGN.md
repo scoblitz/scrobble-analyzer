@@ -65,6 +65,22 @@ Punctuation stripping and diacritic folding are **not implemented anywhere**, an
 - Merge commits over squash: commit granularity is meaningful history for a project reviewed change-by-change.
 - Release framing precedent: v0.6.1 is deliberately scoped as "the normalizer now catches what you reported" (bug-fix framing for detection widening), keeping v0.7 as a coherent "new detection categories" story. Strict semver would call detection widening a minor bump; the point-release framing was chosen consciously.
 
+### 1.9 Chips signal invisibility, not incorrectness
+
+The `⚠️ invisible chars` / `⚠️ smart quote` chips and the character-reveal chips (`NBSP`, `ZWSP`, `2×SP` with codepoint tooltips) exist for **one** reason: to tell the user what differs between two rows **when their eyes can't**. They are an accessibility aid for the comparison, not a verdict on the row they sit next to.
+
+This was implicit in the code and is written down here because it is easy to misread a `⚠️` as "this variation is wrong" and then reason from that — which leads to the wrong conclusion about diacritics (see §5.4). The governing rule:
+
+> Chip a variation when the difference between it and its siblings is **not visually resolvable at body-text size**. Do not chip a difference the user can simply see.
+
+Corollaries worth keeping straight:
+
+- A smart quote gets a chip not because curly quotes are wrong, but because `'` vs `'` is hard to resolve in a list.
+- `Motörhead` vs `Motorhead` needs **no** chip. The difference is obvious, and the umlaut is the band's actual name — chipping it would imply the ASCII form is the fixed version, which inverts the truth.
+- `Subcarpați` vs `Subcarpaţi` **does** need one, for exactly the reason `Motörhead` doesn't: the rows are the same picture. Character class is not the criterion; perceptual distinguishability is.
+
+Because the card body is otherwise strictly neutral — name, play count, Last.fm link, sorted by count, no "correct" badge anywhere (`index.html:2483-2490`) — the chips are the only place the tool can accidentally editorialize. Keep them descriptive.
+
 ---
 
 ## 2. Current state of the codebase
@@ -168,7 +184,7 @@ All 11 new artist groups and the top 40 new track groups were inspected by hand;
 1. **Merge contract** — a checked-in, Node-runnable test file: MUST-merge pairs, MUST-NOT-merge pairs (Elvis Costello & The Attractions enshrined), documented KNOWN_MISS class, and a dormant title-guard section (*3.15.20* ≠ "31520"). **Build this first**; normalization changes land only after it passes. Nothing of the kind exists yet — see §4.1.1.
 2. Routes `feat.`/`ft.` pairs into ordinary track-variation cards. Accepted deliberately as a first step to *surface* the issue, deferring the separate "Multiple Artists" category (disc. #4) to v0.7 once §5.3 is settled.
 3. **Period must map to a space, not to deletion.** This is exactly what preserves the §1.7 title guard: `3.15.20` → `3 15 20`, never `31520`. Verified.
-4. The dominant win on this library is Romanian cedilla-vs-comma-below (`ş` U+015F vs `ș` U+0219); `Ștefan Hrușcă` is currently split three ways at 61/16/15 plays and NFD folding reconciles all three. Note §5.4 still governs *display*: fold for grouping, never imply the ASCII form is correct.
+4. The dominant win on this library is Romanian cedilla-vs-comma-below (`ş` U+015F vs `ș` U+0219); `Ștefan Hrușcă` is currently split three ways at 61/16/15 plays and NFD folding reconciles all three. **This item carries a hard dependency — see 4.1.2. Folding must not ship without the confusable-character chip.**
 5. Not the hard ampersand problem — see §4.2.
 7. Marginal on this library (one surfacing card: `Ramalama [Bang Bang]` vs `Ramalama (Bang Bang)`; a second pair falls under the 3-play threshold). Included on the judgment that it may be more prevalent in other libraries and costs almost nothing. Safe by construction: canonicalizing container characters can only merge strings that already differ solely in container type.
 
@@ -194,6 +210,28 @@ const MUST_NOT_MERGE = [
 ```
 
 Run it with `node`; it normalizes each pair and asserts the keys match (or don't). That's the whole thing. Its value is that the MUST-NOT list makes overmerge regressions *loud* — the failure mode that actually corrupts a user's triage — and that every future normalizer proposal has a concrete place to add its cases before any code changes. The throwaway harness used to produce the table above is a working prototype of it (§2).
+
+#### 4.1.2 Confusable-character chip — a dependency of item 4, not a nicety
+
+Diacritic folding creates a class of card the tool has never produced before: **groups whose rows are visually identical.** Measured on the issue-#11 export, of the 8 artist groups folding newly creates, **4 are mark-vs-mark** — every row carries a diacritic and only its shape differs:
+
+```
+"Zdob şi Zdub"(17)      | "Zdob și Zdub"(8)
+"Subcarpați"(19)        | "Subcarpaţi"(2)
+"Alexandru Andrieș"(19) | "Alexandru Andrieş"(1)
+"Țapinarii"(12)         | "Ţapinarii"(4)
+
+ș U+0219 (comma below)  vs  ş U+015F (cedilla)
+ț U+021B (comma below)  vs  ţ U+0163 (cedilla)
+```
+
+Shipping folding alone would present these as two indistinguishable names with a play count each and no way to tell them apart — the exact failure the invisible-character chips were built to prevent (§1.9). The other 4 groups (`Șuie Paparude` vs `Suie Paparude`) contain a plain-ASCII row and need nothing.
+
+Required behaviour, following §1.9:
+
+> When two members of a group fold to the same key **and** the differing characters are both marked, chip the differing character in the reveal-chip style (`ș U+0219`, codepoint tooltip) — informational, **not** `⚠️`. When one member is plain ASCII, chip nothing; the difference is already visible.
+
+Scope note: this is Romanian/Turkish cedilla-vs-comma-below in practice, but the rule is written on perceptual grounds rather than per-script so it generalises. It is small — the reveal-chip renderer already exists and is reused. Measurement caveat for whoever picks this up: an early pass put the track-side count at 2, but both were artifacts of a crude heuristic (it tested whether *every row* contained any mark, not whether the *differing* character was mark-vs-mark, so `À Mon Âme` vs `A Mon Âme` was misbinned). Treat the affected population as artist-side only until re-measured with a positional comparison.
 
 ### 4.2 v0.7.0 — pattern-detector release (scoped, not built)
 
@@ -223,7 +261,9 @@ Cross-reference library entities against MusicBrainz to catch uniformly-wrong ta
 1. ~~**Dismissal ID stability across normalization changes.**~~ **RESOLVED 2026-08-01 — no migration needed.** `getIssueId()` (`index.html:1133`) derives from `issue.title`, which is the **raw display name of the highest-count member** of a group, not a normalized key. So normalizer changes orphan a dismissal only when they change *which member ranks first*. Measured across the full combined v0.6.1 change set on the issue-#11 export: **0 of 76** previously-flagged artist members change their top name, **2 of 878** track members do, and no previously-flagged group stops being flagged. The risk is negligible and v0.6.1 is unblocked on this question.
 2. ~~**Test data access.**~~ **RESOLVED.** `lastfmstats-Maeldun.zip` is attached to issue #11, downloads without authentication, and contains 380,877 scrobbles. The reporter supplied it explicitly for debugging. Fine for local validation — but it is a real person's complete listening history: do not commit it to the repo, redistribute it, or paste excerpts of it into public issues beyond the cases the reporter already published themselves.
 3. **v0.7 pattern-mode UI.** Checkbox within existing views vs. a separate tab. Explicitly undecided.
-4. **Diacritic folding philosophy.** Should diacritics follow the same "flag, human decides" model as smart quotes (fold for *grouping*, preserve originals for *display*, human picks the winner)? Leaning yes, but not confirmed — and Motörhead is a case where the diacritic form is canonical, so the tool must never imply the ASCII form is "correct."
+4. ~~**Diacritic folding philosophy.**~~ **RESOLVED 2026-08-01.** Yes — diacritics follow the same model as smart quotes: fold for *grouping*, preserve originals for *display*, human picks the winner. The concern that a card might imply the ASCII form is "correct" turned out to be unfounded on inspection: the card body is strictly neutral (name, count, Last.fm link, no badge), and the Google lookup asks `Is the correct spelling "X" or "Y"…` rather than asserting. A Motörhead card is just an ordinary variation card.
+
+   The one place the tool *could* editorialize is the chips — and the governing principle there is §1.9: **chips mark invisibility, not incorrectness.** That reframes the question from "should diacritics be chipped?" (wrong question — it treats a character class as the criterion) to "can the user see this difference?". `Motörhead` vs `Motorhead`: yes, no chip. `Subcarpați` vs `Subcarpaţi`: no, chip it. See §4.1.2, which makes the confusable-character chip a hard dependency of shipping folding.
 5. **Ampersand-drop overmerge risk.** No acceptance criteria yet for what real-library overmerge rate is tolerable. Define via merge-contract cases before implementing.
 
 ---
