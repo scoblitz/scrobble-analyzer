@@ -161,11 +161,24 @@ Real typos exist in that set but are buried by design: they are *rare* (`Citzen 
 
 ## 4. Roadmap
 
-### 4.1 v0.6.1 — normalization patch (scoped, not built)
+### 4.1 v0.6.1 — normalization patch (BUILT 2026-08-01, unreleased)
 
 Theme: "the normalizer catches what you reported."
 
-**Scope validated 2026-08-01** against the 380,877-scrobble export attached to issue #11 (§5.2), using a Node harness that replicated the three shipped normalizers verbatim. Baseline on that library, at the thresholds as shipped (artist ≥10 plays, track ≥3): **38 artist issues, 400 track issues**. Each change measured in isolation:
+All ten items are implemented on branch `normalization-patch`, one commit each, each measured before it landed. Nothing is released yet.
+
+**Measured outcome**, working tree vs. `main`, at the thresholds as shipped (artist ≥10 plays, album ≥5, track ≥3):
+
+| | scoblitz (160,742 scrobbles) | Maeldun (380,877 scrobbles) |
+|---|---|---|
+| Artist | 46 → **49** | 38 → **49** |
+| Album | 98 → **132** | 31 → **55** |
+| Track | 994 → **1201** | 400 → **559** |
+| Groups genuinely dropped | **0** | 6, all intentional |
+
+Every disappearing group was classified rather than counted: scoblitz 42 gone / 42 absorbed into larger groups / 0 dropped; Maeldun 10 gone / 4 absorbed / 6 dropped, those six being the numeric-title false positives item 10 exists to remove. Dismissal orphaning stayed negligible on both (§5.1).
+
+The per-item table below is the **pre-implementation estimate**, kept for attribution — it shows which change is responsible for what. Its figures were measured in isolation against Maeldun only, on a Node harness that copied the normalizers rather than reading them, and the combined row understates the shipped result because it predates items 9/10 and never covered albums. Trust the measured table above; use this one to attribute.
 
 | # | Change | Artist | Track | Closes |
 |---|---|:---:|:---:|---|
@@ -179,11 +192,11 @@ Theme: "the normalizer catches what you reported."
 | 8 | Android file-input `accept` fix | — | — | #5 |
 | 9 | Year allowed between dash and keyword | — | +4 | see 4.1.3 |
 | 10 | Year suffix requires its keyword | — | **−6 false** | see 4.1.3 |
-| | **all combined** | **38→49** | **400→561** | |
+| | *estimated combined* | *38→49* | *400→561* | |
 
 All 11 new artist groups and the top 40 new track groups were inspected by hand; no false positive was found. Notes:
 
-1. **Merge contract** — a checked-in, Node-runnable test file: MUST-merge pairs, MUST-NOT-merge pairs (Elvis Costello & The Attractions enshrined), documented KNOWN_MISS class, and a dormant title-guard section (*3.15.20* ≠ "31520"). **Build this first**; normalization changes land only after it passes. Nothing of the kind exists yet — see §4.1.1.
+1. **Merge contract** — `tests/merge-contract.js`, built first as planned. Now at **64 assertions** with 2 known misses (the typo cases #15/#16, which have no viable detector). It found items 9 and 10 before any scoped change was written — see §4.1.1 and §4.1.3.
 2. Routes `feat.`/`ft.` pairs into ordinary track-variation cards. Accepted deliberately as a first step to *surface* the issue, deferring the separate "Multiple Artists" category (disc. #4) to v0.7 once §5.3 is settled.
 3. **Period must map to a space, not to deletion.** This is exactly what preserves the §1.7 title guard: `3.15.20` → `3 15 20`, never `31520`. Verified.
 4. The dominant win on this library is Romanian cedilla-vs-comma-below (`ş` U+015F vs `ș` U+0219); `Ștefan Hrușcă` is currently split three ways at 61/16/15 plays and NFD folding reconciles all three. **This item carries a hard dependency — see 4.1.2. Folding must not ship without the confusable-character chip.**

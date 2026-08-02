@@ -882,7 +882,7 @@
             <div class="logo-icon">📊</div>
             <div class="logo-text">
                 <h1>Scrobble Analyzer</h1>
-                <div class="tagline">Find & Fix Your Last.fm Data <span style="color: var(--accent-orange); margin-left: 0.5rem;">v0.6.0</span></div>
+                <div class="tagline">Find & Fix Your Last.fm Data <span style="color: var(--accent-orange); margin-left: 0.5rem;">v0.6.1</span></div>
             </div>
         </div>
         <div class="header-stats" id="header-stats" style="display: none;">
@@ -993,14 +993,21 @@
                         <li>Drag the file to the upload box in the sidebar, or click the box to browse</li>
                     </ol>
                     
-                    <h3 style="font-size: 1rem; color: var(--accent-orange); margin-bottom: 1rem;">🆕 What's New in v0.6.0</h3>
+                    <h3 style="font-size: 1rem; color: var(--accent-orange); margin-bottom: 1rem;">🆕 What's New in v0.6.1</h3>
+                    <!-- max-width/margin override: .empty-state p centres text in a
+                         400px column, which is right for the intro blurb above but
+                         indents this one oddly inside the card. -->
+                    <p style="color: var(--text-secondary); font-size: 0.9rem; max-width: none; margin: 0 0 0.75rem;">This release is all about the matching itself - the spellings you reported that should have been grouped, and now are. Expect more issues than your last export showed.</p>
                     <ul style="color: var(--text-secondary); font-size: 0.9rem; padding-left: 1.25rem; margin-bottom: 1.5rem;">
-                        <li style="margin-bottom: 0.5rem;"><strong>Dismissals survive new exports</strong> - Now tied to your Last.fm username instead of the uploaded file. Existing dismissals migrate automatically.</li>
-                        <li style="margin-bottom: 0.5rem;"><strong>Character reveal</strong> - Invisible characters and stray spaces now show as labeled chips, so you can see exactly what's different</li>
-                        <li style="margin-bottom: 0.5rem;"><strong>Track-level invisible detection</strong> - Tracks now get the same invisible-character scan as artists and albums</li>
-                        <li style="margin-bottom: 0.5rem;"><strong>One issue, one category</strong> - Variations that differ only by invisible characters now appear only under Invisible Characters</li>
-                        <li style="margin-bottom: 0.5rem;"><strong>Export options</strong> - Choose whether reports include dismissed items</li>
-                        <li style="margin-bottom: 0.5rem;"><strong>Fixes & polish</strong> - Titles with quotes parse correctly, "Gold" compilations are detected again, plus search/filter clear buttons and a calmer look</li>
+                        <li style="margin-bottom: 0.5rem;"><strong>Accented spellings</strong> - Motörhead now groups with Motorhead, Déjà Voodoo with Deja Voodoo</li>
+                        <li style="margin-bottom: 0.5rem;"><strong>Look-alike accents get a chip</strong> - When two spellings differ only by which accent they use, a small blue chip shows the exact character and its code point, because the names themselves look identical</li>
+                        <li style="margin-bottom: 0.5rem;"><strong>Punctuation and spacing</strong> - "Albert Hammond, Jr." now groups with "Albert Hammond Jr", and "T. Rex" with "T.Rex"</li>
+                        <li style="margin-bottom: 0.5rem;"><strong>Featured artists</strong> - "(feat. …)" and "[ft. …]" now group with the plain title</li>
+                        <li style="margin-bottom: 0.5rem;"><strong>&amp; and "and"</strong> - Now unified on tracks and albums, not just artist names</li>
+                        <li style="margin-bottom: 0.5rem;"><strong>More apostrophe styles</strong> - Acute accents, backticks and modifier apostrophes join the smart quotes</li>
+                        <li style="margin-bottom: 0.5rem;"><strong>Remasters dated in the title</strong> - "Close to Me - 2006 Remaster" now groups with "Close to Me"</li>
+                        <li style="margin-bottom: 0.5rem;"><strong>Fewer false alarms</strong> - Numerically titled tracks are no longer lumped together, so 1991 stays separate from 1983</li>
+                        <li style="margin-bottom: 0.5rem;"><strong>Android uploads</strong> - The file picker should now let you select your CSV</li>
                     </ul>
                     
                     <h3 style="font-size: 1rem; color: var(--accent-orange); margin-bottom: 1rem;">💬 Feedback & Support</h3>
