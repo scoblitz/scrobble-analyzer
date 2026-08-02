@@ -46,7 +46,7 @@ const HTML = path.join(__dirname, '..', 'index.html');
 function loadNormalizers() {
     const html = fs.readFileSync(HTML, 'utf8');
     const names = ['normalizeArtist', 'normalizeAlbum', 'normalizeTrack',
-                   'baseProfile', 'confusableMarkChars'];
+                   'baseProfile', 'confusableMarkChars', 'lookalikeQuoteChars'];
     const sources = names.map(name => {
         const open = `        function ${name}(`;
         const start = html.indexOf(open);
@@ -67,7 +67,8 @@ function loadNormalizers() {
     return factory();
 }
 
-const { normalizeArtist, normalizeAlbum, normalizeTrack, confusableMarkChars } = loadNormalizers();
+const { normalizeArtist, normalizeAlbum, normalizeTrack,
+        confusableMarkChars, lookalikeQuoteChars } = loadNormalizers();
 
 const FN = { artist: normalizeArtist, album: normalizeAlbum, track: normalizeTrack };
 
@@ -255,6 +256,34 @@ KEY_MUST_NOT_BE.forEach(([field, input, forbidden, why]) => {
     else passed++;
 });
 
+// Drift guard: the quote chip and the normalizers each carry their own copy of
+// the apostrophe/quote character class. If they fall out of step the UI either
+// chips a character that does not affect grouping, or stays silent about one
+// that does. Every character the chip is willing to show must be folded to its
+// ASCII equivalent by all three normalizers.
+// The probe must DISCOVER the class, never restate it. An earlier version of
+// this guard passed a hand-written copy of the characters, so widening the chip
+// class past that copy was invisible to it - the test drifted alongside the code
+// it was meant to pin. Sweeping a wide range instead means whatever the chip is
+// willing to match gets found and checked.
+const PROBE = (() => {
+    let s = '';
+    for (let cp = 0x20; cp <= 0x30FF; cp++) {
+        if (cp >= 0xD800 && cp <= 0xDFFF) continue;   // surrogates
+        s += String.fromCodePoint(cp);
+    }
+    return s;
+})();
+const driftFailures = [];
+lookalikeQuoteChars(PROBE).forEach(ch => {
+    const hex = 'U+' + ch.codePointAt(0).toString(16).toUpperCase().padStart(4, '0');
+    ['artist', 'album', 'track'].forEach(field => {
+        const got = FN[field]('x' + ch + 'y');
+        if (got === "x'y" || got === 'x"y') passed++;
+        else driftFailures.push({ ch, hex, field, got });
+    });
+});
+
 const chipFailures = [];
 CHIP_EXPECT.forEach(([names, expected, why]) => {
     const got = confusableMarkChars(names).map(chips => chips.length > 0);
@@ -271,7 +300,7 @@ KNOWN_MISS.forEach(([f, a, b, shouldMatch, why]) => {
 
 console.log('\nmerge contract  ' + DIM + '(normalizers read live from index.html)' + OFF + '\n');
 
-const totalFailures = failures.length + keyFailures.length + chipFailures.length;
+const totalFailures = failures.length + keyFailures.length + chipFailures.length + driftFailures.length;
 
 if (totalFailures === 0) {
     console.log(`  ${GREEN}PASS${OFF}  ${passed} assertions`);
@@ -288,6 +317,11 @@ if (totalFailures === 0) {
         console.log(`  ${RED}x${OFF} [${f.field}] key guard violated`);
         console.log(`      ${JSON.stringify(f.input)}  ->  ${JSON.stringify(f.got)}  ${RED}(forbidden)${OFF}`);
         console.log(`      ${DIM}${f.why}${OFF}\n`);
+    });
+    driftFailures.forEach(f => {
+        console.log(`  ${RED}x${OFF} [drift] the chip shows ${f.ch} ${f.hex}, but normalize${f.field[0].toUpperCase()}${f.field.slice(1)} does not fold it`);
+        console.log(`      ${JSON.stringify('x' + f.ch + 'y')}  ->  ${JSON.stringify(f.got)}`);
+        console.log(`      ${DIM}chip class and normalizer class have drifted apart${OFF}\n`);
     });
     chipFailures.forEach(f => {
         console.log(`  ${RED}x${OFF} [chip] wrong rows chipped`);
