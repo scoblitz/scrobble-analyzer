@@ -1813,6 +1813,17 @@
             // is the normalizer the 3.15.20 guard is aimed at.
             norm = norm.replace(/[.,]/g, ' ');
             norm = norm.replace(/\s+/g, ' ').trim();
+            // A bare trailing year IS a suffix when it trails a real title
+            // ("Comfortably Numb 2022"), and is NOT one when it is the title, or
+            // part of it ("1991", "19-2000", "555-5555"). Three conditions keep
+            // those apart, and all three are load-bearing:
+            //   - whitespace-separated, so "19-2000" is untouched
+            //   - the stem contains a letter, so "1991" and "80186" are untouched
+            //   - the stem ends alphanumeric, so "Spring 1 - 2012" does not become
+            //     "spring 1 -" and reintroduce the dangling separator
+            // Runs last because it needs the collapsed, trimmed form.
+            norm = norm.replace(/^(.*\S.*?)\s+\d{4}$/, (match, stem) =>
+                (/[a-z]/i.test(stem) && /[a-z0-9)\]]$/i.test(stem)) ? stem : match);
             return norm;
         }
 

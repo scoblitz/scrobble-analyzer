@@ -277,7 +277,19 @@ Neither was reported by a user. Both surfaced on 2026-08-01 while writing MUST_M
 
 Fix: make the keyword required. On the export this removes **6 false-positive groups**. That is the reason items 9 and 10 read as `+4 / −6` in the table above: the headline count drops, and detection quality strictly improves. Do not read the −6 as a regression.
 
-Both fixes are guarded going forward — item 9 by MUST_MERGE cases, item 10 by MUST_NOT_MERGE cases including `1991`/`1983` and `80186`/`80286`.
+**Item 10, refined — and why one library was not enough.** Requiring the keyword also stopped bare trailing years being stripped at all. Maeldun's export contained no case where that mattered, so it looked free. Validating against a second library (the maintainer's own, 160,742 scrobbles) turned up the one it broke: `Comfortably Numb`(4) and `Comfortably Numb 2022`(2) stopped grouping. The final rule strips a bare trailing year only when **all three** hold, each guarding a specific failure:
+
+| Condition | Guards against |
+|---|---|
+| whitespace-separated | `19-2000`, `555-5555` — digits belonging to the title |
+| stem contains a letter | `1991`, `80186` — wholly numeric titles |
+| stem ends alphanumeric | `Spring 1 - 2012` → `spring 1 -`, item 9's dangling separator returning |
+
+Measured after refinement: scoblitz 1200 → 1201, Maeldun unchanged at 559. The six false-positive groups stay removed — every one is a set of genuinely distinct numerically-titled tracks (Crystal Castles `1991`/`1983`, HEALTH `0001`–`0004`, MASTER BOOT RECORD `80186`–`80686`).
+
+The lesson is worth keeping: **a normalizer change validated against a single export is undertested.** One library's blind spot is another's common case. Both exports are now the standing validation set.
+
+Both fixes are guarded going forward — item 9 by MUST_MERGE cases, item 10 by MUST_NOT_MERGE cases including `1991`/`1983` and `80186`/`80286`, plus a `KEY_MUST_NOT_BE` entry for the `Spring 1 - 2012` dangle.
 
 ### 4.2 v0.7.0 — pattern-detector release (scoped, not built)
 

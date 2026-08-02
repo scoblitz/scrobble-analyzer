@@ -132,6 +132,11 @@ const MUST_MERGE = [
     ['artist', 'Ștefan Hrușcă', 'Stefan Hrusca', 'three-way split in the wild, 61/16/15 plays'],
     ['track',  'Naïve',         'Naive',         'diaeresis'],
     ['album',  'Oxygène',       'Oxygene',       'grave accent, album normalizer'],
+
+    // --- item 10, refined: a bare year IS a suffix when it trails a real title ---
+    ['track',  'Comfortably Numb 2022', 'Comfortably Numb',
+        'found only in a second library - the first strict rule lost this'],
+    ['track',  'Blue Monday 1988',      'Blue Monday', 'same shape'],
 ];
 
 const MUST_NOT_MERGE = [
@@ -175,6 +180,9 @@ const KEY_MUST_NOT_BE = [
         'DESIGN.md 1.7 title guard: punctuation must map to a SPACE, never be ' +
         'deleted. If this fires, a rule is deleting "." instead of replacing it.'],
     ['album', '3.15.20', '31520', 'same guard on the album normalizer'],
+    ['track', 'Spring 1 - 2012', 'spring 1 -',
+        'the bare-year rule must not strip a year that leaves a dangling ' +
+        'separator behind - that is the item 9 bug coming back in through item 10.'],
 ];
 
 // Which rows get a confusable-diacritic chip (DESIGN.md 1.9 / 4.1.2).
