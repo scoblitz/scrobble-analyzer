@@ -18,7 +18,8 @@ Scrobble Analyzer examines your Last.fm export and identifies:
 - **Tracks Missing Albums** - Tracks that were scrobbled without album information
 - **Tracks on Compilations** - Plays on "Greatest Hits" albums that could be reassigned to original releases
 - **Invisible Characters** - Entries that look identical but aren't: non-breaking spaces, zero-width characters, doubled spaces, and other hidden differences in artists, albums, and tracks. Each one is revealed with a labeled chip (like `NBSP` or `2×SP`) showing exactly which character is hiding where.
-- **Smart Quote Variations** - "Don't" (Unicode) vs "Don't" (ASCII) - common when copying from MusicBrainz
+- **Look-Alike Characters** - Names that differ only by which apostrophe, quote or accent they use: `Don’t` vs `Don't`, `Someone´s` vs `Someone's`, `Motörhead` vs `Motorhead`. Where the difference is genuinely invisible - Romanian comma-below vs cedilla, for instance - a chip names the exact character and its codepoint.
+- **Formatting Variations** - Punctuation and spacing (`Albert Hammond, Jr.` vs `Albert Hammond Jr`), `&` vs "and", featured-artist tags (`(feat. …)`, `[ft. …]`) and bracket style are all treated as the same name, so those land on one card instead of scattering.
 
 Issues are sorted by impact (scrobble count) so you can fix the biggest problems first.
 
@@ -46,27 +47,9 @@ Or [download index.html](index.html) to run locally (note: you won't receive upd
 
 ## Current Status
 
-**Version 0.6.0**
+**Version 0.6.1** - [full release notes](https://github.com/scoblitz/scrobble-analyzer/releases/tag/v0.6.1) · [all releases](https://github.com/scoblitz/scrobble-analyzer/releases)
 
-**v0.6.0 Release Summary**
-
-**New Features:**
-  - **Persistent dismissals** - Dismissals now survive new exports. They're keyed to your Last.fm username (read automatically from the export) instead of the uploaded file, and existing dismissals migrate automatically the first time you load a file.
-  - **Character reveal** - Invisible characters and stray spaces display as labeled chips so you can see exactly what differs between identical-looking names. Hover a chip for the Unicode codepoint.
-  - **Track-level invisible detection** - Tracks now get the same invisible-character scan artists and albums already had.
-  - **Export options** - A checkbox under Export Report lets you include dismissed items (tagged `[DISMISSED]`). By default the report is your active to-do list.
-
-**Improvements:**
-  - **One issue, one category** - Variations that differ only by invisible characters now appear only under Invisible Characters instead of being double-listed as artist/album/track variations.
-  - **Search & filter quality of life** - Clear button in the search box, reset button on the artist filter, and smoother search on large libraries.
-  - **Visual refresh** - Calmer color usage, softer active states, warmer text. Orange is reserved for the header readout and actions instead of shouting from every card.
-
-**Fixes:**
-  - Titles that legitimately contain quotes (like Bowie's *"Heroes"*) no longer have them stripped during CSV parsing
-  - Compilation detection no longer skips albums merely containing the word "gold" (ABBA's *Gold*, Sting's *Fields of Gold* collection, etc.)
-  - Selecting the same file twice in a row via the file picker now works
-  - A failed file read shows an error instead of loading forever
-  - Loading a second file no longer silently keeps the previous file's artist filter
+v0.6.1 is a matching release. Accented spellings, punctuation and spacing, `&` vs "and", featured-artist tags, extra apostrophe styles and bracket styles are now all recognised as the same name. **Expect your issue count to go up** compared to your last export - those variations were always in your library, the tool just couldn't see them.
 
 ### Current Limitations
 
@@ -74,6 +57,8 @@ Or [download index.html](index.html) to run locally (note: you won't receive upd
 - Shows first 100 issue cards per category (use search/filters to find more)
 - Compilations spanning multiple track artists (e.g. an Eric Clapton compilation containing Cream tracks) appear split across those artists, because the export only carries the track artist
 - The `AlbumId` column in the export is currently ignored - it turns out those IDs aren't always trustworthy (ask me about the two Clapton compilations sometime)
+- Genuine misspellings aren't detected - `Citzen Erased` won't be matched to `Citizen Erased`. Everything above works by treating two spellings as the same name; a typo is a different name. Matching by similarity instead sounds obvious but flags far more real songs than typos (`Song for the Dead` and `Song for the Deaf` are both QOTSA tracks, one letter apart), so it isn't in yet
+- Variations are only found when both spellings exist in your library. If everything you have is consistently wrong the same way, there's nothing to compare it against
 
 ## Roadmap Ideas
 
