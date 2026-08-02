@@ -2,6 +2,12 @@
 
 Companion to CLAUDE.md. This is the "why" that isn't visible from the source: decisions made, alternatives rejected, current state, roadmap, and open questions. Written for a technical reader or AI coding agent picking the project up cold.
 
+Alongside this file in `docs/`:
+
+- **[EXTERNAL-DATA.md](EXTERNAL-DATA.md)** — facts about Last.fm, lastfmstats and MusicBrainz. What *their* systems do, as opposed to why *we* decided things. Read before any API or MusicBrainz work.
+- **[case-studies/](case-studies/)** — worked investigations, kept whole. Currently one: the Cream of Clapton AlbumId mismatch, which is the evidence behind §1.4 and §3.2.
+- **[releases/](releases/)** — release notes as shipped.
+
 ---
 
 ## 1. Key design decisions and their reasoning
@@ -20,7 +26,9 @@ A community survey showed users want to research and decide for themselves; comp
 
 ### 1.4 MBIDs are hints, not facts — `AlbumId` is ignored
 
-Established empirically during v0.6.0 testing. Case study: "The Cream of Clapton" (1995 compilation) rows carried an AlbumId resolving in MusicBrainz to "The Cream of Eric Clapton" (1987 UK release, MBID `01e7ce7d-8752-4887-990a-834d5c8e13d3`) — an entirely different album. Verified via a live MusicBrainz call (`GET /ws/2/release/{id}?inc=artist-credits+release-groups&fmt=json`, `User-Agent` header required). This **killed a proposed v0.7 feature** that would have used AlbumId as a correctness signal (a "verified" chip). Any future MusicBrainz integration must treat Last.fm-supplied MBIDs as leads to verify, never as ground truth.
+Established empirically during v0.6.0 testing. "The Cream of Clapton" (1995 compilation) rows carried an AlbumId resolving in MusicBrainz to "The Cream of Eric Clapton" (1987 UK release, MBID `01e7ce7d-8752-4887-990a-834d5c8e13d3`) — an entirely different album, eight years earlier, credited to a different artist. This **killed a proposed v0.7 feature** that would have used AlbumId as a correctness signal (a "verified" chip): a confidently-wrong chip is worse than no chip. Any future MusicBrainz integration must treat Last.fm-supplied MBIDs as leads to verify, never as ground truth.
+
+**Full write-up: [case-studies/2026-07-06-cream-of-clapton-albumid.md](case-studies/2026-07-06-cream-of-clapton-albumid.md).** Read it before any MusicBrainz work — the summary above understates it. The case study also establishes *why* the album appeared as a variation at all (the scrobbler's `albumartist` field, not the casing difference it looked like), which is the mechanism behind §3.2. See also [EXTERNAL-DATA.md](EXTERNAL-DATA.md) §3.
 
 ### 1.5 Persistent dismissals keyed by username + name-based IDs
 
@@ -112,6 +120,8 @@ Variation detection only sees *splits*. If every scrobble of an entity is consis
 ### 3.2 Compilation multi-artist fragmentation
 
 Compilations spanning multiple track artists split across Artist values in the export — the album appears fragmented in ways the current grouping can't reunify. Documented blind spot; no fix designed. Maintainer's personal policy (context, not tool behavior): move compilation tracks to their original studio-album homes when a standard release exists.
+
+**The cause is structural, not a grouping weakness.** The lastfmstats `Artist` column is the *track* artist; the album-artist dimension is not in the export at all, so no grouping key built from the file can recover it. One album can therefore legitimately occupy three buckets at once — track artist with no album artist, track artist with an album artist, and the album artist's own tracks filed under a different Artist entirely. Worked through in full in the [Cream of Clapton case study](case-studies/2026-07-06-cream-of-clapton-albumid.md) (rule 3), which is also where the mechanism was first identified. Any future fix needs a data source beyond the CSV — see [EXTERNAL-DATA.md](EXTERNAL-DATA.md) §3 on `release-group.secondary-types`, which is the authoritative version of what compilation detection currently approximates with title regexes.
 
 ### 3.3 Known normalization misses (user-reported, targeted by v0.6.1)
 
@@ -319,6 +329,8 @@ Also resolved during scoping: discussion #13 was closed by philosophy (no code n
 ### 4.3 Reference detection / uniform errors (designed problem, no implementation)
 
 Cross-reference library entities against MusicBrainz to catch uniformly-wrong tags (§3.1), and/or maintain a curated known-gotchas list (*"Heroes"*, *Déjà Vu*, *Frampton Comes Alive!*). Constraints already known: Last.fm MBIDs can't be trusted as the join key (§1.4), so matching must be by normalized name search against MusicBrainz with human confirmation; MusicBrainz API requires a `User-Agent` and has rate limits (1 req/s). Planned research case: The Allman Brothers Band, examining how Last.fm data maps to MusicBrainz release-group vs. specific-release MBIDs. No target version assigned.
+
+**Start from [EXTERNAL-DATA.md](EXTERNAL-DATA.md)**, which holds the entity vocabulary, the release→release-group chain, and two leads that are more promising than anything the normalizers can do by rule: MusicBrainz **artist aliases** (a curated list of known name variants, which would *confirm* variations rather than infer them) and **`release-group.secondary-types`** (authoritative compilation typing). Both were established during earlier research and are easy to rediscover the hard way.
 
 ### 4.4 Separate tools (out of SA scope entirely)
 
