@@ -339,6 +339,16 @@
             letter-spacing: 0.03em;
             cursor: help;
         }
+        /* Look-alike chips say "here is what differs", not "this is wrong" - the
+           red reveal chip would read as an accusation against a spelling that is
+           very often the correct one (a curly apostrophe is what Last.fm's own
+           catalog frequently uses). Blue keeps it informational. Shared by the
+           diacritic and quote-character chips, which solve the same problem. */
+        .char-chip.lookalike {
+            background: rgba(74, 158, 255, 0.2);
+            color: var(--accent-blue);
+            font-weight: 500;
+        }
 
         .filter-btn {
             padding: 0.75rem 1.25rem;
@@ -450,17 +460,6 @@
             border-radius: 3px;
             font-size: 0.65rem;
             color: #ec4899;
-            margin-left: 0.5rem;
-        }
-
-        /* Smart quote warning */
-        .smart-quote-warning {
-            display: inline-block;
-            padding: 0.15rem 0.4rem;
-            background: rgba(251, 191, 36, 0.2);
-            border-radius: 3px;
-            font-size: 0.65rem;
-            color: #fbbf24;
             margin-left: 0.5rem;
         }
 
@@ -874,7 +873,7 @@
             <div class="logo-icon">📊</div>
             <div class="logo-text">
                 <h1>Scrobble Analyzer</h1>
-                <div class="tagline">Find & Fix Your Last.fm Data <span style="color: var(--accent-orange); margin-left: 0.5rem;">v0.6.0</span></div>
+                <div class="tagline">Find & Fix Your Last.fm Data <span style="color: var(--accent-orange); margin-left: 0.5rem;">v0.6.1</span></div>
             </div>
         </div>
         <div class="header-stats" id="header-stats" style="display: none;">
@@ -904,7 +903,13 @@
                         or click to browse
                     </div>
                 </div>
-                <input type="file" id="file-input" accept=".csv">
+                <!-- Android's picker filters on MIME type, and providers report
+                     CSV inconsistently (text/csv, text/plain, application/vnd.ms-excel).
+                     A bare ".csv" leaves every file greyed out on some devices
+                     (issue #5). Listing the types alongside the extension keeps
+                     desktop behaviour and unblocks those pickers. A wrong file
+                     still fails the format check after it is read. -->
+                <input type="file" id="file-input" accept=".csv,text/csv,text/comma-separated-values,application/csv,application/vnd.ms-excel,text/plain">
             </div>
 
             <div class="sidebar-section" id="nav-section" style="display: none;">
@@ -979,14 +984,21 @@
                         <li>Drag the file to the upload box in the sidebar, or click the box to browse</li>
                     </ol>
                     
-                    <h3 style="font-size: 1rem; color: var(--accent-orange); margin-bottom: 1rem;">🆕 What's New in v0.6.0</h3>
+                    <h3 style="font-size: 1rem; color: var(--accent-orange); margin-bottom: 1rem;">🆕 What's New in v0.6.1</h3>
+                    <!-- max-width/margin override: .empty-state p centres text in a
+                         400px column, which is right for the intro blurb above but
+                         indents this one oddly inside the card. -->
+                    <p style="color: var(--text-secondary); font-size: 0.9rem; max-width: none; margin: 0 0 0.75rem;">This release is all about the matching itself - the spellings you reported that should have been grouped, and now are. Expect more issues than your last export showed.</p>
                     <ul style="color: var(--text-secondary); font-size: 0.9rem; padding-left: 1.25rem; margin-bottom: 1.5rem;">
-                        <li style="margin-bottom: 0.5rem;"><strong>Dismissals survive new exports</strong> - Now tied to your Last.fm username instead of the uploaded file. Existing dismissals migrate automatically.</li>
-                        <li style="margin-bottom: 0.5rem;"><strong>Character reveal</strong> - Invisible characters and stray spaces now show as labeled chips, so you can see exactly what's different</li>
-                        <li style="margin-bottom: 0.5rem;"><strong>Track-level invisible detection</strong> - Tracks now get the same invisible-character scan as artists and albums</li>
-                        <li style="margin-bottom: 0.5rem;"><strong>One issue, one category</strong> - Variations that differ only by invisible characters now appear only under Invisible Characters</li>
-                        <li style="margin-bottom: 0.5rem;"><strong>Export options</strong> - Choose whether reports include dismissed items</li>
-                        <li style="margin-bottom: 0.5rem;"><strong>Fixes & polish</strong> - Titles with quotes parse correctly, "Gold" compilations are detected again, plus search/filter clear buttons and a calmer look</li>
+                        <li style="margin-bottom: 0.5rem;"><strong>Accented spellings</strong> - Motörhead now groups with Motorhead, Déjà Voodoo with Deja Voodoo</li>
+                        <li style="margin-bottom: 0.5rem;"><strong>Look-alike accents get a chip</strong> - When two spellings differ only by which accent they use, a small blue chip shows the exact character and its code point, because the names themselves look identical</li>
+                        <li style="margin-bottom: 0.5rem;"><strong>Punctuation and spacing</strong> - "Albert Hammond, Jr." now groups with "Albert Hammond Jr", and "T. Rex" with "T.Rex"</li>
+                        <li style="margin-bottom: 0.5rem;"><strong>Featured artists</strong> - "(feat. …)" and "[ft. …]" now group with the plain title</li>
+                        <li style="margin-bottom: 0.5rem;"><strong>&amp; and "and"</strong> - Now unified on tracks and albums, not just artist names</li>
+                        <li style="margin-bottom: 0.5rem;"><strong>More apostrophe styles</strong> - Acute accents, backticks and modifier apostrophes join the smart quotes</li>
+                        <li style="margin-bottom: 0.5rem;"><strong>Remasters dated in the title</strong> - "Close to Me - 2006 Remaster" now groups with "Close to Me"</li>
+                        <li style="margin-bottom: 0.5rem;"><strong>Fewer false alarms</strong> - Numerically titled tracks are no longer lumped together, so 1991 stays separate from 1983</li>
+                        <li style="margin-bottom: 0.5rem;"><strong>Android uploads</strong> - The file picker should now let you select your CSV</li>
                     </ul>
                     
                     <h3 style="font-size: 1rem; color: var(--accent-orange); margin-bottom: 1rem;">💬 Feedback & Support</h3>
@@ -1608,6 +1620,232 @@
             return new Set(names.map(getVisibleString)).size === 1;
         }
 
+        // --- Confusable diacritics -------------------------------------------
+        // Folding diacritics (see the normalizers) groups names the user may not
+        // be able to tell apart: "Subcarpati" spelled with comma-below vs cedilla
+        // is the same picture at body-text size. Those rows need a chip saying
+        // what differs. "Motorhead" with and without the umlaut does not - the
+        // eye already does that work, and the umlaut is the band's actual name,
+        // so flagging it would imply the ASCII form is the fixed one. The
+        // criterion is perceptual, not by character class - docs/DESIGN.md 1.9.
+
+        // Split a string into one entry per base character, carrying whatever
+        // combining marks follow it.
+        function baseProfile(str) {
+            const out = [];
+            for (const ch of String(str || '').normalize('NFD')) {
+                if (/[\u0300-\u036f]/.test(ch)) {
+                    if (out.length) out[out.length - 1].marks += ch;
+                } else {
+                    out.push({ base: ch, marks: '' });
+                }
+            }
+            return out;
+        }
+
+        // For each name in a variation group, which of its characters differ from
+        // a sibling by carrying a DIFFERENT mark rather than by having one at all.
+        // Returns an array of arrays of composed characters, parallel to `names`.
+        // Only compares members whose base letters line up; anything differing in
+        // more than its marks is visibly different already.
+        function confusableMarkChars(names) {
+            const profiles = names.map(baseProfile);
+            const found = names.map(() => new Set());
+            for (let i = 0; i < names.length; i++) {
+                for (let j = i + 1; j < names.length; j++) {
+                    const a = profiles[i], b = profiles[j];
+                    if (a.length !== b.length) continue;
+                    for (let k = 0; k < a.length; k++) {
+                        if (a[k].base !== b[k].base) continue;    // different letter: visible
+                        if (!a[k].marks || !b[k].marks) continue; // one is bare: visible
+                        if (a[k].marks === b[k].marks) continue;  // identical: nothing to say
+                        found[i].add((a[k].base + a[k].marks).normalize('NFC'));
+                        found[j].add((b[k].base + b[k].marks).normalize('NFC'));
+                    }
+                }
+            }
+            return found.map(set => [...set]);
+        }
+
+        // Quote and apostrophe characters that look like the ASCII ones but are
+        // not, and that the normalizers fold away. Same problem as the diacritics
+        // above - two rows that read identically - so they get the same chip.
+        //
+        // This must stay in step with the apostrophe/quote class in the three
+        // normalizers; tests/merge-contract.js asserts that every character
+        // returned here is actually folded by them.
+        //
+        // Deliberately per-row rather than comparing siblings: a group can pair
+        // "Couldn`t Stand The Weather" with "Couldn't Stand the Weather (Legacy
+        // Edition)", where the strings differ in length and a position-aligned
+        // comparison would find nothing.
+        //
+        // The chip names the character rather than its category. "Smart quote"
+        // was the old label and it went stale the moment the class grew to
+        // include an acute accent and a backtick - showing U+0060 cannot.
+        function lookalikeQuoteChars(str) {
+            const found = String(str || '').match(/[\u2018\u2019\u201C\u201D\u00B4\u0060\u02BC]/g);
+            return found ? [...new Set(found)] : [];
+        }
+
+        // --- Normalization keys ----------------------------------------------
+        // These three reduce a raw name to the key its variation group is
+        // clustered under. They are the highest-risk code in the file: a change
+        // here silently changes what groups with what.
+        //
+        // They are top-level (rather than inline in the finders) so that
+        // tests/merge-contract.js can extract and exercise them directly. Keep
+        // them top-level, keep them pure, and add cases to the merge contract
+        // BEFORE changing behaviour here.
+        //
+        // The three are deliberately NOT interchangeable - see docs/DESIGN.md
+        // section 1.7 for the per-normalizer table of which rules apply where.
+
+        // Artist: strips a leading "the" and unifies &/and. Does NOT strip
+        // keyword suffixes - "(Remastered)" is meaningless on an artist.
+        function normalizeArtist(artist) {
+            if (!artist) return '';
+            let norm = artist.toLowerCase().trim();
+            norm = norm.replace(/\u00a0/g, ' ');  // Replace non-breaking spaces
+            // Apostrophe-like characters → ASCII. Beyond the smart quotes this
+            // covers U+00B4 acute, U+0060 backtick and U+02BC modifier-letter
+            // apostrophe. File-sharing-era tags used all three as apostrophes,
+            // so Last.fm split them onto separate pages (issue #12).
+            norm = norm.replace(/[\u2018\u2019\u00B4\u0060\u02BC]/g, "'");
+            norm = norm.replace(/[\u201C\u201D]/g, '"');  // Smart double quotes → ASCII
+            // Fold diacritics for GROUPING only - the original spelling is
+            // what gets displayed, and the user still picks the winner.
+            // NFD splits a letter into base + combining mark, then the marks
+            // are dropped. This is what lets Motorhead meet Motorhead, and
+            // more importantly what reconciles Romanian comma-below with
+            // cedilla (U+0219 vs U+015F), which look identical on screen.
+            // NFD is canonical-only on purpose: NFKD would also rewrite
+            // ligatures and superscripts, which is a different decision.
+            // Known limit - letters with a stroke rather than a mark do not
+            // decompose, so o-slash, l-stroke and d-stroke are left alone.
+            norm = norm.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+            if (norm.startsWith('the ')) norm = norm.slice(4);
+            norm = norm.replace(/\s*&\s*/g, ' and ');
+            // Punctuation maps to a SPACE, never to nothing. Deleting it would
+            // collapse "3.15.20" to "31520" (DESIGN.md 1.7) and join words that
+            // were only ever adjacent across a comma. Runs after the rules
+            // above so keyword tokens like "alt." are still intact for them.
+            norm = norm.replace(/[.,]/g, ' ');
+            norm = norm.replace(/\s+/g, ' ').trim();
+            return norm;
+        }
+
+        // Album: strips edition/remaster suffixes. Does NOT strip a leading
+        // "the" - "The Wall" and "Wall" are different albums.
+        function normalizeAlbum(album) {
+            if (!album) return '';
+            let norm = album.toLowerCase();
+            norm = norm.replace(/\u00a0/g, ' ');  // Replace non-breaking spaces
+            // Apostrophe-like characters → ASCII. Beyond the smart quotes this
+            // covers U+00B4 acute, U+0060 backtick and U+02BC modifier-letter
+            // apostrophe. File-sharing-era tags used all three as apostrophes,
+            // so Last.fm split them onto separate pages (issue #12).
+            norm = norm.replace(/[\u2018\u2019\u00B4\u0060\u02BC]/g, "'");
+            // Square brackets and parentheses are interchangeable in the wild
+            // ("Ramalama [Bang Bang]" vs "Ramalama (Bang Bang)"). Canonicalise
+            // to parentheses so the container type stops mattering. Safe by
+            // construction: this can only merge strings that already differed
+            // nowhere else. The suffix rules below accept either form anyway,
+            // so running before them changes nothing for them.
+            norm = norm.replace(/\[/g, '(').replace(/\]/g, ')');
+            norm = norm.replace(/[\u201C\u201D]/g, '"');  // Smart double quotes → ASCII
+            // Fold diacritics for GROUPING only - the original spelling is
+            // what gets displayed, and the user still picks the winner.
+            // NFD splits a letter into base + combining mark, then the marks
+            // are dropped. This is what lets Motorhead meet Motorhead, and
+            // more importantly what reconciles Romanian comma-below with
+            // cedilla (U+0219 vs U+015F), which look identical on screen.
+            // NFD is canonical-only on purpose: NFKD would also rewrite
+            // ligatures and superscripts, which is a different decision.
+            // Known limit - letters with a stroke rather than a mark do not
+            // decompose, so o-slash, l-stroke and d-stroke are left alone.
+            norm = norm.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+            // Remove remaster/deluxe/edition suffixes
+            norm = norm.replace(/\s*[\(\[].*?(remaster|deluxe|edition|bonus|expanded|anniversary|version|disc \d).*?[\)\]]/gi, '');
+            // Optional year, as in normalizeTrack ("Aja - 1999 Remaster")
+            norm = norm.replace(/\s*-\s*(\d{4}\s+)?(remaster|deluxe|expanded).*$/i, '');
+            // Same &/and unification the artist normalizer has always had. Its
+            // absence here (and on tracks) is why discussion #10 went unflagged.
+            norm = norm.replace(/\s*&\s*/g, ' and ');
+            // Punctuation to a space, never deleted - see normalizeArtist.
+            norm = norm.replace(/[.,]/g, ' ');
+            norm = norm.replace(/\s+/g, ' ').trim();
+            return norm;
+        }
+
+        // Track: as album, plus live/remix/edit/take and bare year suffixes.
+        function normalizeTrack(track) {
+            if (!track) return '';
+            let norm = track.toLowerCase();
+            norm = norm.replace(/\u00a0/g, ' ');  // Replace non-breaking spaces
+            // Apostrophe-like characters → ASCII. Beyond the smart quotes this
+            // covers U+00B4 acute, U+0060 backtick and U+02BC modifier-letter
+            // apostrophe. File-sharing-era tags used all three as apostrophes,
+            // so Last.fm split them onto separate pages (issue #12).
+            norm = norm.replace(/[\u2018\u2019\u00B4\u0060\u02BC]/g, "'");
+            // Square brackets and parentheses are interchangeable in the wild
+            // ("Ramalama [Bang Bang]" vs "Ramalama (Bang Bang)"). Canonicalise
+            // to parentheses so the container type stops mattering. Safe by
+            // construction: this can only merge strings that already differed
+            // nowhere else. The suffix rules below accept either form anyway,
+            // so running before them changes nothing for them.
+            norm = norm.replace(/\[/g, '(').replace(/\]/g, ')');
+            norm = norm.replace(/[\u201C\u201D]/g, '"');  // Smart double quotes → ASCII
+            // Fold diacritics for GROUPING only - the original spelling is
+            // what gets displayed, and the user still picks the winner.
+            // NFD splits a letter into base + combining mark, then the marks
+            // are dropped. This is what lets Motorhead meet Motorhead, and
+            // more importantly what reconciles Romanian comma-below with
+            // cedilla (U+0219 vs U+015F), which look identical on screen.
+            // NFD is canonical-only on purpose: NFKD would also rewrite
+            // ligatures and superscripts, which is a different decision.
+            // Known limit - letters with a stroke rather than a mark do not
+            // decompose, so o-slash, l-stroke and d-stroke are left alone.
+            norm = norm.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+            // Remove common suffixes
+            // The \b around feat/ft are load-bearing: without them "ft" matches
+            // inside ordinary words and strips real titles - "Quattro (World
+            // Drifts In)", "Debase (Soft Palate)", "Winter (What We Never Were
+            // After All)" all lose their parenthetical. "feat(uring)?" is one
+            // token so "(Featuring Beth Ditto)" is caught too.
+            norm = norm.replace(/\s*[\(\[].*?(remaster|live|remix|edit|version|mix|demo|acoustic|mono|stereo|single|radio|extended|instrumental|reprise|take \d+|alternate|alt\.|bonus|\bfeat(?:uring)?\b|\bft\b).*?[\)\]]/gi, '');
+            // A year may sit between the dash and the keyword ("Midtown - 2023
+            // Remaster" - the common Spotify shape). Without the optional year
+            // group the rule below strips "2023 Remaster" and orphans the dash,
+            // leaving "midtown -" which groups with nothing.
+            norm = norm.replace(/\s*-\s*(\d{4}\s+)?(remaster|live|remix|edit|version|demo|acoustic|mono|stereo|single|radio|extended).*$/i, '');
+            // Year suffixes. The keyword is REQUIRED: a bare trailing number is
+            // part of the title, not a suffix. Without it this ate real titles
+            // ("1991" and "1983" both became "" and wrongly merged; "19-2000"
+            // became "19-").
+            norm = norm.replace(/\s*\d{4}\s*(remaster|remix|version)$/i, '');
+            // Same &/and unification the artist normalizer has always had. Its
+            // absence here is the whole of discussion #10: "9th & Hennepin" and
+            // "9th and Hennepin" both existed and never grouped.
+            norm = norm.replace(/\s*&\s*/g, ' and ');
+            // Punctuation to a space, never deleted - see normalizeArtist. This
+            // is the normalizer the 3.15.20 guard is aimed at.
+            norm = norm.replace(/[.,]/g, ' ');
+            norm = norm.replace(/\s+/g, ' ').trim();
+            // A bare trailing year IS a suffix when it trails a real title
+            // ("Comfortably Numb 2022"), and is NOT one when it is the title, or
+            // part of it ("1991", "19-2000", "555-5555"). Three conditions keep
+            // those apart, and all three are load-bearing:
+            //   - whitespace-separated, so "19-2000" is untouched
+            //   - the stem contains a letter, so "1991" and "80186" are untouched
+            //   - the stem ends alphanumeric, so "Spring 1 - 2012" does not become
+            //     "spring 1 -" and reintroduce the dangling separator
+            // Runs last because it needs the collapsed, trimmed form.
+            norm = norm.replace(/^(.*\S.*?)\s+\d{4}$/, (match, stem) =>
+                (/[a-z]/i.test(stem) && /[a-z0-9)\]]$/i.test(stem)) ? stem : match);
+            return norm;
+        }
+
         // Find artist variations (like "The Beatles" vs "Beatles")
         function findArtistVariations(scrobbles) {
             console.log('Finding artist variations...');
@@ -1623,16 +1861,10 @@
 
             const normalized = new Map();
             Object.keys(artistCounts).forEach(artist => {
-                let norm = artist.toLowerCase().trim();
-                norm = norm.replace(/\u00a0/g, ' ');  // Replace non-breaking spaces
-                norm = norm.replace(/[\u2018\u2019]/g, "'");  // Smart single quotes → ASCII
-                norm = norm.replace(/[\u201C\u201D]/g, '"');  // Smart double quotes → ASCII
-                if (norm.startsWith('the ')) norm = norm.slice(4);
-                norm = norm.replace(/\s*&\s*/g, ' and ');
-                norm = norm.replace(/\s+/g, ' ').trim();
-                
+                const norm = normalizeArtist(artist);
+
                 if (!normalized.has(norm)) normalized.set(norm, []);
-                normalized.get(norm).push({ name: artist, count: artistCounts[artist], hasSmartQuotes: /[\u2018\u2019\u201C\u201D]/.test(artist), hasInvisible: hasInvisibleChars(artist) });
+                normalized.get(norm).push({ name: artist, count: artistCounts[artist], hasInvisible: hasInvisibleChars(artist) });
             });
 
             const issues = [];
@@ -1677,19 +1909,6 @@
             
             console.log('Unique artist+album combos:', Object.keys(albumCounts).length);
 
-            function normalizeAlbum(album) {
-                if (!album) return '';
-                let norm = album.toLowerCase();
-                norm = norm.replace(/\u00a0/g, ' ');  // Replace non-breaking spaces
-                norm = norm.replace(/[\u2018\u2019]/g, "'");  // Smart single quotes → ASCII
-                norm = norm.replace(/[\u201C\u201D]/g, '"');  // Smart double quotes → ASCII
-                // Remove remaster/deluxe/edition suffixes
-                norm = norm.replace(/\s*[\(\[].*?(remaster|deluxe|edition|bonus|expanded|anniversary|version|disc \d).*?[\)\]]/gi, '');
-                norm = norm.replace(/\s*-\s*(remaster|deluxe|expanded).*$/i, '');
-                norm = norm.replace(/\s+/g, ' ').trim();
-                return norm;
-            }
-
             const grouped = new Map();
             Object.keys(albumCounts).forEach(key => {
                 const [artist, album] = key.split('|||');
@@ -1701,7 +1920,6 @@
                     name: album, 
                     count: albumCounts[key],
                     artist: artist,
-                    hasSmartQuotes: /[\u2018\u2019\u201C\u201D]/.test(album),
                     hasInvisible: hasInvisibleChars(album)
                 });
             });
@@ -1877,20 +2095,6 @@
             
             console.log('Unique artist+track combos:', Object.keys(trackCounts).length);
 
-            function normalizeTrack(track) {
-                if (!track) return '';
-                let norm = track.toLowerCase();
-                norm = norm.replace(/\u00a0/g, ' ');  // Replace non-breaking spaces
-                norm = norm.replace(/[\u2018\u2019]/g, "'");  // Smart single quotes → ASCII
-                norm = norm.replace(/[\u201C\u201D]/g, '"');  // Smart double quotes → ASCII
-                // Remove common suffixes
-                norm = norm.replace(/\s*[\(\[].*?(remaster|live|remix|edit|version|mix|demo|acoustic|mono|stereo|single|radio|extended|instrumental|reprise|take \d+|alternate|alt\.|bonus).*?[\)\]]/gi, '');
-                norm = norm.replace(/\s*-\s*(remaster|live|remix|edit|version|demo|acoustic|mono|stereo|single|radio|extended).*$/i, '');
-                norm = norm.replace(/\s*\d{4}\s*(remaster|remix|version)?$/i, ''); // Year suffixes
-                norm = norm.replace(/\s+/g, ' ').trim();
-                return norm;
-            }
-
             const grouped = new Map();
             Object.keys(trackCounts).forEach(key => {
                 const [artist, track] = key.split('|||');
@@ -1902,7 +2106,6 @@
                     name: track, 
                     count: trackCounts[key],
                     artist: artist,
-                    hasSmartQuotes: /[\u2018\u2019\u201C\u201D]/.test(track),
                     hasInvisible: hasInvisibleChars(track)
                 });
             });
@@ -2422,6 +2625,10 @@
                     }
                 }
                 
+                // Which rows differ from a sibling only by which diacritic
+                // they carry - the ones the eye cannot separate (1.9).
+                const confusableByRow = confusableMarkChars(variationsToRender.map(v => v.name || ''));
+
                 const variationsHtml = variationsToRender.map((v, i) => {
                     // Determine the Last.fm URL based on issue type
                     let lastFmUrl = '';
@@ -2447,9 +2654,22 @@
                         ? '<span class="invisible-warning">⚠️ invisible chars</span>' 
                         : '';
                     
-                    const smartQuoteWarning = v.hasSmartQuotes 
-                        ? '<span class="smart-quote-warning">⚠️ smart quote</span>' 
-                        : '';
+                    // Look-alike characters get a chip naming the character
+                    // itself, not its category - informational, no warning
+                    // glyph (1.9). Two sources, one presentation:
+                    //   - a diacritic that differs from a sibling's
+                    //   - a quote/apostrophe that is not the ASCII one
+                    // Naming the character is what keeps this honest. The
+                    // old label read "smart quote", which stopped being true
+                    // as soon as the class grew an acute accent and a
+                    // backtick; "U+0060" cannot go stale that way.
+                    const lookalikeHtml = [
+                        ...(confusableByRow[i] || []),
+                        ...lookalikeQuoteChars(v.name)
+                    ].map(ch => {
+                        const hex = 'U+' + ch.codePointAt(0).toString(16).toUpperCase().padStart(4, '0');
+                        return `<span class="char-chip lookalike" title="${escapeHtml(ch + ' ' + hex)}">${escapeHtml(ch)} ${hex}</span>`;
+                    }).join('');
                     
                     // Per-item lookup button for missing albums and compilations
                     let itemLookupHtml = '';
@@ -2482,7 +2702,7 @@
                     
                     return `
                         <div class="variation-item">
-                            <span class="variation-value">${nameHtml}${invisibleWarning}${smartQuoteWarning}</span>
+                            <span class="variation-value">${nameHtml}${lookalikeHtml}${invisibleWarning}</span>
                             ${v.count ? `<span class="variation-count">${v.count}</span>` : ''}
                             ${lastFmLinkHtml}
                             ${itemLookupHtml}

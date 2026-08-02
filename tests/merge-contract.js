@@ -1,0 +1,351 @@
+#!/usr/bin/env node
+/*
+ * Merge contract for the Scrobble Analyzer normalizers.
+ *
+ *   node tests/merge-contract.js
+ *
+ * WHAT THIS IS
+ * ------------
+ * A developer-side test. It never ships, never runs in the browser, and has no
+ * effect on index.html - users still download one file. It exists because
+ * normalization changes are the highest-risk edits in the codebase: they
+ * silently change what groups with what, and nothing else makes that visible
+ * before release.
+ *
+ * WHAT IT ASSERTS
+ * ---------------
+ * Grouping, NOT correctness. A MUST_MERGE pair claims two spellings belong on
+ * the same card. It says nothing about which spelling is right - that stays a
+ * human decision (DESIGN.md 1.3). MUST_NOT_MERGE is the mirror: these must stay
+ * on separate cards because they are genuinely different things.
+ *
+ * The MUST_NOT list is the important half. A fix that fails to fix is obvious;
+ * a fix that also quietly merges two distinct artists is the one that corrupts
+ * somebody's triage.
+ *
+ * HOW TO ADD A CASE
+ * -----------------
+ *   1. Add the pair below with its issue number.
+ *   2. Run this. WATCH IT FAIL - that is what proves you reproduced the report.
+ *   3. Change the normalizer in index.html.
+ *   4. Run again: new case passes, nothing in MUST_NOT_MERGE broke.
+ *   5. Commit the contract change and the normalizer change together.
+ *
+ * The normalizers are READ OUT OF index.html at runtime, never copied here. A
+ * copy drifts silently and you end up testing code you are not shipping.
+ */
+
+'use strict';
+
+const fs = require('fs');
+const path = require('path');
+
+const HTML = path.join(__dirname, '..', 'index.html');
+
+// --- load the real normalizers straight out of index.html --------------------
+function loadNormalizers() {
+    const html = fs.readFileSync(HTML, 'utf8');
+    const names = ['normalizeArtist', 'normalizeAlbum', 'normalizeTrack',
+                   'baseProfile', 'confusableMarkChars', 'lookalikeQuoteChars'];
+    const sources = names.map(name => {
+        const open = `        function ${name}(`;
+        const start = html.indexOf(open);
+        if (start === -1) {
+            throw new Error(
+                `Could not find "function ${name}" at top level in index.html.\n` +
+                `The merge contract requires all three normalizers to be top-level\n` +
+                `functions indented 8 spaces. If one was moved or re-nested, move it\n` +
+                `back - see docs/DESIGN.md 4.1.1.`
+            );
+        }
+        const close = '\n        }\n';
+        const end = html.indexOf(close, start);
+        if (end === -1) throw new Error(`No closing brace found for ${name}`);
+        return html.slice(start, end + close.length);
+    });
+    const factory = new Function(sources.join('\n') + `\nreturn { ${names.join(', ')} };`);
+    return factory();
+}
+
+const { normalizeArtist, normalizeAlbum, normalizeTrack,
+        confusableMarkChars, lookalikeQuoteChars } = loadNormalizers();
+
+const FN = { artist: normalizeArtist, album: normalizeAlbum, track: normalizeTrack };
+
+// --- the contract ------------------------------------------------------------
+// [field, a, b, why]
+
+const MUST_MERGE = [
+    // --- shipped behaviour: these already pass and must keep passing ---
+    ['artist', 'The Beatles',        'Beatles',              'leading "the" is stripped'],
+    ['artist', 'Simon & Garfunkel',  'Simon and Garfunkel',  'ampersand unified on artists'],
+    ['track',  '“Heroes”', '"Heroes"',             'smart double quotes fold to ASCII'],
+    ['track',  'Goin’ Out West', "Goin' Out West",      'smart single quote folds to ASCII'],
+    ['album',  'Aja (Remastered)',   'Aja',                  'edition suffix stripped'],
+    ['track',  'Midtown - Remaster', 'Midtown',              'dash remaster suffix stripped'],
+    ['track',  'Midtown (Instrumental)', 'Midtown',          'parenthetical keyword stripped'],
+
+    // --- v0.6.1 item 9: year between the dash and the keyword ---
+    ['track',  'Midtown - 2023 Remaster', 'Midtown',         'dangling separator (disc. #7 Spotify shape)'],
+    ['track',  'Always Then - 2017 Version', 'Always Then',  'same, with "version"'],
+    ['album',  'Aja - 1999 Remaster', 'Aja',                 'same rule on the album normalizer'],
+
+    // --- v0.6.1 item 2: featured-artist parentheticals ---
+    ['track',  'Young Love [ft. Laura Marling]', 'Young Love (feat. Laura Marling)',
+        'issue #17 - ft. and feat. both stripped, so container type stops mattering'],
+    ['track',  'A Real Hero (feat. Electric Youth)', 'A Real Hero',
+        'discussion #4 - featured artist in the title'],
+    ['track',  'Cruel Intentions (featuring Beth Ditto)', 'Cruel Intentions',
+        '"featuring" spelled out - feat(uring)? is one token'],
+    ['track',  'Machina (feat. Mariana Saldaña)', 'Machina (ft. Mariana Saldaña)',
+        'the two abbreviations agree with each other'],
+
+    // --- v0.6.1 item 3: punctuation to a space ---
+    ['artist', 'Albert Hammond, Jr.', 'Albert Hammond Jr',  'issue #11'],
+    ['artist', 'T. Rex',              'T.Rex',              'spacing around an initial'],
+    ['artist', 'Peter, Bjorn and John','Peter Bjorn and John','serial comma in a band name'],
+    ['track',  'D.A.N.C.E.',          'D.A.N.C.E',          'trailing period only'],
+    ['track',  'Blvd. Nights',        'Blvd Nights',        'abbreviation period'],
+    ['track',  'You, Appearing',      'You Appearing',      'comma to a space, not to nothing'],
+    ['album',  'Endtroducing.....',   'Endtroducing',       'ellipsis run'],
+    ['album',  'Attack, Decay, Sustain, Release', 'Attack Decay Sustain Release', 'serial commas'],
+
+    // --- v0.6.1 item 5: &/and on tracks and albums, as artists always had ---
+    ['track',  '9th & Hennepin', '9th and Hennepin', 'discussion #10, the reported case'],
+    ['track',  'Skin & Bones',   'Skin And Bones',   'same, mixed case'],
+    ['album',  'Young & Old',    'Young and Old',    'the rule reaches albums too'],
+    ['album',  'X&Y',            'X & Y',            'no spaces around the ampersand'],
+
+    // --- v0.6.1 item 6: apostrophe-like characters (issue #12) ---
+    ['track',  'Someone´s in the Wolf',  "Someone's in the Wolf",  'U+00B4 acute, the reported case'],
+    ['track',  'She Don`t Use Jelly',    "She Don't Use Jelly",    'U+0060 backtick'],
+    ['track',  'Love Ainʼt No Stranger', "Love Ain't No Stranger", 'U+02BC modifier-letter apostrophe'],
+    ['track',  'Goin’ Out West',         "Goin' Out West",         'U+2019, unchanged by this item'],
+
+    // --- v0.6.1 item 7: [ ] and ( ) are interchangeable ---
+    ['track',  'Ramalama [Bang Bang]', 'Ramalama (Bang Bang)', 'issue #17, the general class'],
+    ['track',  'Track [Interlude]',    'Track (Interlude)',    'no keyword inside, so only the container differs (DESIGN.md 3.6)'],
+    ['album',  'Noise [Reprise]',      'Noise (Reprise)',       'the rule reaches albums too'],
+
+    // --- v0.6.1 item 4: diacritic folding ---
+    ['artist', 'Motörhead',     'Motorhead',     'issue #14, the reported case'],
+    ['artist', 'Subcarpați',    'Subcarpaţi',    'comma-below vs cedilla, U+021B vs U+0163'],
+    ['artist', 'Ștefan Hrușcă', 'Stefan Hrusca', 'three-way split in the wild, 61/16/15 plays'],
+    ['track',  'Naïve',         'Naive',         'diaeresis'],
+    ['album',  'Oxygène',       'Oxygene',       'grave accent, album normalizer'],
+
+    // --- item 10, refined: a bare year IS a suffix when it trails a real title ---
+    ['track',  'Comfortably Numb 2022', 'Comfortably Numb',
+        'found only in a second library - the first strict rule lost this'],
+    ['track',  'Blue Monday 1988',      'Blue Monday', 'same shape'],
+];
+
+const MUST_NOT_MERGE = [
+    // --- the canonical guard: different credits, correctly distinct ---
+    ['artist', 'Elvis Costello', 'Elvis Costello & The Attractions', 'different credits (DESIGN.md 1.7)'],
+    ['artist', 'Albert Hammond', 'Albert Hammond, Jr.',              'father and son, different artists'],
+
+    // --- near-miss titles that edit distance would wrongly merge (DESIGN.md 3.7) ---
+    ['track',  'Song for the Dead', 'Song for the Deaf', 'distinct QOTSA tracks, edit distance 1'],
+    ['track',  'Opus 17',           'Opus 37',           'distinct pieces, edit distance 1'],
+    ['track',  'Obstacle 1',        'Obstacle 2',        'distinct Interpol tracks'],
+
+    // --- albums are not artists: no leading-"the" strip here ---
+    ['album',  'The Wall',          'Wall',              'leading "the" is meaningful in album titles'],
+
+    // --- v0.6.1 item 10: a bare trailing number is part of the title ---
+    ['track',  '19-2000',           '19-2001',           'year rule must not eat digits belonging to the title'],
+    ['track',  '1991',              '1983',              'numeric titles both became "" and wrongly merged'],
+    ['track',  '80186',             '80286',             'trailing \\d{4} matched inside a 5-digit title'],
+    ['track',  '555-5555',          '555-1234',          'Lorn - phone-number titles must stay distinct'],
+
+    // --- v0.6.1 item 2: "ft" must not match inside ordinary words. These are
+    //     real titles from a real library that a boundary-less \bft\b eats. ---
+    ['track',  'Quattro (World Drifts In)',            'Quattro',            '"ft" inside "Drifts"'],
+    ['track',  'Debase (Soft Palate)',                 'Debase',             '"ft" inside "Soft"'],
+    ['track',  'Winter (What We Never Were After All)','Winter',             '"ft" inside "After"'],
+    ['track',  'Mars and the Artist (after Cy Twombly)','Mars and the Artist','"ft" inside "after"'],
+];
+
+// Assertions about a single key, not a pair.
+//
+// Some guards cannot be expressed as a pair, because the string you are
+// guarding against is itself rewritten by the normalizer. The 3.15.20 guard is
+// the case in point: asserting that "3.15.20" and "31520" stay unmerged proves
+// nothing, since the year rule chews "31520" down to "3" and they differ no
+// matter what punctuation does. The real requirement is about the key itself.
+//
+// [field, input, forbidden key, why]
+const KEY_MUST_NOT_BE = [
+    ['track', '3.15.20', '31520',
+        'DESIGN.md 1.7 title guard: punctuation must map to a SPACE, never be ' +
+        'deleted. If this fires, a rule is deleting "." instead of replacing it.'],
+    ['album', '3.15.20', '31520', 'same guard on the album normalizer'],
+    ['track', 'Spring 1 - 2012', 'spring 1 -',
+        'the bare-year rule must not strip a year that leaves a dangling ' +
+        'separator behind - that is the item 9 bug coming back in through item 10.'],
+];
+
+// Which rows get a confusable-diacritic chip (DESIGN.md 1.9 / 4.1.2).
+//
+// Folding diacritics groups names the eye may not be able to separate. The chip
+// says what differs - but only where the difference is genuinely invisible. The
+// test is perceptual, not by character class: mark-vs-different-mark gets a
+// chip, mark-vs-bare-letter does not, because you can already see that one.
+//
+// [names in the group, expected chip? per name, why]
+const CHIP_EXPECT = [
+    [['Subcarpați', 'Subcarpaţi'], [true, true],
+        'comma-below vs cedilla - the same picture at body-text size'],
+    [['Zdob şi Zdub', 'Zdob și Zdub'], [true, true],
+        'same, mid-string'],
+    [['Ștefan Hrușcă', 'Stefan Hrusca', 'Ştefan Hruşcă'], [true, false, true],
+        'three-way: the two marked rows are confusable, the bare one is not'],
+    [['Motörhead', 'Motorhead'], [false, false],
+        'obvious at a glance, and the umlaut is the actual name - no chip'],
+    [['Șuie Paparude', 'Suie Paparude'], [false, false],
+        'mark vs bare letter is visible'],
+    [['Naive', 'Naïve'], [false, false],
+        'same, and a reminder that character class is not the criterion'],
+    [['Song for the Dead', 'Song for the Deaf'], [false, false],
+        'different letters entirely, no marks involved'],
+];
+
+// Cases that behave wrongly today and have deliberately not been fixed.
+// Reported, visible, never fatal. The 4th field is what CORRECT behaviour would
+// be, so this list covers both directions: pairs that should merge and don't,
+// and pairs that shouldn't merge but do. When one starts behaving correctly the
+// runner says so - promote it to MUST_MERGE or MUST_NOT_MERGE.
+const KNOWN_MISS = [
+    // --- scoped for v0.6.1, expected to flip as items land ---
+
+    // --- no viable detector, not scoped to any release (DESIGN.md 3.7) ---
+    ['track',  'Cartoons and Macramé Wounds', 'Cartoons and Macreme Wounds', true,
+        'issue #15 - a typo, not an accent; edit distance is not usable'],
+    ['track',  'Citizen Erased', 'Citzen Erased', true,
+        'issue #16 - single-character typo; edit distance is not usable'],
+
+];
+
+// --- runner ------------------------------------------------------------------
+const GREEN = '\x1b[32m', RED = '\x1b[31m', DIM = '\x1b[2m', YEL = '\x1b[33m', OFF = '\x1b[0m';
+
+let passed = 0;
+const failures = [];
+
+function check(field, a, b, why, shouldMatch) {
+    const fn = FN[field];
+    if (!fn) throw new Error('unknown field: ' + field);
+    const ka = fn(a), kb = fn(b);
+    const matched = ka === kb;
+    if (matched === shouldMatch) {
+        passed++;
+        return true;
+    }
+    failures.push({ field, a, b, why, ka, kb, shouldMatch });
+    return false;
+}
+
+MUST_MERGE.forEach(([f, a, b, why]) => check(f, a, b, why, true));
+MUST_NOT_MERGE.forEach(([f, a, b, why]) => check(f, a, b, why, false));
+
+const keyFailures = [];
+KEY_MUST_NOT_BE.forEach(([field, input, forbidden, why]) => {
+    const got = FN[field](input);
+    if (got === forbidden) keyFailures.push({ field, input, forbidden, why, got });
+    else passed++;
+});
+
+// Drift guard: the quote chip and the normalizers each carry their own copy of
+// the apostrophe/quote character class. If they fall out of step the UI either
+// chips a character that does not affect grouping, or stays silent about one
+// that does. Every character the chip is willing to show must be folded to its
+// ASCII equivalent by all three normalizers.
+// The probe must DISCOVER the class, never restate it. An earlier version of
+// this guard passed a hand-written copy of the characters, so widening the chip
+// class past that copy was invisible to it - the test drifted alongside the code
+// it was meant to pin. Sweeping a wide range instead means whatever the chip is
+// willing to match gets found and checked.
+const PROBE = (() => {
+    let s = '';
+    for (let cp = 0x20; cp <= 0x30FF; cp++) {
+        if (cp >= 0xD800 && cp <= 0xDFFF) continue;   // surrogates
+        s += String.fromCodePoint(cp);
+    }
+    return s;
+})();
+const driftFailures = [];
+lookalikeQuoteChars(PROBE).forEach(ch => {
+    const hex = 'U+' + ch.codePointAt(0).toString(16).toUpperCase().padStart(4, '0');
+    ['artist', 'album', 'track'].forEach(field => {
+        const got = FN[field]('x' + ch + 'y');
+        if (got === "x'y" || got === 'x"y') passed++;
+        else driftFailures.push({ ch, hex, field, got });
+    });
+});
+
+const chipFailures = [];
+CHIP_EXPECT.forEach(([names, expected, why]) => {
+    const got = confusableMarkChars(names).map(chips => chips.length > 0);
+    const ok = got.length === expected.length && got.every((g, i) => g === expected[i]);
+    if (ok) passed++;
+    else chipFailures.push({ names, expected, got, why });
+});
+
+// KNOWN_MISS is reported, never fatal.
+const fixed = [];
+KNOWN_MISS.forEach(([f, a, b, shouldMatch, why]) => {
+    if ((FN[f](a) === FN[f](b)) === shouldMatch) fixed.push({ f, a, b, shouldMatch, why });
+});
+
+console.log('\nmerge contract  ' + DIM + '(normalizers read live from index.html)' + OFF + '\n');
+
+const totalFailures = failures.length + keyFailures.length + chipFailures.length + driftFailures.length;
+
+if (totalFailures === 0) {
+    console.log(`  ${GREEN}PASS${OFF}  ${passed} assertions`);
+} else {
+    console.log(`  ${RED}FAIL${OFF}  ${totalFailures} of ${passed + totalFailures} assertions\n`);
+    failures.forEach(f => {
+        const verb = f.shouldMatch ? 'should have merged, did not' : 'must NOT merge, but did';
+        console.log(`  ${RED}x${OFF} [${f.field}] ${verb}`);
+        console.log(`      ${JSON.stringify(f.a)}  ->  ${JSON.stringify(f.ka)}`);
+        console.log(`      ${JSON.stringify(f.b)}  ->  ${JSON.stringify(f.kb)}`);
+        console.log(`      ${DIM}${f.why}${OFF}\n`);
+    });
+    keyFailures.forEach(f => {
+        console.log(`  ${RED}x${OFF} [${f.field}] key guard violated`);
+        console.log(`      ${JSON.stringify(f.input)}  ->  ${JSON.stringify(f.got)}  ${RED}(forbidden)${OFF}`);
+        console.log(`      ${DIM}${f.why}${OFF}\n`);
+    });
+    driftFailures.forEach(f => {
+        console.log(`  ${RED}x${OFF} [drift] the chip shows ${f.ch} ${f.hex}, but normalize${f.field[0].toUpperCase()}${f.field.slice(1)} does not fold it`);
+        console.log(`      ${JSON.stringify('x' + f.ch + 'y')}  ->  ${JSON.stringify(f.got)}`);
+        console.log(`      ${DIM}chip class and normalizer class have drifted apart${OFF}\n`);
+    });
+    chipFailures.forEach(f => {
+        console.log(`  ${RED}x${OFF} [chip] wrong rows chipped`);
+        f.names.forEach((n, i) => {
+            const want = f.expected[i] ? 'chip' : 'no chip';
+            const got = f.got[i] ? 'chip' : 'no chip';
+            const mark = want === got ? ' ' : RED + '!' + OFF;
+            console.log(`      ${mark} ${JSON.stringify(n)}  want ${want}, got ${got}`);
+        });
+        console.log(`      ${DIM}${f.why}${OFF}\n`);
+    });
+}
+
+if (KNOWN_MISS.length) {
+    console.log(`\n  ${DIM}${KNOWN_MISS.length} known misses not yet fixed (not failures)${OFF}`);
+}
+if (fixed.length) {
+    console.log(`\n  ${YEL}!${OFF} ${fixed.length} KNOWN_MISS case(s) now behave correctly - promote them:`);
+    fixed.forEach(f => {
+        const target = f.shouldMatch ? 'MUST_MERGE' : 'MUST_NOT_MERGE';
+        console.log(`      [${f.f}] -> ${target}  ${JSON.stringify(f.a)} / ${JSON.stringify(f.b)}`);
+        console.log(`          ${DIM}${f.why}${OFF}`);
+    });
+}
+
+console.log('');
+process.exit(totalFailures ? 1 : 0);

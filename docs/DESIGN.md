@@ -55,9 +55,9 @@ A third class — **reference detectors**, comparing the library against an exte
 
 Punctuation stripping and diacritic folding are **not implemented anywhere**, and the `&`/`and` rule exists **only on artists**. Earlier drafts claimed punctuation stripping was part of the pipeline; it never was. Several open issues trace directly to these three gaps (§3.3). Each rule that *does* exist was driven by a real user report, not speculation. Two principles worth preserving:
 
-- Normalization changes are the highest-risk edits in the codebase — they silently change what groups with what. Hence the planned merge contract (§4.1).
-- The canonical MUST-NOT-merge example: **Elvis Costello vs. Elvis Costello & The Attractions** are different credits, correctly distinct. Any normalization change that merges them is wrong.
-- A dormant future guard exists conceptually for title normalization: numeric-punctuation titles like *3.15.20* must not normalize to "31520". Not yet enforced anywhere; encode it in the merge contract when title normalization is touched.
+- Normalization changes are the highest-risk edits in the codebase — they silently change what groups with what. Hence the merge contract, `tests/merge-contract.js` (§4.1.1) — **built as of 2026-08-01**. Add cases there before changing behaviour here.
+- The canonical MUST-NOT-merge example: **Elvis Costello vs. Elvis Costello & The Attractions** are different credits, correctly distinct. Any normalization change that merges them is wrong. Now enforced.
+- The title guard — numeric-punctuation titles like *3.15.20* must not normalize to "31520" — **is now enforced**, but not as a pair. It could not be: asserting that `3.15.20` and `31520` stay unmerged proves nothing, because the year rule rewrites `31520` to `3` and the two differ no matter what punctuation does. It lives in the contract's `KEY_MUST_NOT_BE` list as an assertion about the key itself. This was found by injecting the exact mistake the guard exists to catch and watching the pair form pass.
 
 ### 1.8 Git/release conventions (and why)
 
@@ -161,11 +161,24 @@ Real typos exist in that set but are buried by design: they are *rare* (`Citzen 
 
 ## 4. Roadmap
 
-### 4.1 v0.6.1 — normalization patch (scoped, not built)
+### 4.1 v0.6.1 — normalization patch (BUILT 2026-08-01, unreleased)
 
 Theme: "the normalizer catches what you reported."
 
-**Scope validated 2026-08-01** against the 380,877-scrobble export attached to issue #11 (§5.2), using a Node harness that replicated the three shipped normalizers verbatim. Baseline on that library, at the thresholds as shipped (artist ≥10 plays, track ≥3): **38 artist issues, 400 track issues**. Each change measured in isolation:
+All ten items are implemented on branch `normalization-patch`, one commit each, each measured before it landed. Nothing is released yet.
+
+**Measured outcome**, working tree vs. `main`, at the thresholds as shipped (artist ≥10 plays, album ≥5, track ≥3):
+
+| | scoblitz (160,742 scrobbles) | Maeldun (380,877 scrobbles) |
+|---|---|---|
+| Artist | 46 → **49** | 38 → **49** |
+| Album | 98 → **132** | 31 → **55** |
+| Track | 994 → **1201** | 400 → **559** |
+| Groups genuinely dropped | **0** | 6, all intentional |
+
+Every disappearing group was classified rather than counted: scoblitz 42 gone / 42 absorbed into larger groups / 0 dropped; Maeldun 10 gone / 4 absorbed / 6 dropped, those six being the numeric-title false positives item 10 exists to remove. Dismissal orphaning stayed negligible on both (§5.1).
+
+The per-item table below is the **pre-implementation estimate**, kept for attribution — it shows which change is responsible for what. Its figures were measured in isolation against Maeldun only, on a Node harness that copied the normalizers rather than reading them, and the combined row understates the shipped result because it predates items 9/10 and never covered albums. Trust the measured table above; use this one to attribute.
 
 | # | Change | Artist | Track | Closes |
 |---|---|:---:|:---:|---|
@@ -177,11 +190,13 @@ Theme: "the normalizer catches what you reported."
 | 6 | Apostrophes U+00B4, U+0060, U+02BC | 0 | +5 | #12 |
 | 7 | Bracket/paren container canonicalization | — | +1 | #17 general class |
 | 8 | Android file-input `accept` fix | — | — | #5 |
-| | **all combined** | **38→49** | **400→561** | |
+| 9 | Year allowed between dash and keyword | — | +4 | see 4.1.3 |
+| 10 | Year suffix requires its keyword | — | **−6 false** | see 4.1.3 |
+| | *estimated combined* | *38→49* | *400→561* | |
 
 All 11 new artist groups and the top 40 new track groups were inspected by hand; no false positive was found. Notes:
 
-1. **Merge contract** — a checked-in, Node-runnable test file: MUST-merge pairs, MUST-NOT-merge pairs (Elvis Costello & The Attractions enshrined), documented KNOWN_MISS class, and a dormant title-guard section (*3.15.20* ≠ "31520"). **Build this first**; normalization changes land only after it passes. Nothing of the kind exists yet — see §4.1.1.
+1. **Merge contract** — `tests/merge-contract.js`, built first as planned. Now at **64 assertions** with 2 known misses (the typo cases #15/#16, which have no viable detector). It found items 9 and 10 before any scoped change was written — see §4.1.1 and §4.1.3.
 2. Routes `feat.`/`ft.` pairs into ordinary track-variation cards. Accepted deliberately as a first step to *surface* the issue, deferring the separate "Multiple Artists" category (disc. #4) to v0.7 once §5.3 is settled.
 3. **Period must map to a space, not to deletion.** This is exactly what preserves the §1.7 title guard: `3.15.20` → `3 15 20`, never `31520`. Verified.
 4. The dominant win on this library is Romanian cedilla-vs-comma-below (`ş` U+015F vs `ș` U+0219); `Ștefan Hrușcă` is currently split three ways at 61/16/15 plays and NFD folding reconciles all three. **This item carries a hard dependency — see 4.1.2. Folding must not ship without the confusable-character chip.**
@@ -257,6 +272,37 @@ Required behaviour, following §1.9:
 **Decision (2026-08-01): diacritic folding stays in v0.6.1, chip included.** The alternative considered and rejected was deferring folding to v0.7 to keep v0.6.1 purely mechanical — every other item in the release is a one-line normalizer edit, and this one pulls in rendering work. Rejected because folding is the second-largest detection win in the release (+8 artist, +24 track) and splitting it from the chip would ship the unreadable-card problem on purpose. v0.6.1 therefore contains exactly one piece of UI work; expect it in review.
 
 Scope note: this is Romanian/Turkish cedilla-vs-comma-below in practice, but the rule is written on perceptual grounds rather than per-script so it generalises. It is small — the reveal-chip renderer already exists and is reused. Measurement caveat for whoever picks this up: an early pass put the track-side count at 2, but both were artifacts of a crude heuristic (it tested whether *every row* contained any mark, not whether the *differing* character was mark-vs-mark, so `À Mon Âme` vs `A Mon Âme` was misbinned). Treat the affected population as artist-side only until re-measured with a positional comparison.
+
+#### 4.1.3 Items 9 and 10 — two suffix bugs found by the merge contract
+
+Neither was reported by a user. Both surfaced on 2026-08-01 while writing MUST_MERGE cases for behaviour assumed to already work, which is the merge contract earning its place before a single scoped item had been built. Added to v0.6.1 by decision the same day.
+
+**Item 9 — dangling separator.** `Midtown - 2023 Remaster` normalized to `midtown -`, so it grouped with nothing. The dash rule required its keyword *immediately* after the dash, so with a year in between it did not fire; the year rule then stripped `2023 Remaster` and abandoned the separator. This is the standard Spotify shape and exactly what discussion #7 raised. Fix: allow an optional `\d{4}` between the dash and the keyword, in the track *and* album normalizers. On the issue-#11 export: +4 groups, and track keys ending in an orphaned separator fall from 20 to 8 (the remainder are legitimate — Isis `-`, Mew `+ -`, a Morse-code artist).
+
+**Item 10 — over-eager year strip.** The trailing-year rule made its keyword optional, so it deleted *any* trailing four-digit run. This did real damage: it was not merely failing to group, it was **fabricating cards**. Every wholly numeric title normalized to the empty string and collapsed together:
+
+```
+"1991"(55)  | "1983"(1)                                     <- distinct tracks, merged
+"0001"(2)   | "0002"(2)  | "0003"(2) | "0004"(2)            <- distinct tracks, merged
+"80186"(1)  | "80286"(1) | ... | "80686"(1)                 <- \d{4} matched inside a 5-digit title
+"19-2000"   -> "19-"      "555-5555" -> "555-"              <- titles mangled
+```
+
+Fix: make the keyword required. On the export this removes **6 false-positive groups**. That is the reason items 9 and 10 read as `+4 / −6` in the table above: the headline count drops, and detection quality strictly improves. Do not read the −6 as a regression.
+
+**Item 10, refined — and why one library was not enough.** Requiring the keyword also stopped bare trailing years being stripped at all. Maeldun's export contained no case where that mattered, so it looked free. Validating against a second library (the maintainer's own, 160,742 scrobbles) turned up the one it broke: `Comfortably Numb`(4) and `Comfortably Numb 2022`(2) stopped grouping. The final rule strips a bare trailing year only when **all three** hold, each guarding a specific failure:
+
+| Condition | Guards against |
+|---|---|
+| whitespace-separated | `19-2000`, `555-5555` — digits belonging to the title |
+| stem contains a letter | `1991`, `80186` — wholly numeric titles |
+| stem ends alphanumeric | `Spring 1 - 2012` → `spring 1 -`, item 9's dangling separator returning |
+
+Measured after refinement: scoblitz 1200 → 1201, Maeldun unchanged at 559. The six false-positive groups stay removed — every one is a set of genuinely distinct numerically-titled tracks (Crystal Castles `1991`/`1983`, HEALTH `0001`–`0004`, MASTER BOOT RECORD `80186`–`80686`).
+
+The lesson is worth keeping: **a normalizer change validated against a single export is undertested.** One library's blind spot is another's common case. Both exports are now the standing validation set.
+
+Both fixes are guarded going forward — item 9 by MUST_MERGE cases, item 10 by MUST_NOT_MERGE cases including `1991`/`1983` and `80186`/`80286`, plus a `KEY_MUST_NOT_BE` entry for the `Spring 1 - 2012` dangle.
 
 ### 4.2 v0.7.0 — pattern-detector release (scoped, not built)
 

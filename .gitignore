@@ -1,0 +1,4 @@
+# macOS Finder metadata. Written into any folder Finder opens, including this
+# one - not part of the project and never wanted in a commit.
+.DS_Store
+._*
