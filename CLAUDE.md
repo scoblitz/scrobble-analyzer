@@ -22,7 +22,7 @@ Data flow:
 ## Run / test
 
 - **Run:** open the HTML file directly in a browser. That's it.
-- **Test:** no automated tests exist yet. A "merge contract" test file (Node-runnable; MUST-merge / MUST-NOT-merge pairs for the normalizers) is planned for v0.6.1 — see DESIGN.md. Until it lands, verify normalizer changes manually against real exports.
+- **Test:** `node tests/merge-contract.js`. It reads the normalizers, the invisible-character finder and the dismissal functions live out of index.html (they must stay top-level, 8-space-indented — see DESIGN.md §4.1.1) and pins MUST-merge / MUST-NOT-merge pairs plus the dismissal status rules. Add cases before changing behaviour. Still verify UI changes manually against a real export.
 
 ## Conventions & house rules
 
@@ -35,8 +35,8 @@ Data flow:
 
 ## Current release state
 
-v0.6.0 shipped (persistent dismissals, invisible-character consolidation + track-level detection, character reveal chips, visual refresh, five bug fixes). v0.6.1 (normalization patch) and v0.7.0 (pattern-detector release) are scoped but not built.
+v0.7.0 is the current release: dismissals split into "fixed" (hides until new plays appear under the old name, then recurs tagged) and "ignored" (hides for good), with an Active / Fixed / Ignored view and storage v2 that migrates older dismissals as fixed-with-no-baseline. Before it: v0.6.1 (normalization patch), v0.6.0 (persistent dismissals, invisible-character work, visual refresh). v0.8.0 (pattern-detector release) is scoped but not built.
 
 ## Deeper context
 
-Read **DESIGN.md** for design decisions and their rationale, rejected alternatives, known blind spots, the v0.6.1/v0.7 roadmap, and explicitly flagged open questions. Read it before touching the normalizers or detection logic.
+Read **DESIGN.md** for design decisions and their rationale, rejected alternatives, known blind spots, the roadmap, and explicitly flagged open questions. Read it before touching the normalizers or detection logic.
