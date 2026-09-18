@@ -42,29 +42,40 @@ const path = require('path');
 
 const HTML = path.join(__dirname, '..', 'index.html');
 
-// --- load the real normalizers straight out of index.html --------------------
+// --- read real functions straight out of index.html --------------------------
+// Every function under test must be top-level in the <script>, indented 8
+// spaces, closing with a lone brace at the same indent. That is the whole
+// extraction rule (DESIGN.md 4.1.1); nothing is copied into this file.
+const HTML_SOURCE = fs.readFileSync(HTML, 'utf8');
+
+function topLevelSource(name) {
+    const open = `        function ${name}(`;
+    const start = HTML_SOURCE.indexOf(open);
+    if (start === -1) {
+        throw new Error(
+            `Could not find "function ${name}" at top level in index.html.\n` +
+            `The contract requires it to be a top-level function indented 8 spaces.\n` +
+            `If it was moved or re-nested, move it back - see docs/DESIGN.md 4.1.1.`
+        );
+    }
+    const close = '\n        }\n';
+    const end = HTML_SOURCE.indexOf(close, start);
+    if (end === -1) throw new Error(`No closing brace found for ${name}`);
+    return HTML_SOURCE.slice(start, end + close.length);
+}
+
+// Returns { name: fn } for the named functions, evaluated together so they
+// can call each other. `globals` are injected by name (e.g. a silent console).
+function loadTopLevel(names, globals = {}) {
+    const sources = names.map(topLevelSource);
+    const factory = new Function(...Object.keys(globals),
+        sources.join('\n') + `\nreturn { ${names.join(', ')} };`);
+    return factory(...Object.values(globals));
+}
+
 function loadNormalizers() {
-    const html = fs.readFileSync(HTML, 'utf8');
-    const names = ['normalizeArtist', 'normalizeAlbum', 'normalizeTrack',
-                   'baseProfile', 'confusableMarkChars', 'lookalikeQuoteChars'];
-    const sources = names.map(name => {
-        const open = `        function ${name}(`;
-        const start = html.indexOf(open);
-        if (start === -1) {
-            throw new Error(
-                `Could not find "function ${name}" at top level in index.html.\n` +
-                `The merge contract requires all three normalizers to be top-level\n` +
-                `functions indented 8 spaces. If one was moved or re-nested, move it\n` +
-                `back - see docs/DESIGN.md 4.1.1.`
-            );
-        }
-        const close = '\n        }\n';
-        const end = html.indexOf(close, start);
-        if (end === -1) throw new Error(`No closing brace found for ${name}`);
-        return html.slice(start, end + close.length);
-    });
-    const factory = new Function(sources.join('\n') + `\nreturn { ${names.join(', ')} };`);
-    return factory();
+    return loadTopLevel(['normalizeArtist', 'normalizeAlbum', 'normalizeTrack',
+                         'baseProfile', 'confusableMarkChars', 'lookalikeQuoteChars']);
 }
 
 const { normalizeArtist, normalizeAlbum, normalizeTrack,
@@ -283,20 +294,73 @@ const FINDER_EXPECT = [
 ];
 
 function loadFinder() {
-    const html = fs.readFileSync(HTML, 'utf8');
-    const names = ['getVisibleString', 'hasInvisibleChars', 'findInvisibleCharacterIssues'];
-    const sources = names.map(name => {
-        const open = `        function ${name}(`;
-        const start = html.indexOf(open);
-        if (start === -1) throw new Error(`Could not find "function ${name}" at top level in index.html.`);
-        const end = html.indexOf('\n        }\n', start);
-        return html.slice(start, end + 11);
-    });
     // The finder logs progress to the console; silence it here.
-    const factory = new Function('console', sources.join('\n') + '\nreturn findInvisibleCharacterIssues;');
-    return factory({ log() {} });
+    return loadTopLevel(['getVisibleString', 'hasInvisibleChars', 'findInvisibleCharacterIssues'],
+                        { console: { log() {} } }).findInvisibleCharacterIssues;
 }
 const findInvisibleCharacterIssues = loadFinder();
+
+const { dismissalStatus, migrateDismissalBlob } =
+    loadTopLevel(['dismissalStatus', 'migrateDismissalBlob', 'legacyDismissalRecord']);
+
+// Dismissal status (DESIGN.md 4.5). One pure function decides whether a
+// dismissed item is hidden or has come back; everything the UI does with
+// dismissals in phase 2 is a consumer of this answer, so the rules are
+// pinned here first.
+//
+// `current` is what the export shows now: a play count for a per-track item
+// (missing-album / compilation row), or { name: count } for every row on a
+// card. `record` is what was stored when the item was marked.
+//
+// [why, record, current, expected]
+const FIXED = (count) => ({ intent: 'fixed', count, at: 1 });
+const FIXED_CARD = (members) => ({ intent: 'fixed', members, at: 1 });
+const IGNORED = { intent: 'ignored', at: 1 };
+const LEGACY = { intent: 'fixed', legacy: true, at: 1 };
+
+const DISMISSAL_EXPECT = [
+    ['never dismissed', undefined, 5, 'active'],
+    ['never dismissed (card)', undefined, { A: 5 }, 'active'],
+
+    ['ignored hides regardless of count', IGNORED, 99, 'hidden'],
+    ['ignored hides regardless of members', IGNORED, { A: 5, B: 1 }, 'hidden'],
+
+    // Counts, not presence: reloading the same file, or re-exporting before
+    // the Last.fm edit propagated, must not un-hide a fixed item.
+    ['fixed, count unchanged', FIXED(5), 5, 'hidden'],
+    ['fixed, count fell (edit propagated partly)', FIXED(5), 3, 'hidden'],
+    ['fixed, new plays under the bad name', FIXED(5), 6, 'recurred'],
+
+    ['fixed card, same members and counts', FIXED_CARD({ A: 5, B: 2 }), { A: 5, B: 2 }, 'hidden'],
+    ['fixed card, a member grew', FIXED_CARD({ A: 5, B: 2 }), { A: 5, B: 3 }, 'recurred'],
+    ['fixed card, a member appeared', FIXED_CARD({ A: 5, B: 2 }), { A: 5, B: 2, C: 1 }, 'recurred'],
+    // A member that disappears is the fix landing, not a recurrence.
+    ['fixed card, a member disappeared', FIXED_CARD({ A: 5, B: 2 }), { A: 5 }, 'hidden'],
+    // The accepted tradeoff (4.5): the tool does not know which spelling the
+    // user kept, so the winner growing counts as a recurrence. Pinned so it
+    // stays deliberate.
+    ['fixed card, winner grew (accepted tradeoff)', FIXED_CARD({ A: 5, B: 2 }), { A: 7, B: 2 }, 'recurred'],
+    ['fixed card, loser gone and winner grew', FIXED_CARD({ A: 5, B: 2 }), { A: 7 }, 'recurred'],
+
+    // Migrated from v1: no baseline, so anything still present surfaces once.
+    ['legacy fixed, per-track present', LEGACY, 1, 'recurred'],
+    ['legacy fixed, card present', LEGACY, { A: 1 }, 'recurred'],
+    // (legacy + absent is never evaluated: nothing on screen to ask about)
+];
+
+// v1 -> v2 blob migration. Every v1 ID becomes a legacy fixed record; a v2
+// blob passes through untouched (including one carrying the v1 shadow array).
+const MIGRATION_EXPECT = [
+    ['v1 blob becomes legacy fixed records',
+        { dismissed: ['artist-a', 'missing-b-item-c'], savedAt: 42 },
+        { 'artist-a':         { intent: 'fixed', legacy: true, at: 42 },
+          'missing-b-item-c': { intent: 'fixed', legacy: true, at: 42 } }],
+    ['empty v1 blob',
+        { dismissed: [], savedAt: 42 }, {}],
+    ['v2 blob passes through, shadow array ignored',
+        { version: 2, items: { 'artist-a': { intent: 'ignored', at: 7 } }, dismissed: ['artist-a', 'stale'], savedAt: 42 },
+        { 'artist-a': { intent: 'ignored', at: 7 } }],
+];
 
 // --- runner ------------------------------------------------------------------
 const GREEN = '\x1b[32m', RED = '\x1b[31m', DIM = '\x1b[2m', YEL = '\x1b[33m', OFF = '\x1b[0m';
@@ -371,15 +435,27 @@ CHIP_EXPECT.forEach(([names, expected, why]) => {
     else chipFailures.push({ names, expected, got, why });
 });
 
+const dismissalFailures = [];
+DISMISSAL_EXPECT.forEach(([why, record, current, expected]) => {
+    const got = dismissalStatus(record, current);
+    if (got === expected) passed++;
+    else dismissalFailures.push({ why, record, current, expected, got });
+});
+MIGRATION_EXPECT.forEach(([why, blob, expected]) => {
+    const got = migrateDismissalBlob(blob);
+    if (JSON.stringify(got) === JSON.stringify(expected)) passed++;
+    else dismissalFailures.push({ why, record: blob, current: '(migration)', expected, got });
+});
+
 // KNOWN_MISS is reported, never fatal.
 const fixed = [];
 KNOWN_MISS.forEach(([f, a, b, shouldMatch, why]) => {
     if ((FN[f](a) === FN[f](b)) === shouldMatch) fixed.push({ f, a, b, shouldMatch, why });
 });
 
-console.log('\nmerge contract  ' + DIM + '(normalizers read live from index.html)' + OFF + '\n');
+console.log('\nmerge contract  ' + DIM + '(normalizers and dismissal rules read live from index.html)' + OFF + '\n');
 
-const totalFailures = failures.length + keyFailures.length + chipFailures.length + driftFailures.length + finderFailures.length;
+const totalFailures = failures.length + keyFailures.length + chipFailures.length + driftFailures.length + finderFailures.length + dismissalFailures.length;
 
 if (totalFailures === 0) {
     console.log(`  ${GREEN}PASS${OFF}  ${passed} assertions`);
@@ -406,6 +482,12 @@ if (totalFailures === 0) {
         console.log(`  ${RED}x${OFF} [finder] wrong cards for: ${f.why}`);
         console.log(`      want ${JSON.stringify(f.want)}`);
         console.log(`      got  ${JSON.stringify(f.got)}\n`);
+    });
+    dismissalFailures.forEach(f => {
+        console.log(`  ${RED}x${OFF} [dismissal] ${f.why}`);
+        console.log(`      record  ${JSON.stringify(f.record)}`);
+        console.log(`      current ${JSON.stringify(f.current)}`);
+        console.log(`      want ${JSON.stringify(f.expected)}, got ${JSON.stringify(f.got)}\n`);
     });
     chipFailures.forEach(f => {
         console.log(`  ${RED}x${OFF} [chip] wrong rows chipped`);
