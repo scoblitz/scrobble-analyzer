@@ -2733,11 +2733,23 @@
                     }
                 }
                 
-                // Dismiss button - show "Restore" if dismissed, "Dismiss" if not
-                // For missing/compilation, also offer "Dismiss All" option
+                // Dismiss button - show "Restore" if dismissed, "Dismiss" if not.
+                // Missing/compilation cards dismiss per track, never as a whole
+                // issue. Compilation cards additionally get a "Dismiss all",
+                // for the album that is not a compilation at all, or the user
+                // who does not treat compilations as something to fix: it
+                // dismisses every track still showing, by the same per-track
+                // IDs the small buttons use, so restore, the dismissed view,
+                // the counts and the report need no special case.
                 const isDismissed = issue._isDismissed;
                 let dismissButtonHtml;
-                if (['missing', 'compilation'].includes(issue.type)) {
+                if (issue.type === 'compilation') {
+                    const n = variationsToRender.length;
+                    const plural = n !== 1 ? 's' : '';
+                    dismissButtonHtml = state.showDismissed
+                        ? `<button class="dismiss-btn restore dismiss-all" data-issue-id="${issue._id}">↩️ Restore all ${n} track${plural}</button>`
+                        : `<button class="dismiss-btn dismiss-all" data-issue-id="${issue._id}">✓ Dismiss all ${n} track${plural}</button>`;
+                } else if (issue.type === 'missing') {
                     // No issue-level dismiss for these - they use per-item dismissal
                     dismissButtonHtml = '';
                 } else {
@@ -2800,6 +2812,26 @@
                 });
                 
                 card.addEventListener('click', (e) => {
+                    // "Dismiss all" / "Restore all" on a compilation card: every
+                    // track currently showing, by its per-track ID. Checked
+                    // before the plain dismiss-btn branch, which it would
+                    // otherwise match. Always a full re-render: the card
+                    // empties (or fills), and neighbouring cards may move.
+                    if (e.target.classList.contains('dismiss-all')) {
+                        const isRestore = e.target.classList.contains('restore');
+                        (issue.variations || []).forEach(v => {
+                            const itemId = getItemId(issue._id, v.name);
+                            if (isRestore) state.dismissedIds.delete(itemId);
+                            else state.dismissedIds.add(itemId);
+                        });
+                        saveDismissedState();
+                        updateCounts();
+                        const scrollTop = document.querySelector('.content').scrollTop;
+                        renderIssues();
+                        document.querySelector('.content').scrollTop = scrollTop;
+                        return;
+                    }
+
                     // Handle issue-level dismiss button click
                     if (e.target.classList.contains('dismiss-btn')) {
                         const issueId = e.target.dataset.issueId;
