@@ -43,6 +43,7 @@ Strategic consequence: persistent dismissals **unlock detection categories that 
 
 - **Variation detectors** need a disagreement to exist: two spellings clustering to one normalization key. They can never see a *uniform* error (see §3.1).
 - **Pattern detectors** match individual entries against regex, no twin required (compilation detection, missing-album detection today; remaster/feat. detection in v0.7).
+  - The Invisible Characters category straddles both classes: visually identical twins are a variation match, but a **lone** artist, album or track whose own name carries an invisible character is flagged with no twin (albums and tracks gained this for issue #22; artists always had it). A doubled space is always wrong, and in real exports it is usually where an `&` used to be. The lone test looks at the entity's own name only, so an artist with a doubled space yields one card, not one per album and track.
 
 A third class — **reference detectors**, comparing the library against an external canonical source (MusicBrainz) — is designed but not built (§4.3).
 
