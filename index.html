@@ -1730,7 +1730,11 @@
             // collapse "3.15.20" to "31520" (DESIGN.md 1.7) and join words that
             // were only ever adjacent across a comma. Runs after the rules
             // above so keyword tokens like "alt." are still intact for them.
-            norm = norm.replace(/[.,]/g, ' ');
+            // Dashes are in the class too (issue #20: "Hip Hop" vs "Hip-Hop"),
+            // covering the ASCII hyphen, U+2010 HYPHEN, and the en and em
+            // dashes. They must stay AFTER the dash-suffix rules in the album
+            // and track normalizers, which need the dash intact to match.
+            norm = norm.replace(/[.,\-\u2010\u2013\u2014]/g, ' ');
             norm = norm.replace(/\s+/g, ' ').trim();
             return norm;
         }
@@ -1773,7 +1777,7 @@
             // absence here (and on tracks) is why discussion #10 went unflagged.
             norm = norm.replace(/\s*&\s*/g, ' and ');
             // Punctuation to a space, never deleted - see normalizeArtist.
-            norm = norm.replace(/[.,]/g, ' ');
+            norm = norm.replace(/[.,\-\u2010\u2013\u2014]/g, ' ');
             norm = norm.replace(/\s+/g, ' ').trim();
             return norm;
         }
@@ -1830,7 +1834,7 @@
             norm = norm.replace(/\s*&\s*/g, ' and ');
             // Punctuation to a space, never deleted - see normalizeArtist. This
             // is the normalizer the 3.15.20 guard is aimed at.
-            norm = norm.replace(/[.,]/g, ' ');
+            norm = norm.replace(/[.,\-\u2010\u2013\u2014]/g, ' ');
             norm = norm.replace(/\s+/g, ' ').trim();
             // A bare trailing year IS a suffix when it trails a real title
             // ("Comfortably Numb 2022"), and is NOT one when it is the title, or
