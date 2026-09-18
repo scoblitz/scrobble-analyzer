@@ -37,6 +37,8 @@ Shipped in v0.6.0. Two coupled decisions:
 - **Keying by Last.fm username** (parsed from the `Date#username` CSV header) rather than file hash. Rejected alternative: file-hash keys — they broke on every re-export, defeating persistence. Migration from the old file-hash scheme is in place.
 - **Name-based item IDs** rather than index-based. Indexes shift when the export changes; names don't (mostly — see open question 5.1).
 
+A dismissal is currently a single bit that conflates "I fixed this" with "never show me this" — scoped to split in §4.5.
+
 Strategic consequence: persistent dismissals **unlock detection categories that were previously too noisy**. Remaster flagging was rejected pre-v0.6 because users who deliberately listen to remasters would drown in flags; now triage is a one-time cost. "Features unlocking features" — keep this in mind when evaluating noisy-but-useful detector proposals.
 
 ### 1.6 Two detector classes: variation vs. pattern
@@ -337,6 +339,71 @@ Cross-reference library entities against MusicBrainz to catch uniformly-wrong ta
 - **"Buried Treasure"** — a discovery tool surfacing low-play-count albums; deliberately separate from SA and trusts Last.fm data as-is. Fragmentation detection stays in SA.
 - **MCP radio-stations concept** — Apple Music playlists driven by Last.fm history via Claude Desktop. Exploratory.
 
+### 4.5 Dismissal intent: "fixed" vs. "ignored" (scoped 2026-09-18, not built)
+
+**The problem.** A dismissal today is one bit: hide this ID for this username, forever. Two incompatible intents share it. The maintainer's original intent was *"I fixed this on Last.fm; hide it so I can see what is left"* — persistence existed so the same file could be reloaded without re-triaging. Other users read the button as *"this is not a problem; never show it again."* Both are legitimate, and the single bit serves the second while silently breaking the first: a track dismissed after a fix that later recurs (the same compilation tag scrobbled again, a re-import with the old spelling) matches the stored ID and is hidden without anyone seeing it. Recurring issues are being missed.
+
+**The decision.** Split dismissal into two intents, with different hiding rules:
+
+| Intent | Button | Hides while | Re-shows when |
+|---|---|---|---|
+| **Fixed** | `✓ Fixed` | the item is unchanged from when it was marked | new plays appear under the flagged name, or a variation group's membership changes — tagged **recurred** |
+| **Ignored** | `🚫 Ignore` | always | never (restore only) |
+
+Restore (`↩️`) works on both, as today.
+
+**The count rule, and why it is a count and not presence.** The tempting rule for *fixed* is "hide until the ID disappears from an export, then show it if it ever comes back." That breaks in the ordinary workflow: mark fixed, re-export before the Last.fm edit has reached lastfmstats.com, and the item is still in the file — it would un-hide immediately, and the user would have to dismiss it twice. Comparing **play counts** instead keeps it hidden until there are genuinely new scrobbles under the bad name. It also keeps reloading the *same* file safe, which was the original reason for persistence.
+
+What is stored per ID:
+
+- **Per-track items** (missing-album and compilation rows): the row's own play count. Recurrence = current count exceeds the stored count. This is exact; nothing but a new scrobble under that album can raise it.
+- **Card-level items** (artist/album/track variation cards, invisible-character cards): a map of `{ member name → play count }` for every row on the card. Recurrence = any member's count exceeds its stored count, **or** a member appears that was not stored. Known tradeoff, accepted: if the user marks fixed, keeps listening to the *correct* spelling, and re-exports before the edit propagated, the winner's count has grown and the card recurs once — one click to re-mark it, and the re-mark stamps fresh counts. The alternative — compare only the non-winning members — was rejected because the tool does not know which spelling the user chose as the winner; guessing the top-count member misses the case where the correct spelling was the minority, and that miss is silent and permanent. A false recurrence costs a click; a missed one costs the thing this feature exists for.
+
+**Legacy dismissals become "fixed" with no baseline.** Every ID stored by the current format migrates to `fixed` with an empty count (per-track: 0; card: empty member map). Consequence: anything legacy-dismissed that is *still present* in the next export recurs once, tagged, with both buttons offered. This is the intended behaviour, not a side effect, and it is why the maintainer chose fixed over ignored as the legacy default:
+
+- Items that were genuinely fixed are absent from the export and never show. No noise from them.
+- Items still present either recurred, were never actually fixed, or were meant as "ignore." All three need one human decision, and the tagged card asks for exactly that.
+- Users who meant "ignore" confirm it once. Users who need to fix each recurrence see it, which they cannot today.
+
+Rejected alternative: migrate legacy IDs as fixed but stamp a baseline count from the first export loaded after the upgrade. Gentler, but it swallows every recurrence that happened *before* the upgrade — the opposite of "seen at least once by everyone."
+
+**Storage format.** Today: `{ dismissed: [id, …], savedAt }`. New:
+
+```
+{ version: 2,
+  items: { "<id>": { intent: "fixed" | "ignored",
+                     count: <number>            // per-track items
+                     members: { name: count }   // card-level items
+                     at: <ms timestamp>,
+                     legacy: true               // only on migrated entries; dropped on re-mark
+                   }, … },
+  savedAt }
+```
+
+Migration runs in `loadDismissedState`: a blob with `dismissed` and no `items` is converted in memory and written back in the new format on the next save. IDs themselves are unchanged (§1.5 — name-based, keyed by username), so nothing about `getIssueId` / `getItemId` moves.
+
+**The status function is the testable core.** One pure, top-level function — same 8-space-indented, top-level discipline as the normalizers (§4.1.1), so `tests/merge-contract.js` can read it live:
+
+```
+dismissalStatus(record | undefined, current)  →  'active' | 'hidden' | 'recurred'
+```
+
+where `current` is a count (per-track) or a member map (card). Everything else — hiding, counts, the recurred tag, the report markers — is a consumer of that one answer. The contract gets a `DISMISSAL_EXPECT` table: no record → active; ignored → hidden regardless; fixed + equal counts → hidden; fixed + higher count → recurred; fixed card + same members and counts → hidden; fixed card + new member → recurred; fixed card + winner grew → recurred (the accepted tradeoff, pinned so it is deliberate); legacy fixed + anything present → recurred; legacy fixed + absent → nothing to evaluate.
+
+**UI.**
+
+- Card footer: `✓ Fixed` and `🚫 Ignore` replace `✓ Dismiss`. Per-track rows get the same pair in the small style. Compilation cards' *Dismiss all* (built 2026-09-18) becomes `✓ Fixed all N` and `🚫 Ignore all N`; missing-album cards stay per-track only, by decision — each missing album is its own lookup, there is nothing to resolve in bulk.
+- A recurred card carries a line that says why it is back: *"↻ Marked fixed 12 Aug 2026 at 5 plays — 3 new plays since."* For legacy: *"↻ Dismissed before v0.7 — fixed, or ignore from now on?"* Without that line a reappearance looks like the tool forgot, which is the confusion this feature exists to remove.
+- The *View dismissed only* checkbox becomes a three-way filter: Active (default; includes recurred) / Fixed / Ignored. The sidebar dismissed count splits accordingly.
+- Report: `[FIXED]` / `[IGNORED]` replace `[DISMISSED]`; recurred items get `[RECURRED]` in the active section.
+
+**Build phases, each leaving main working.** Stop at any boundary.
+
+1. Storage v2, migration, `dismissalStatus`, contract cases. No visible change — the UI keeps treating both intents as hidden until phase 2, so legacy users see nothing new yet.
+2. Buttons, the recurred tag, report markers. This is the phase where legacy dismissals surface once.
+3. Three-way filter and split sidebar counts.
+4. Browser verification against a real export with a pre-seeded v1 `localStorage` blob (migration path), plus a v2 blob (steady state). Then What's New and the version bump — release framing is open question §5.6.
+
 ---
 
 ## 5. Open questions — flag these to the maintainer, don't guess
@@ -348,6 +415,7 @@ Cross-reference library entities against MusicBrainz to catch uniformly-wrong ta
 
    The one place the tool *could* editorialize is the chips — and the governing principle there is §1.9: **chips mark invisibility, not incorrectness.** That reframes the question from "should diacritics be chipped?" (wrong question — it treats a character class as the criterion) to "can the user see this difference?". `Motörhead` vs `Motorhead`: yes, no chip. `Subcarpați` vs `Subcarpaţi`: no, chip it. See §4.1.2, which makes the confusable-character chip a hard dependency of shipping folding.
 5. **Ampersand-drop overmerge risk.** No acceptance criteria yet for what real-library overmerge rate is tolerable. Define via merge-contract cases before implementing.
+6. **Release framing for the dismissal split (§4.5).** It changes stored data and what users see on first load, so it is not a patch. Its own minor release, or folded into v0.7 alongside the pattern detectors? Undecided; phases 1–3 can be built either way.
 
 ---
 
