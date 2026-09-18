@@ -342,7 +342,7 @@ Cross-reference library entities against MusicBrainz to catch uniformly-wrong ta
 - **"Buried Treasure"** — a discovery tool surfacing low-play-count albums; deliberately separate from SA and trusts Last.fm data as-is. Fragmentation detection stays in SA.
 - **MCP radio-stations concept** — Apple Music playlists driven by Last.fm history via Claude Desktop. Exploratory.
 
-### 4.5 Dismissal intent: "fixed" vs. "ignored" (scoped 2026-09-18; phase 1 built 2026-09-18, phases 2–4 not built)
+### 4.5 Dismissal intent: "fixed" vs. "ignored" (scoped 2026-09-18; phases 1–2 built 2026-09-18, phases 3–4 not built)
 
 **The problem.** A dismissal today is one bit: hide this ID for this username, forever. Two incompatible intents share it. The maintainer's original intent was *"I fixed this on Last.fm; hide it so I can see what is left"* — persistence existed so the same file could be reloaded without re-triaging. Other users read the button as *"this is not a problem; never show it again."* Both are legitimate, and the single bit serves the second while silently breaking the first: a track dismissed after a fix that later recurs (the same compilation tag scrobbled again, a re-import with the old spelling) matches the stored ID and is hidden without anyone seeing it. Recurring issues are being missed.
 
@@ -414,7 +414,18 @@ where `current` is a count (per-track) or a member map (card). Everything else �
 - **The pre-v0.6.0 file-hash migration (`migrateOldDismissals`) also writes legacy records**, so v0 → v2 behaves the same as v1 → v2. `at` on migrated entries is the old blob's `savedAt`.
 - **The v2 blob keeps a `dismissed: [ids]` shadow array** alongside `items`, so opening a pre-split build of the tool still shows these dismissals rather than losing them. Costs a few bytes; drop it once the split has shipped. Migration detects v1 by the *absence* of `items`, so the shadow does not confuse it.
 - **Two card cases the table above implied but did not state are pinned:** a member that disappears (with the rest unchanged) stays hidden — that is the fix landing; a member that disappears while the winner grows recurs.
-- `ignored` has no write path yet. It exists only in `dismissalStatus` and the contract until phase 2 adds the button.
+- ~~`ignored` has no write path yet.~~ Phase 2 added the buttons.
+
+**Phase 2 as built (2026-09-18).** The UI now reads status, never presence: `cardStatus(issue, id)` and `itemStatus(id, row)` wrap `dismissalStatus` with the live baseline, and every reader that used to ask `isDismissed(id)` asks for `'hidden'` instead (the only presence checks left are in the pre-v0.6.0 file-hash migration, where presence is the right question). A recurred item is active everywhere — counts, the default view, the report's active section. Buttons, tags and markers are as specified above, with these details settled during the build:
+
+- **The recurred line's wording.** Per-track: *"↻ Marked fixed 12 Aug 2026 at 5 plays — 3 new plays since."* Card: *"↻ Marked fixed 12 Aug 2026 — 3 new plays and 1 new spelling since."* (one or both parts, whichever apply). The measurement is `recurrenceDelta(record, current)`, top-level and pinned in the contract (`DELTA_EXPECT`): growth in stored members plus the list of unstored spellings; a member that shrank or vanished contributes nothing. Track rows carry a short inline form (*"↻ 2 new plays since marked fixed"*).
+- **Legacy wording is version-neutral** — *"↻ Dismissed in an earlier version — fixed, or ignore from now on?"* — because the release that ships this is open question §5.6. Revisit once that is decided.
+- **Re-marking a recurred item.** Fixed or Ignore on a recurred item writes a fresh record (new baseline, no `legacy` flag) and it hides. There is no Restore on a recurred item; it is already visible, and Restore would only discard the baseline.
+- **Ignore also stores a baseline.** Nothing reads it, but keeping the record shape uniform costs nothing and leaves the door open to switching an item's intent later without losing the count.
+- **"Fixed all N" / "Ignore all N"** on a compilation card mark only the rows currently showing (active and recurred), never rows already hidden under the other intent.
+- **Per-item card descriptions** name the split: *"3 tracks remaining (1 recurred, 2 fixed, 1 ignored)"*, parts omitted when zero. Hidden cards in the dismissed view are tagged *(fixed)* or *(ignored)* in the title.
+- **Report.** `[FIXED]` / `[IGNORED]` on hidden items when included; `[RECURRED]` on recurred items always, followed by the recurred line indented under the item. The report header explains the tags.
+- **Sidebar** still says *View dismissed only (N)* where N is the hidden count; the three-way filter is phase 3.
 
 ---
 
