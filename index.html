@@ -943,7 +943,7 @@
             <div class="logo-icon">📊</div>
             <div class="logo-text">
                 <h1>Scrobble Analyzer</h1>
-                <div class="tagline">Find & Fix Your Last.fm Data <span style="color: var(--accent-orange); margin-left: 0.5rem;">v0.6.1</span></div>
+                <div class="tagline">Find & Fix Your Last.fm Data <span style="color: var(--accent-orange); margin-left: 0.5rem;">v0.7.0</span></div>
             </div>
         </div>
         <div class="header-stats" id="header-stats" style="display: none;">
@@ -1056,21 +1056,20 @@
                         <li>Drag the file to the upload box in the sidebar, or click the box to browse</li>
                     </ol>
                     
-                    <h3 style="font-size: 1rem; color: var(--accent-orange); margin-bottom: 1rem;">🆕 What's New in v0.6.1</h3>
+                    <h3 style="font-size: 1rem; color: var(--accent-orange); margin-bottom: 1rem;">🆕 What's New in v0.7.0</h3>
                     <!-- max-width/margin override: .empty-state p centres text in a
                          400px column, which is right for the intro blurb above but
                          indents this one oddly inside the card. -->
-                    <p style="color: var(--text-secondary); font-size: 0.9rem; max-width: none; margin: 0 0 0.75rem;">This release is all about the matching itself - the spellings you reported that should have been grouped, and now are. Expect more issues than your last export showed.</p>
+                    <p style="color: var(--text-secondary); font-size: 0.9rem; max-width: none; margin: 0 0 0.75rem;">This release changes what dismissing means. One button has become two, and the tool can now tell you when something you fixed has come back.</p>
                     <ul style="color: var(--text-secondary); font-size: 0.9rem; padding-left: 1.25rem; margin-bottom: 1.5rem;">
-                        <li style="margin-bottom: 0.5rem;"><strong>Accented spellings</strong> - Motörhead now groups with Motorhead, Déjà Voodoo with Deja Voodoo</li>
-                        <li style="margin-bottom: 0.5rem;"><strong>Look-alike accents get a chip</strong> - When two spellings differ only by which accent they use, a small blue chip shows the exact character and its code point, because the names themselves look identical</li>
-                        <li style="margin-bottom: 0.5rem;"><strong>Punctuation and spacing</strong> - "Albert Hammond, Jr." now groups with "Albert Hammond Jr", and "T. Rex" with "T.Rex"</li>
-                        <li style="margin-bottom: 0.5rem;"><strong>Featured artists</strong> - "(feat. …)" and "[ft. …]" now group with the plain title</li>
-                        <li style="margin-bottom: 0.5rem;"><strong>&amp; and "and"</strong> - Now unified on tracks and albums, not just artist names</li>
-                        <li style="margin-bottom: 0.5rem;"><strong>More apostrophe styles</strong> - Acute accents, backticks and modifier apostrophes join the smart quotes</li>
-                        <li style="margin-bottom: 0.5rem;"><strong>Remasters dated in the title</strong> - "Close to Me - 2006 Remaster" now groups with "Close to Me"</li>
-                        <li style="margin-bottom: 0.5rem;"><strong>Fewer false alarms</strong> - Numerically titled tracks are no longer lumped together, so 1991 stays separate from 1983</li>
-                        <li style="margin-bottom: 0.5rem;"><strong>Android uploads</strong> - The file picker should now let you select your CSV</li>
+                        <li style="margin-bottom: 0.5rem;"><strong>✓ Fixed or 🚫 Ignore</strong> - Fixed means "I corrected this on Last.fm": the item hides until new plays appear under the old name. Ignore means "not a problem": the item hides for good. Both can be restored</li>
+                        <li style="margin-bottom: 0.5rem;"><strong>Recurrences come back tagged</strong> - When a fixed item picks up new scrobbles or a new spelling, it returns to the active list with a line saying when you marked it and what changed since</li>
+                        <li style="margin-bottom: 0.5rem;"><strong>Your existing dismissals</strong> - Everything you dismissed before is treated as fixed. Anything still in your export shows once more with a note, so you can confirm it or switch it to ignore. Items you genuinely fixed never reappear</li>
+                        <li style="margin-bottom: 0.5rem;"><strong>Active / Fixed / Ignored views</strong> - The "view dismissed only" checkbox is now a three-way switch in the sidebar, each with its own count</li>
+                        <li style="margin-bottom: 0.5rem;"><strong>Compilations in one click</strong> - "Fixed all" and "Ignore all" on a compilation card act on every track still showing</li>
+                        <li style="margin-bottom: 0.5rem;"><strong>Report markers</strong> - [FIXED], [IGNORED] and [RECURRED] replace [DISMISSED]</li>
+                        <li style="margin-bottom: 0.5rem;"><strong>Hyphens</strong> - "Hip Hop" now groups with "Hip-Hop", and dashes are treated like other punctuation in artist, album and track names</li>
+                        <li style="margin-bottom: 0.5rem;"><strong>Lone invisible characters</strong> - An album or track with a hidden character in its name is flagged even when there is no clean spelling to compare it with</li>
                     </ul>
                     
                     <h3 style="font-size: 1rem; color: var(--accent-orange); margin-bottom: 1rem;">💬 Feedback & Support</h3>
@@ -1348,8 +1347,8 @@
             if (!record) return '';
             if (record.legacy) {
                 return short
-                    ? '↻ dismissed in an earlier version — fixed, or ignore?'
-                    : '↻ Dismissed in an earlier version — fixed, or ignore from now on?';
+                    ? '↻ dismissed before v0.7 — fixed, or ignore?'
+                    : '↻ Dismissed before v0.7 — fixed, or ignore from now on?';
             }
             const { newPlays, newMembers } = recurrenceDelta(record, current);
             const parts = [];

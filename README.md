@@ -47,9 +47,9 @@ Or [download index.html](index.html) to run locally (note: you won't receive upd
 
 ## Current Status
 
-**Version 0.6.1** - [full release notes](https://github.com/scoblitz/scrobble-analyzer/releases/tag/v0.6.1) · [all releases](https://github.com/scoblitz/scrobble-analyzer/releases)
+**Version 0.7.0** - [full release notes](https://github.com/scoblitz/scrobble-analyzer/releases/tag/v0.7.0) · [all releases](https://github.com/scoblitz/scrobble-analyzer/releases)
 
-v0.6.1 is a matching release. Accented spellings, punctuation and spacing, `&` vs "and", featured-artist tags, extra apostrophe styles and bracket styles are now all recognised as the same name. **Expect your issue count to go up** compared to your last export - those variations were always in your library, the tool just couldn't see them.
+v0.7.0 changes what dismissing means. **✓ Fixed** hides an item until new plays appear under the old name, then brings it back tagged so you can see it recurred. **🚫 Ignore** hides it for good. Everything you dismissed in an earlier version is treated as fixed: whatever is still in your next export shows once more with a note asking which you meant, and items you genuinely fixed stay gone.
 
 ### Current Limitations
 
