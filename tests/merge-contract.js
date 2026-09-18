@@ -134,6 +134,18 @@ const MUST_MERGE = [
     ['track',  'Naïve',         'Naive',         'diaeresis'],
     ['album',  'Oxygène',       'Oxygene',       'grave accent, album normalizer'],
 
+    // --- issue #20: dashes to a space, like the period and comma above ---
+    ['track',  "Why Hip Hop Sucks in '96", "Why Hip-Hop Sucks In '96", 'issue #20, the reported case (18 vs 5 plays)'],
+    ['track',  'Tenth Avenue Freeze-Out',  'Tenth Avenue Freeze Out',   'hyphenated compound'],
+    ['track',  'Wake Me Up Before You Go‐Go', 'Wake Me Up Before You Go-Go', 'U+2010 HYPHEN, seen in the wild'],
+    ['track',  'The Weight - 2000 - Remaster', 'The Weight',
+        'dash on both sides of the year: the suffix rule strips "- Remaster", the ' +
+        'orphaned "- 2000" becomes " 2000" and the bare-year rule finishes it'],
+    ['album',  'Hvarf - Heim',             'Hvarf-Heim',             'spaced vs unspaced dash'],
+    ['album',  'The Beatles 1967 - 1970',  'The Beatles 1967 – 1970', 'U+2013 EN DASH'],
+    ['album',  'M.U. - The Best of Jethro Tull', 'M.U. — The Best of Jethro Tull', 'U+2014 EM DASH'],
+    ['artist', 'T-Bone Burnett',           'T Bone Burnett',         'the rule reaches artists too'],
+
     // --- item 10, refined: a bare year IS a suffix when it trails a real title ---
     ['track',  'Comfortably Numb 2022', 'Comfortably Numb',
         'found only in a second library - the first strict rule lost this'],
@@ -181,6 +193,8 @@ const KEY_MUST_NOT_BE = [
         'DESIGN.md 1.7 title guard: punctuation must map to a SPACE, never be ' +
         'deleted. If this fires, a rule is deleting "." instead of replacing it.'],
     ['album', '3.15.20', '31520', 'same guard on the album normalizer'],
+    ['track', '19-2000', '192000',
+        'same guard for the dash: a space, never deleted (issue #20)'],
     ['track', 'Spring 1 - 2012', 'spring 1 -',
         'the bare-year rule must not strip a year that leaves a dangling ' +
         'separator behind - that is the item 9 bug coming back in through item 10.'],
