@@ -1120,7 +1120,7 @@
         const state = {
             scrobbles: [],
             issues: [],
-            dismissedIds: new Set(),
+            dismissals: {},   // { id: record } - see "Dismissal records" below
             showDismissed: false,
             fileHash: null,   // still computed - used to match old-format storage for migration
             username: null,   // parsed from the CSV's Date#username header
@@ -1165,26 +1165,131 @@
             return `scrobble-analyzer-user-${username || 'default'}`;
         }
 
+        // --- Dismissal records (storage v2) ----------------------------------
+        // One record per dismissed ID (DESIGN.md 4.5):
+        //
+        //   { intent: 'fixed' | 'ignored',
+        //     count: <number>,           // per-track items (missing/compilation rows)
+        //     members: { name: count },  // card-level items (every row on the card)
+        //     at: <ms timestamp>,
+        //     legacy: true }             // migrated from v1, no baseline; dropped on re-mark
+        //
+        // Phase 1 is storage only: every button still writes 'fixed' with a
+        // baseline, and the UI hides any ID that has a record, whatever its
+        // intent or status. dismissalStatus() below is the one place that
+        // decides hidden vs recurred; phase 2 starts consuming it.
+
+        function isDismissed(id) {
+            return Object.prototype.hasOwnProperty.call(state.dismissals, id);
+        }
+
+        function markDismissed(id, current) {
+            const record = { intent: 'fixed', at: Date.now() };
+            if (typeof current === 'number') record.count = current;
+            else if (current && typeof current === 'object') record.members = { ...current };
+            state.dismissals[id] = record;
+        }
+
+        function unmarkDismissed(id) {
+            delete state.dismissals[id];
+        }
+
+        // What an issue looks like right now, in the shape dismissalStatus
+        // compares against: one row's play count when itemId is given, else
+        // { name: count } for every row on the card.
+        function currentBaseline(issue, itemId) {
+            const rows = issue.variations || [];
+            if (itemId !== undefined) {
+                const row = rows.find(v => getItemId(issue._id, v.name) === itemId);
+                return row ? row.count : 0;
+            }
+            const members = {};
+            rows.forEach(v => { members[v.name] = v.count; });
+            return members;
+        }
+
+        // The status of one dismissed ID against what the export shows now.
+        // Pure and top-level (8-space indent, no nesting) so
+        // tests/merge-contract.js can read it live - same discipline as the
+        // normalizers (DESIGN.md 4.1.1).
+        //   record  - the stored dismissal, or undefined when never dismissed
+        //   current - this row's play count, or a card's { name: count } map
+        // Returns 'active' | 'hidden' | 'recurred'.
+        //
+        // Counts, not presence: an item marked fixed stays hidden while its
+        // count is unchanged, so re-exporting before the Last.fm edit has
+        // propagated (or reloading the same file) does not un-hide it. Only
+        // genuinely new scrobbles under the flagged name do. On a card, a
+        // member that disappears is not a recurrence; a member that appears,
+        // or any member whose count grew, is - including the winner, which
+        // the tool cannot tell from the losers (accepted tradeoff, 4.5).
+        function dismissalStatus(record, current) {
+            if (!record) return 'active';
+            if (record.intent === 'ignored') return 'hidden';
+            // Fixed with no baseline (migrated from v1): if it is still here it
+            // recurred, was never fixed, or was meant as ignore. All three
+            // need one human decision, so it surfaces once.
+            if (record.legacy) return 'recurred';
+            if (typeof current === 'number') {
+                return current > (record.count || 0) ? 'recurred' : 'hidden';
+            }
+            const stored = record.members || {};
+            const names = Object.keys(current || {});
+            for (let i = 0; i < names.length; i++) {
+                const name = names[i];
+                if (!Object.prototype.hasOwnProperty.call(stored, name)) return 'recurred';
+                if (current[name] > stored[name]) return 'recurred';
+            }
+            return 'hidden';
+        }
+
         function saveDismissedState() {
             if (!state.username) return;
             const data = {
-                dismissed: Array.from(state.dismissedIds),
+                version: 2,
+                items: state.dismissals,
+                // Shadow of the v1 shape, so a pre-split build of the tool
+                // still sees these dismissals if someone opens one. Drop once
+                // the split has shipped.
+                dismissed: Object.keys(state.dismissals),
                 savedAt: Date.now()
             };
             localStorage.setItem(userStorageKey(state.username), JSON.stringify(data));
         }
 
+        // Returns the { id: record } map for this user. A v1 blob is converted
+        // in memory here and written back as v2 on the next save.
         function loadDismissedState(username) {
             const stored = localStorage.getItem(userStorageKey(username));
             if (stored) {
                 try {
-                    const data = JSON.parse(stored);
-                    return new Set(data.dismissed || []);
+                    return migrateDismissalBlob(JSON.parse(stored));
                 } catch (e) {
                     console.error('Error loading dismissed state:', e);
                 }
             }
-            return new Set();
+            return {};
+        }
+
+        // v2 ({ items }) passes through. v1 ({ dismissed: [id, ...] }) becomes
+        // one legacy 'fixed' record per ID, with no baseline (DESIGN.md 4.5):
+        // whatever is still present in the next export surfaces once, tagged,
+        // so nothing that recurred before the upgrade is swallowed. Migration
+        // runs before detection and cannot know which IDs are rows and which
+        // are cards, which is why a legacy record carries neither count nor
+        // members; dismissalStatus treats it by its flag alone.
+        function migrateDismissalBlob(data) {
+            if (data && data.items && typeof data.items === 'object') return data.items;
+            const at = (data && data.savedAt) || Date.now();
+            const items = {};
+            ((data && data.dismissed) || []).forEach(id => {
+                items[id] = legacyDismissalRecord(at);
+            });
+            return items;
+        }
+
+        function legacyDismissalRecord(at) {
+            return { intent: 'fixed', legacy: true, at };
         }
 
         // Migrate dismissals saved by pre-v0.6.0 versions (keyed by file hash).
@@ -1229,15 +1334,15 @@
                     const isItemLevel = /-item-\d+$/.test(id);
                     if (!isItemLevel) {
                         // Issue-level: content-based, safe from any old key
-                        if (!state.dismissedIds.has(id)) {
-                            state.dismissedIds.add(id);
+                        if (!isDismissed(id)) {
+                            state.dismissals[id] = legacyDismissalRecord(oldData.savedAt || Date.now());
                             migratedIssueLevel++;
                         }
                     } else if (isMatchingFile) {
                         // Item-level: only translatable against the matching file
                         const newId = itemIdTranslation[id];
-                        if (newId && !state.dismissedIds.has(newId)) {
-                            state.dismissedIds.add(newId);
+                        if (newId && !isDismissed(newId)) {
+                            state.dismissals[newId] = legacyDismissalRecord(oldData.savedAt || Date.now());
                             migratedItemLevel++;
                         }
                     }
@@ -1423,10 +1528,10 @@
                     state.username = parsed.username || 'default';
                     
                     // Load this user's dismissals (keyed by username, survives new exports)
-                    state.dismissedIds = loadDismissedState(state.username);
+                    state.dismissals = loadDismissedState(state.username);
                     state.showDismissed = false;
                     document.getElementById('show-dismissed-toggle').checked = false;
-                    console.log('Loaded dismissed issues for', state.username + ':', state.dismissedIds.size);
+                    console.log('Loaded dismissed issues for', state.username + ':', Object.keys(state.dismissals).length);
                     
                     console.log('Parsed scrobbles count:', state.scrobbles.length);
                     console.log('Sample scrobble:', state.scrobbles[0]);
@@ -2401,7 +2506,7 @@
                 const issueId = getIssueId(issue);
                 
                 // Check if entire issue is dismissed
-                if (state.dismissedIds.has(issueId)) {
+                if (isDismissed(issueId)) {
                     issueLevelDismissed++;
                     return false;
                 }
@@ -2412,7 +2517,7 @@
                     let activeItems = 0;
                     variations.forEach((v, i) => {
                         const itemId = getItemId(issueId, v.name);
-                        if (state.dismissedIds.has(itemId)) {
+                        if (isDismissed(itemId)) {
                             itemLevelDismissed++;
                         } else {
                             activeItems++;
@@ -2437,7 +2542,7 @@
                     const issueId = getIssueId(issue);
                     (issue.variations || []).forEach((v, i) => {
                         const itemId = getItemId(issueId, v.name);
-                        if (!state.dismissedIds.has(itemId)) {
+                        if (!isDismissed(itemId)) {
                             missingTrackCount++;
                         }
                     });
@@ -2445,7 +2550,7 @@
                     const issueId = getIssueId(issue);
                     (issue.variations || []).forEach((v, i) => {
                         const itemId = getItemId(issueId, v.name);
-                        if (!state.dismissedIds.has(itemId)) {
+                        if (!isDismissed(itemId)) {
                             compilationTrackCount++;
                         }
                     });
@@ -2495,7 +2600,7 @@
             // Add issue IDs and dismissed status
             filtered = filtered.map(issue => {
                 const issueId = getIssueId(issue);
-                const isIssueDismissed = state.dismissedIds.has(issueId);
+                const isIssueDismissed = isDismissed(issueId);
                 
                 // For missing/compilation, check if any items are dismissed
                 let hasDismissedItems = false;
@@ -2503,7 +2608,7 @@
                 if (['missing', 'compilation'].includes(issue.type)) {
                     (issue.variations || []).forEach((v, i) => {
                         const itemId = getItemId(issueId, v.name);
-                        if (state.dismissedIds.has(itemId)) {
+                        if (isDismissed(itemId)) {
                             hasDismissedItems = true;
                         } else {
                             hasActiveItems = true;
@@ -2593,7 +2698,7 @@
                     const issueId = getIssueId(issue);
                     (issue.variations || []).forEach((v, i) => {
                         const itemId = getItemId(issueId, v.name);
-                        if (!state.dismissedIds.has(itemId)) {
+                        if (!isDismissed(itemId)) {
                             displayCount++;
                         }
                     });
@@ -2628,7 +2733,7 @@
                     variationsToRender = variationsToRender.map((v, i) => ({
                         ...v,
                         _itemId: getItemId(issue._id, v.name),
-                        _isItemDismissed: state.dismissedIds.has(getItemId(issue._id, v.name))
+                        _isItemDismissed: isDismissed(getItemId(issue._id, v.name))
                     }));
                     
                     // Filter based on view mode
@@ -2837,8 +2942,8 @@
                         const isRestore = e.target.classList.contains('restore');
                         (issue.variations || []).forEach(v => {
                             const itemId = getItemId(issue._id, v.name);
-                            if (isRestore) state.dismissedIds.delete(itemId);
-                            else state.dismissedIds.add(itemId);
+                            if (isRestore) unmarkDismissed(itemId);
+                            else markDismissed(itemId, v.count);
                         });
                         saveDismissedState();
                         updateCounts();
@@ -2852,11 +2957,10 @@
                     if (e.target.classList.contains('dismiss-btn')) {
                         const issueId = e.target.dataset.issueId;
                         if (e.target.classList.contains('restore')) {
-                            // Restore: remove from dismissed
-                            state.dismissedIds.delete(issueId);
+                            unmarkDismissed(issueId);
                         } else {
-                            // Dismiss: add to dismissed
-                            state.dismissedIds.add(issueId);
+                            // Card-level: baseline is every row's count
+                            markDismissed(issueId, currentBaseline(issue));
                         }
                         saveDismissedState();
                         updateCounts();
@@ -2874,9 +2978,9 @@
                         const isRestore = e.target.classList.contains('restore');
                         
                         if (isRestore) {
-                            state.dismissedIds.delete(itemId);
+                            unmarkDismissed(itemId);
                         } else {
-                            state.dismissedIds.add(itemId);
+                            markDismissed(itemId, currentBaseline(issue, itemId));
                         }
                         saveDismissedState();
                         
@@ -3098,13 +3202,13 @@
                 const entries = [];
                 state.issues.filter(i => i.type === type).forEach(issue => {
                     const issueId = getIssueId(issue);
-                    const issueDismissed = state.dismissedIds.has(issueId);
+                    const issueDismissed = isDismissed(issueId);
                     if (issueDismissed && !includeDismissed) return;
                     
                     let variations = (issue.variations || []).map(v => ({
                         ...v,
                         _dismissed: ['missing', 'compilation'].includes(type)
-                            ? state.dismissedIds.has(getItemId(issueId, v.name))
+                            ? isDismissed(getItemId(issueId, v.name))
                             : false
                     }));
                     
