@@ -76,7 +76,7 @@ Rules run in roughly that order; the punctuation row runs last because the suffi
 
 - Branch names describe the work, not the version — a branch named `v0.6.0` collides with the tag `v0.6.0` in Git's ref namespace. Learned the hard way during the v0.6.0 cycle.
 - Merge commits over squash: commit granularity is meaningful history for a project reviewed change-by-change.
-- Release framing precedent: v0.6.1 is deliberately scoped as "the normalizer now catches what you reported" (bug-fix framing for detection widening), keeping v0.7 as a coherent "new detection categories" story. Strict semver would call detection widening a minor bump; the point-release framing was chosen consciously.
+- Release framing precedent: v0.6.1 is deliberately scoped as "the normalizer now catches what you reported" (bug-fix framing for detection widening), keeping the next minor as a coherent story. Strict semver would call detection widening a minor bump; the point-release framing was chosen consciously. v0.7.0 then went to the dismissal split (§4.5) rather than the pattern detectors, because it changes stored data and what users see on first load — a minor bump on its own merits — and the detectors moved to v0.8.0 (§4.2).
 
 ### 1.9 Chips signal invisibility, not incorrectness
 
@@ -108,8 +108,8 @@ Because the card body is otherwise strictly neutral — name, play count, Last.f
 - Visual refresh (orange reserved for header LED + action buttons; tinted rather than solid active states)
 
 **Scoped but not built:**
-- Everything in the roadmap (§4). Notably: **no automated tests exist** — no test file has ever been committed to this repo, in any commit in its history. The merge contract (§4.1) is the first planned test infrastructure.
-- A throwaway Node harness replicating the three shipped normalizers was written to validate the v0.6.1 scope against a real export (§4.1). It is a *prototype of* the merge contract, not a substitute for it, and was deliberately not checked in.
+- Everything in the roadmap (§4) except §4.1 (shipped as v0.6.1) and §4.5 (shipped as v0.7.0).
+- The only automated test is the merge contract, `tests/merge-contract.js` (§4.1.1): 125 assertions as of v0.7.0, reading the normalizers, the invisible-character finder and the dismissal functions live out of `index.html`. Run it with `node tests/merge-contract.js`.
 
 **Half-designed:**
 - Uniform-error / reference detection (§4.3) — problem well understood, no implementation design yet.
@@ -319,7 +319,7 @@ The lesson is worth keeping: **a normalizer change validated against a single ex
 
 Both fixes are guarded going forward — item 9 by MUST_MERGE cases, item 10 by MUST_NOT_MERGE cases including `1991`/`1983` and `80186`/`80286`, plus a `KEY_MUST_NOT_BE` entry for the `Spring 1 - 2012` dangle.
 
-### 4.2 v0.7.0 — pattern-detector release (scoped, not built)
+### 4.2 v0.8.0 — pattern-detector release (scoped, not built; was numbered v0.7.0 until the dismissal split took that release — §5.6)
 
 An opt-in **pattern search mode** (UI shape unresolved — §5.3), comprising:
 
@@ -342,7 +342,7 @@ Cross-reference library entities against MusicBrainz to catch uniformly-wrong ta
 - **"Buried Treasure"** — a discovery tool surfacing low-play-count albums; deliberately separate from SA and trusts Last.fm data as-is. Fragmentation detection stays in SA.
 - **MCP radio-stations concept** — Apple Music playlists driven by Last.fm history via Claude Desktop. Exploratory.
 
-### 4.5 Dismissal intent: "fixed" vs. "ignored" (scoped 2026-09-18; phases 1–3 built 2026-09-18, phase 4 not built)
+### 4.5 Dismissal intent: "fixed" vs. "ignored" (scoped and built 2026-09-18; released as v0.7.0)
 
 **The problem.** A dismissal today is one bit: hide this ID for this username, forever. Two incompatible intents share it. The maintainer's original intent was *"I fixed this on Last.fm; hide it so I can see what is left"* — persistence existed so the same file could be reloaded without re-triaging. Other users read the button as *"this is not a problem; never show it again."* Both are legitimate, and the single bit serves the second while silently breaking the first: a track dismissed after a fix that later recurs (the same compilation tag scrobbled again, a re-import with the old spelling) matches the stored ID and is hidden without anyone seeing it. Recurring issues are being missed.
 
@@ -419,7 +419,7 @@ where `current` is a count (per-track) or a member map (card). Everything else �
 **Phase 2 as built (2026-09-18).** The UI now reads status, never presence: `cardStatus(issue, id)` and `itemStatus(id, row)` wrap `dismissalStatus` with the live baseline, and every reader that used to ask `isDismissed(id)` asks for `'hidden'` instead (the only presence checks left are in the pre-v0.6.0 file-hash migration, where presence is the right question). A recurred item is active everywhere — counts, the default view, the report's active section. Buttons, tags and markers are as specified above, with these details settled during the build:
 
 - **The recurred line's wording.** Per-track: *"↻ Marked fixed 12 Aug 2026 at 5 plays — 3 new plays since."* Card: *"↻ Marked fixed 12 Aug 2026 — 3 new plays and 1 new spelling since."* (one or both parts, whichever apply). The measurement is `recurrenceDelta(record, current)`, top-level and pinned in the contract (`DELTA_EXPECT`): growth in stored members plus the list of unstored spellings; a member that shrank or vanished contributes nothing. Track rows carry a short inline form (*"↻ 2 new plays since marked fixed"*).
-- **Legacy wording is version-neutral** — *"↻ Dismissed in an earlier version — fixed, or ignore from now on?"* — because the release that ships this is open question §5.6. Revisit once that is decided.
+- **Legacy wording** — *"↻ Dismissed before v0.7 — fixed, or ignore from now on?"* — as specified, once §5.6 settled the release number. (It was version-neutral for the day between the phase 2 build and that decision.)
 - **Re-marking a recurred item.** Fixed or Ignore on a recurred item writes a fresh record (new baseline, no `legacy` flag) and it hides. There is no Restore on a recurred item; it is already visible, and Restore would only discard the baseline.
 - **Ignore also stores a baseline.** Nothing reads it, but keeping the record shape uniform costs nothing and leaves the door open to switching an item's intent later without losing the count.
 - **"Fixed all N" / "Ignore all N"** on a compilation card mark only the rows currently showing (active and recurred), never rows already hidden under the other intent.
@@ -434,6 +434,14 @@ where `current` is a count (per-track) or a member map (card). Everything else �
 - **A new import resets to Active**, as the old checkbox reset to unchecked.
 - The export checkbox (*Include dismissed items*) is unchanged; it includes both intents.
 
+**Phase 4 as built (2026-09-18).** Verified in Chrome against the maintainer's own export (161,352 scrobbles; 2,169 issue cards; 5,290 flagged items):
+
+- *Migration path.* A v1 blob of 15 real IDs (two each of artist, album and track cards, one invisible card, two rows each from a missing and a compilation card, plus one ID no longer in the export) loaded as 15 legacy records; the 14 present ones recurred with the legacy line, the absent one was never evaluated, and the blob stayed v1 on disk until the first save. Re-marking (one through a real button click, the rest through the same helpers) wrote v2 with real baselines, the stale ID still legacy.
+- *Steady state.* Re-importing the same file against the v2 blob: every unchanged fixed and ignored item stayed hidden, no spurious recurrence.
+- *Recurrence.* Lowering one card member's stored count by 5 and one row's by 1, then re-importing: exactly those two recurred, the card reading *"↻ Marked fixed Sep 18, 2026 — 5 new plays since."*
+- *Cost.* With 2,169 cards, `renderIssues` took 23 ms and `updateCounts` 8 ms including every status check. Analysis itself finished in about 2 s.
+- *One trap for whoever tests this next:* the analysis pipeline sleeps between stages with `setTimeout`, which Chrome throttles to once a second in a hidden tab and to once a minute after five minutes hidden. A background tab therefore looks frozen at *Finalizing…* for minutes. It is not the app; foreground the tab, or stub `sleep` for the test.
+
 ---
 
 ## 5. Open questions — flag these to the maintainer, don't guess
@@ -445,7 +453,7 @@ where `current` is a count (per-track) or a member map (card). Everything else �
 
    The one place the tool *could* editorialize is the chips — and the governing principle there is §1.9: **chips mark invisibility, not incorrectness.** That reframes the question from "should diacritics be chipped?" (wrong question — it treats a character class as the criterion) to "can the user see this difference?". `Motörhead` vs `Motorhead`: yes, no chip. `Subcarpați` vs `Subcarpaţi`: no, chip it. See §4.1.2, which makes the confusable-character chip a hard dependency of shipping folding.
 5. **Ampersand-drop overmerge risk.** No acceptance criteria yet for what real-library overmerge rate is tolerable. Define via merge-contract cases before implementing.
-6. **Release framing for the dismissal split (§4.5).** It changes stored data and what users see on first load, so it is not a patch. Its own minor release, or folded into v0.7 alongside the pattern detectors? Undecided; phases 1–3 can be built either way.
+6. ~~**Release framing for the dismissal split (§4.5).**~~ **RESOLVED 2026-09-18 — its own minor release, v0.7.0.** The maintainer judged it significant enough to take the number on its own; the pattern-detector release becomes v0.8.0 (§4.2). The reasoning stands as written: it changes stored data and what users see on first load, so it is not a patch.
 
 ---
 
