@@ -342,7 +342,7 @@ Cross-reference library entities against MusicBrainz to catch uniformly-wrong ta
 - **"Buried Treasure"** — a discovery tool surfacing low-play-count albums; deliberately separate from SA and trusts Last.fm data as-is. Fragmentation detection stays in SA.
 - **MCP radio-stations concept** — Apple Music playlists driven by Last.fm history via Claude Desktop. Exploratory.
 
-### 4.5 Dismissal intent: "fixed" vs. "ignored" (scoped 2026-09-18, not built)
+### 4.5 Dismissal intent: "fixed" vs. "ignored" (scoped 2026-09-18; phase 1 built 2026-09-18, phases 2–4 not built)
 
 **The problem.** A dismissal today is one bit: hide this ID for this username, forever. Two incompatible intents share it. The maintainer's original intent was *"I fixed this on Last.fm; hide it so I can see what is left"* — persistence existed so the same file could be reloaded without re-triaging. Other users read the button as *"this is not a problem; never show it again."* Both are legitimate, and the single bit serves the second while silently breaking the first: a track dismissed after a fix that later recurs (the same compilation tag scrobbled again, a re-import with the old spelling) matches the stored ID and is hidden without anyone seeing it. Recurring issues are being missed.
 
@@ -406,6 +406,15 @@ where `current` is a count (per-track) or a member map (card). Everything else �
 2. Buttons, the recurred tag, report markers. This is the phase where legacy dismissals surface once.
 3. Three-way filter and split sidebar counts.
 4. Browser verification against a real export with a pre-seeded v1 `localStorage` blob (migration path), plus a v2 blob (steady state). Then What's New and the version bump — release framing is open question §5.6.
+
+**Phase 1 as built (2026-09-18).** Storage v2, both migrations, `dismissalStatus`, and 18 contract cases (`DISMISSAL_EXPECT`, `MIGRATION_EXPECT`). `state.dismissedIds` (a Set) became `state.dismissals` (the `items` map); every reader goes through `isDismissed(id)` and every writer through `markDismissed(id, current)` / `unmarkDismissed(id)`, with `currentBaseline(issue, itemId?)` producing the count or member map from an issue's rows. Decisions the scope above left open, settled during the build:
+
+- **The existing Dismiss button already stores a real baseline.** Anything dismissed on a phase-1 build is a normal `fixed` record, not a legacy one, so it will not surface spuriously when phase 2 lands. This is why the count extractor is phase-1 work even though nothing reads the counts yet.
+- **Legacy records carry neither `count` nor `members`.** Migration runs in `loadDismissedState`, before detection, and cannot know whether an ID is a row or a card. `dismissalStatus` decides by the `legacy` flag alone, so the "0 / empty map" wording above is realized as "absent"; equivalent, simpler.
+- **The pre-v0.6.0 file-hash migration (`migrateOldDismissals`) also writes legacy records**, so v0 → v2 behaves the same as v1 → v2. `at` on migrated entries is the old blob's `savedAt`.
+- **The v2 blob keeps a `dismissed: [ids]` shadow array** alongside `items`, so opening a pre-split build of the tool still shows these dismissals rather than losing them. Costs a few bytes; drop it once the split has shipped. Migration detects v1 by the *absence* of `items`, so the shadow does not confuse it.
+- **Two card cases the table above implied but did not state are pinned:** a member that disappears (with the rest unchanged) stays hidden — that is the fix landing; a member that disappears while the winner grows recurs.
+- `ignored` has no write path yet. It exists only in `dismissalStatus` and the contract until phase 2 adds the button.
 
 ---
 
