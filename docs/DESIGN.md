@@ -48,20 +48,22 @@ A third class — **reference detectors**, comparing the library against an exte
 
 ### 1.7 Normalization pipeline choices
 
-**What is actually implemented today** — verified line-by-line against `index.html` on 2026-08-01. An earlier revision of this document (and of CLAUDE.md) described the pipeline inaccurately; this table is the corrected record.
+**What is actually implemented today** — verified line-by-line against `index.html` on 2026-09-18 (first verified 2026-08-01, before v0.6.1 landed). An earlier revision of this document (and of CLAUDE.md) described the pipeline inaccurately; this table is the corrected record and should be re-verified whenever a normalizer changes.
 
 | Step | Artist | Album | Track |
 |---|:---:|:---:|:---:|
 | lowercase, trim, collapse whitespace | yes | yes | yes |
 | NBSP (U+00A0) → space | yes | yes | yes |
-| smart quotes U+2018/2019/201C/201D → ASCII | yes | yes | yes |
+| apostrophe-likes U+2018/2019/00B4/0060/02BC → `'`, U+201C/201D → `"` | yes | yes | yes |
+| `[ ]` → `( )` (container canonicalization) | — | yes | yes |
+| fold diacritics (NFD, marks dropped) | yes | yes | yes |
 | strip leading "the" | yes | — | — |
-| "&" → "and" | yes | **no** | **no** |
-| keyword suffix stripping (remaster/live/…) | — | yes | yes |
-| strip punctuation | **no** | **no** | **no** |
-| fold diacritics | **no** | **no** | **no** |
+| keyword suffix stripping (remaster/live/feat/…), optional year between dash and keyword | — | yes | yes |
+| bare trailing year after a real title ("Comfortably Numb 2022") | — | — | yes |
+| "&" → "and" | yes | yes | yes |
+| punctuation `.` `,` `-` U+2010 U+2013 U+2014 → **space** (never deleted) | yes | yes | yes |
 
-Punctuation stripping and diacritic folding are **not implemented anywhere**, and the `&`/`and` rule exists **only on artists**. Earlier drafts claimed punctuation stripping was part of the pipeline; it never was. Several open issues trace directly to these three gaps (§3.3). Each rule that *does* exist was driven by a real user report, not speculation. Two principles worth preserving:
+Rules run in roughly that order; the punctuation row runs last because the suffix rules need the dash intact to match. Punctuation is mapped to a space rather than deleted (the *3.15.20* guard below); dashes joined the class for issue #20 ("Hip Hop" vs "Hip-Hop"), with the side effect that `Foo - 2000 - Remaster` now reaches `foo`. Before v0.6.1 none of punctuation, diacritic folding, or `&`/`and` on albums and tracks existed, and several issues traced to those gaps (§3.3). Each rule that *does* exist was driven by a real user report, not speculation. Principles worth preserving:
 
 - Normalization changes are the highest-risk edits in the codebase — they silently change what groups with what. Hence the merge contract, `tests/merge-contract.js` (§4.1.1) — **built as of 2026-08-01**. Add cases there before changing behaviour here.
 - The canonical MUST-NOT-merge example: **Elvis Costello vs. Elvis Costello & The Attractions** are different credits, correctly distinct. Any normalization change that merges them is wrong. Now enforced.
