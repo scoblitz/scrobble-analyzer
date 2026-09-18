@@ -342,7 +342,7 @@ Cross-reference library entities against MusicBrainz to catch uniformly-wrong ta
 - **"Buried Treasure"** — a discovery tool surfacing low-play-count albums; deliberately separate from SA and trusts Last.fm data as-is. Fragmentation detection stays in SA.
 - **MCP radio-stations concept** — Apple Music playlists driven by Last.fm history via Claude Desktop. Exploratory.
 
-### 4.5 Dismissal intent: "fixed" vs. "ignored" (scoped 2026-09-18; phases 1–2 built 2026-09-18, phases 3–4 not built)
+### 4.5 Dismissal intent: "fixed" vs. "ignored" (scoped 2026-09-18; phases 1–3 built 2026-09-18, phase 4 not built)
 
 **The problem.** A dismissal today is one bit: hide this ID for this username, forever. Two incompatible intents share it. The maintainer's original intent was *"I fixed this on Last.fm; hide it so I can see what is left"* — persistence existed so the same file could be reloaded without re-triaging. Other users read the button as *"this is not a problem; never show it again."* Both are legitimate, and the single bit serves the second while silently breaking the first: a track dismissed after a fix that later recurs (the same compilation tag scrobbled again, a re-import with the old spelling) matches the stored ID and is hidden without anyone seeing it. Recurring issues are being missed.
 
@@ -425,7 +425,14 @@ where `current` is a count (per-track) or a member map (card). Everything else �
 - **"Fixed all N" / "Ignore all N"** on a compilation card mark only the rows currently showing (active and recurred), never rows already hidden under the other intent.
 - **Per-item card descriptions** name the split: *"3 tracks remaining (1 recurred, 2 fixed, 1 ignored)"*, parts omitted when zero. Hidden cards in the dismissed view are tagged *(fixed)* or *(ignored)* in the title.
 - **Report.** `[FIXED]` / `[IGNORED]` on hidden items when included; `[RECURRED]` on recurred items always, followed by the recurred line indented under the item. The report header explains the tags.
-- **Sidebar** still says *View dismissed only (N)* where N is the hidden count; the three-way filter is phase 3.
+- ~~**Sidebar** still says *View dismissed only (N)*~~ — replaced in phase 3.
+
+**Phase 3 as built (2026-09-18).** The checkbox became a three-button switch under the issue-type nav — **Active / Fixed / Ignored**, each with its count — and `state.showDismissed` became `state.view`. One predicate, `inView(view, status, record)`, answers whether an item belongs in the current view: Active is everything not hidden (recurred included); Fixed and Ignored are hidden items of that intent. Cards, rows, the results count, per-item descriptions (*"2 fixed tracks"*), and the compilation Restore-all button all consult it.
+
+- **Active carries a count too**, the same number as *All Issues*. Redundant on its own, but with it the three add up to everything flagged, which is the honest picture of what the tool found.
+- **Restore all is view-scoped.** In the Fixed view it restores that card's fixed rows and leaves its ignored rows hidden, and vice versa. Same rule as Fixed all / Ignore all in the Active view: bulk actions touch only rows currently showing.
+- **A new import resets to Active**, as the old checkbox reset to unchecked.
+- The export checkbox (*Include dismissed items*) is unchanged; it includes both intents.
 
 ---
 
