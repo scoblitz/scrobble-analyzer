@@ -227,6 +227,63 @@ const KNOWN_MISS = [
 
 ];
 
+// --- lone invisible-character entries (issue #22) ------------------------------
+//
+// The Invisible Characters finder is a variation detector for artists, albums
+// and tracks alike, but artists ALSO get a pattern rule: a lone artist whose
+// name carries an invisible character is flagged with no twin. Albums and
+// tracks did not, so "Fiction  (Dreams In Digital)" with a doubled space and
+// no single-space sibling in the export was never shown (issue #22). A doubled
+// space is always wrong, and in the wild it is usually where an "&" used to be
+// ("Sparks  Ashes", "angus  julia stone"). Albums and tracks now get the same
+// lone-entry rule as artists, at the category's existing 3-play threshold.
+//
+// The finder is read live from index.html like the normalizers. Each case is a
+// synthetic export and the exact set of cards it must produce.
+//
+// [why, scrobbles, expected cards as "subtype: title"]
+const S = (Artist, Album, Track, n) => Array.from({ length: n }, () => ({ Artist, Album, Track }));
+const FINDER_EXPECT = [
+    ['issue #22 - a lone doubled-space track at 3 plays is flagged',
+        S('Orgy', 'Vapor Transmission', 'Fiction  (Dreams In Digital)', 3),
+        ['track: Orgy - Fiction (Dreams In Digital)']],
+    ['a lone doubled-space track under 3 plays stays below the threshold',
+        S('Orgy', 'Vapor Transmission', 'Fiction  (Dreams In Digital)', 2),
+        []],
+    ['a lone doubled-space album is flagged the same way',
+        S('Wild Beasts', 'Punk Drunk  Trembling', 'Punk Drunk and Trembling', 3),
+        ['album: Wild Beasts - Punk Drunk Trembling']],   // titles use the visible string
+    ['a lone NBSP track is in the same class as a lone NBSP artist',
+        S('The Beatles', 'Abbey Road', 'Come\u00a0Together', 3),
+        ['track: The Beatles - Come Together']],
+    ['a clean lone track is not an issue however often it was played',
+        S('The Beatles', 'Abbey Road', 'Come Together', 50),
+        []],
+    ['a doubled space in the ARTIST makes one artist card, not an album and a track card too',
+        S('angus  julia stone', 'Down the Way', 'Big Jet Plane', 5),
+        ['artist: angus julia stone']],
+    ['a twin pair is still one card, unchanged',
+        [...S('Orgy', 'Vapor Transmission', 'Fiction  (Dreams In Digital)', 1),
+         ...S('Orgy', 'Vapor Transmission', 'Fiction (Dreams In Digital)', 2)],
+        ['track: Orgy - Fiction (Dreams In Digital)']],
+];
+
+function loadFinder() {
+    const html = fs.readFileSync(HTML, 'utf8');
+    const names = ['getVisibleString', 'hasInvisibleChars', 'findInvisibleCharacterIssues'];
+    const sources = names.map(name => {
+        const open = `        function ${name}(`;
+        const start = html.indexOf(open);
+        if (start === -1) throw new Error(`Could not find "function ${name}" at top level in index.html.`);
+        const end = html.indexOf('\n        }\n', start);
+        return html.slice(start, end + 11);
+    });
+    // The finder logs progress to the console; silence it here.
+    const factory = new Function('console', sources.join('\n') + '\nreturn findInvisibleCharacterIssues;');
+    return factory({ log() {} });
+}
+const findInvisibleCharacterIssues = loadFinder();
+
 // --- runner ------------------------------------------------------------------
 const GREEN = '\x1b[32m', RED = '\x1b[31m', DIM = '\x1b[2m', YEL = '\x1b[33m', OFF = '\x1b[0m';
 
@@ -284,6 +341,14 @@ lookalikeQuoteChars(PROBE).forEach(ch => {
     });
 });
 
+const finderFailures = [];
+FINDER_EXPECT.forEach(([why, scrobbles, expected]) => {
+    const got = findInvisibleCharacterIssues(scrobbles).map(i => `${i.subtype}: ${i.title}`).sort();
+    const want = [...expected].sort();
+    if (JSON.stringify(got) === JSON.stringify(want)) passed++;
+    else finderFailures.push({ why, got, want });
+});
+
 const chipFailures = [];
 CHIP_EXPECT.forEach(([names, expected, why]) => {
     const got = confusableMarkChars(names).map(chips => chips.length > 0);
@@ -300,7 +365,7 @@ KNOWN_MISS.forEach(([f, a, b, shouldMatch, why]) => {
 
 console.log('\nmerge contract  ' + DIM + '(normalizers read live from index.html)' + OFF + '\n');
 
-const totalFailures = failures.length + keyFailures.length + chipFailures.length + driftFailures.length;
+const totalFailures = failures.length + keyFailures.length + chipFailures.length + driftFailures.length + finderFailures.length;
 
 if (totalFailures === 0) {
     console.log(`  ${GREEN}PASS${OFF}  ${passed} assertions`);
@@ -322,6 +387,11 @@ if (totalFailures === 0) {
         console.log(`  ${RED}x${OFF} [drift] the chip shows ${f.ch} ${f.hex}, but normalize${f.field[0].toUpperCase()}${f.field.slice(1)} does not fold it`);
         console.log(`      ${JSON.stringify('x' + f.ch + 'y')}  ->  ${JSON.stringify(f.got)}`);
         console.log(`      ${DIM}chip class and normalizer class have drifted apart${OFF}\n`);
+    });
+    finderFailures.forEach(f => {
+        console.log(`  ${RED}x${OFF} [finder] wrong cards for: ${f.why}`);
+        console.log(`      want ${JSON.stringify(f.want)}`);
+        console.log(`      got  ${JSON.stringify(f.got)}\n`);
     });
     chipFailures.forEach(f => {
         console.log(`  ${RED}x${OFF} [chip] wrong rows chipped`);
