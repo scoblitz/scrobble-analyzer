@@ -493,6 +493,33 @@
             color: var(--bg-dark);
         }
 
+        .dismiss-btn + .dismiss-btn {
+            margin-left: 0.5rem;
+        }
+
+        /* "Ignore" is the quieter of the two intents: no green on hover */
+        .dismiss-btn.ignore:hover,
+        .dismiss-btn-small.ignore:hover {
+            background: var(--text-secondary);
+            color: var(--bg-dark);
+            border-color: var(--text-secondary);
+        }
+
+        /* Why a dismissed item is back (DESIGN.md 4.5) */
+        .recurred-note {
+            margin-top: 0.35rem;
+            font-size: 0.78rem;
+            color: var(--accent-yellow);
+        }
+
+        .recurred-note.small {
+            margin-top: 0;
+            margin-left: 0.5rem;
+            font-family: inherit;
+            font-size: 0.7rem;
+            white-space: nowrap;
+        }
+
         /* Small dismiss button for individual items */
         .dismiss-btn-small {
             padding: 0.2rem 0.5rem;
@@ -1174,17 +1201,17 @@
         //     at: <ms timestamp>,
         //     legacy: true }             // migrated from v1, no baseline; dropped on re-mark
         //
-        // Phase 1 is storage only: every button still writes 'fixed' with a
-        // baseline, and the UI hides any ID that has a record, whatever its
-        // intent or status. dismissalStatus() below is the one place that
-        // decides hidden vs recurred; phase 2 starts consuming it.
+        // The UI reads status, never presence: 'hidden' items leave the
+        // default view, 'recurred' items stay in it with a note saying why
+        // and both buttons offered, 'active' items were never marked.
+        // dismissalStatus() below is the one place that decides.
 
         function isDismissed(id) {
             return Object.prototype.hasOwnProperty.call(state.dismissals, id);
         }
 
-        function markDismissed(id, current) {
-            const record = { intent: 'fixed', at: Date.now() };
+        function markDismissed(id, current, intent) {
+            const record = { intent: intent === 'ignored' ? 'ignored' : 'fixed', at: Date.now() };
             if (typeof current === 'number') record.count = current;
             else if (current && typeof current === 'object') record.members = { ...current };
             state.dismissals[id] = record;
@@ -1241,6 +1268,57 @@
                 if (current[name] > stored[name]) return 'recurred';
             }
             return 'hidden';
+        }
+
+        function cardStatus(issue, issueId) {
+            return dismissalStatus(state.dismissals[issueId], currentBaseline(issue));
+        }
+
+        function itemStatus(issueId, row) {
+            return dismissalStatus(state.dismissals[getItemId(issueId, row.name)], row.count);
+        }
+
+        // What changed since a fixed item was marked. Pure and top-level for
+        // the contract. newPlays counts growth in members that were stored
+        // (or the row itself); newMembers lists spellings not stored at all.
+        // A legacy record has no baseline, so nothing is measurable.
+        function recurrenceDelta(record, current) {
+            if (!record || record.legacy) return { newPlays: 0, newMembers: [] };
+            if (typeof current === 'number') {
+                return { newPlays: Math.max(0, current - (record.count || 0)), newMembers: [] };
+            }
+            const stored = record.members || {};
+            let newPlays = 0;
+            const newMembers = [];
+            Object.keys(current || {}).forEach(name => {
+                if (!Object.prototype.hasOwnProperty.call(stored, name)) newMembers.push(name);
+                else newPlays += Math.max(0, current[name] - stored[name]);
+            });
+            return { newPlays, newMembers };
+        }
+
+        // The line a recurred item carries so a reappearance does not look
+        // like the tool forgot. `short` is the inline form for a track row.
+        function recurrenceNote(record, current, short) {
+            if (!record) return '';
+            if (record.legacy) {
+                return short
+                    ? '↻ dismissed in an earlier version — fixed, or ignore?'
+                    : '↻ Dismissed in an earlier version — fixed, or ignore from now on?';
+            }
+            const { newPlays, newMembers } = recurrenceDelta(record, current);
+            const parts = [];
+            if (newPlays > 0) parts.push(`${newPlays} new play${newPlays !== 1 ? 's' : ''}`);
+            if (newMembers.length > 0) parts.push(`${newMembers.length} new spelling${newMembers.length !== 1 ? 's' : ''}`);
+            const what = parts.join(' and ') || 'changes';
+            if (short) return `↻ ${what} since marked fixed`;
+            const when = new Date(record.at || 0).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+            const atPlays = typeof current === 'number' ? ` at ${record.count || 0} play${record.count !== 1 ? 's' : ''}` : '';
+            return `↻ Marked fixed ${when}${atPlays} — ${what} since.`;
+        }
+
+        function intentLabel(record) {
+            return record && record.intent === 'ignored' ? 'ignored' : 'fixed';
         }
 
         function saveDismissedState() {
@@ -2493,7 +2571,8 @@
             renderIssues();
         }
 
-        // Update counts accounting for dismissed issues
+        // Update counts. Hidden (fixed and unchanged, or ignored) items leave
+        // the active counts; recurred items stay in them.
         function updateCounts() {
             // Count issue-level dismissals
             let issueLevelDismissed = 0;
@@ -2505,19 +2584,18 @@
             const activeIssues = state.issues.filter(issue => {
                 const issueId = getIssueId(issue);
                 
-                // Check if entire issue is dismissed
-                if (isDismissed(issueId)) {
+                // Check if entire issue is hidden
+                if (cardStatus(issue, issueId) === 'hidden') {
                     issueLevelDismissed++;
                     return false;
                 }
                 
-                // For missing/compilation, check if all items are dismissed
+                // For missing/compilation, check if all items are hidden
                 if (['missing', 'compilation'].includes(issue.type)) {
                     const variations = issue.variations || [];
                     let activeItems = 0;
                     variations.forEach((v, i) => {
-                        const itemId = getItemId(issueId, v.name);
-                        if (isDismissed(itemId)) {
+                        if (itemStatus(issueId, v) === 'hidden') {
                             itemLevelDismissed++;
                         } else {
                             activeItems++;
@@ -2541,16 +2619,14 @@
                 if (issue.type === 'missing') {
                     const issueId = getIssueId(issue);
                     (issue.variations || []).forEach((v, i) => {
-                        const itemId = getItemId(issueId, v.name);
-                        if (!isDismissed(itemId)) {
+                        if (itemStatus(issueId, v) !== 'hidden') {
                             missingTrackCount++;
                         }
                     });
                 } else if (issue.type === 'compilation') {
                     const issueId = getIssueId(issue);
                     (issue.variations || []).forEach((v, i) => {
-                        const itemId = getItemId(issueId, v.name);
-                        if (!isDismissed(itemId)) {
+                        if (itemStatus(issueId, v) !== 'hidden') {
                             compilationTrackCount++;
                         }
                     });
@@ -2597,18 +2673,18 @@
             
             let filtered = [...state.issues];  // Create a copy
             
-            // Add issue IDs and dismissed status
+            // Add issue IDs and dismissal status. "Dismissed" below means
+            // hidden; a recurred item counts as active everywhere.
             filtered = filtered.map(issue => {
                 const issueId = getIssueId(issue);
-                const isIssueDismissed = isDismissed(issueId);
+                const status = cardStatus(issue, issueId);
                 
-                // For missing/compilation, check if any items are dismissed
+                // For missing/compilation, check if any items are hidden
                 let hasDismissedItems = false;
                 let hasActiveItems = false;
                 if (['missing', 'compilation'].includes(issue.type)) {
                     (issue.variations || []).forEach((v, i) => {
-                        const itemId = getItemId(issueId, v.name);
-                        if (isDismissed(itemId)) {
+                        if (itemStatus(issueId, v) === 'hidden') {
                             hasDismissedItems = true;
                         } else {
                             hasActiveItems = true;
@@ -2619,7 +2695,8 @@
                 return {
                     ...issue,
                     _id: issueId,
-                    _isDismissed: isIssueDismissed,
+                    _status: status,
+                    _isDismissed: status === 'hidden',
                     _hasDismissedItems: hasDismissedItems,
                     _hasActiveItems: hasActiveItems
                 };
@@ -2697,8 +2774,7 @@
                 if (issue.type === 'missing' || issue.type === 'compilation') {
                     const issueId = getIssueId(issue);
                     (issue.variations || []).forEach((v, i) => {
-                        const itemId = getItemId(issueId, v.name);
-                        if (!isDismissed(itemId)) {
+                        if (itemStatus(issueId, v) !== 'hidden') {
                             displayCount++;
                         }
                     });
@@ -2730,11 +2806,15 @@
                 let variationsToRender = issue.variations || [];
                 
                 if (['missing', 'compilation'].includes(issue.type)) {
-                    variationsToRender = variationsToRender.map((v, i) => ({
-                        ...v,
-                        _itemId: getItemId(issue._id, v.name),
-                        _isItemDismissed: isDismissed(getItemId(issue._id, v.name))
-                    }));
+                    variationsToRender = variationsToRender.map((v, i) => {
+                        const status = itemStatus(issue._id, v);
+                        return {
+                            ...v,
+                            _itemId: getItemId(issue._id, v.name),
+                            _itemStatus: status,
+                            _isItemDismissed: status === 'hidden'
+                        };
+                    });
                     
                     // Filter based on view mode
                     if (state.showDismissed) {
@@ -2805,13 +2885,21 @@
                         }
                     }
                     
-                    // Per-item dismiss for missing albums and compilations
+                    // Per-item fixed / ignore for missing albums and
+                    // compilations; restore when viewing dismissed. A recurred
+                    // row says why it is back and offers both again.
                     let itemDismissHtml = '';
+                    let itemNoteHtml = '';
                     if (['missing', 'compilation'].includes(issue.type) && v._itemId) {
                         if (v._isItemDismissed) {
-                            itemDismissHtml = `<button class="dismiss-btn-small restore" data-item-id="${v._itemId}">↩️</button>`;
+                            itemDismissHtml = `<button class="dismiss-btn-small restore" data-item-id="${v._itemId}" title="Restore">↩️</button>`;
                         } else {
-                            itemDismissHtml = `<button class="dismiss-btn-small" data-item-id="${v._itemId}">✓</button>`;
+                            itemDismissHtml =
+                                `<button class="dismiss-btn-small" data-item-id="${v._itemId}" data-intent="fixed" title="Fixed on Last.fm - hide until new plays appear under this name">✓</button>` +
+                                `<button class="dismiss-btn-small ignore" data-item-id="${v._itemId}" data-intent="ignored" title="Not a problem - never show again">🚫</button>`;
+                        }
+                        if (v._itemStatus === 'recurred') {
+                            itemNoteHtml = `<span class="recurred-note small">${escapeHtml(recurrenceNote(state.dismissals[v._itemId], v.count, true))}</span>`;
                         }
                     }
                     
@@ -2824,6 +2912,7 @@
                     return `
                         <div class="variation-item">
                             <span class="variation-value">${nameHtml}${lookalikeHtml}${invisibleWarning}</span>
+                            ${itemNoteHtml}
                             ${v.count ? `<span class="variation-count">${v.count}</span>` : ''}
                             ${lastFmLinkHtml}
                             ${itemLookupHtml}
@@ -2845,12 +2934,17 @@
                     if (state.showDismissed) {
                         displayDescription = `${visibleItems} dismissed track${visibleItems !== 1 ? 's' : ''}`;
                     } else {
-                        const dismissedCount = totalItems - visibleItems;
-                        if (dismissedCount > 0) {
-                            displayDescription = `${visibleItems} track${visibleItems !== 1 ? 's' : ''} remaining (${dismissedCount} dismissed)`;
-                        } else {
-                            displayDescription = `${visibleItems} track${visibleItems !== 1 ? 's' : ''}`;
-                        }
+                        const hiddenRows = (issue.variations || []).filter(v => itemStatus(issue._id, v) === 'hidden');
+                        const nFixed = hiddenRows.filter(v => intentLabel(state.dismissals[getItemId(issue._id, v.name)]) === 'fixed').length;
+                        const nIgnored = hiddenRows.length - nFixed;
+                        const nRecurred = variationsToRender.filter(v => v._itemStatus === 'recurred').length;
+                        const notes = [];
+                        if (nRecurred) notes.push(`${nRecurred} recurred`);
+                        if (nFixed) notes.push(`${nFixed} fixed`);
+                        if (nIgnored) notes.push(`${nIgnored} ignored`);
+                        displayDescription = `${visibleItems} track${visibleItems !== 1 ? 's' : ''}`
+                            + (hiddenRows.length > 0 ? ' remaining' : '')
+                            + (notes.length ? ` (${notes.join(', ')})` : '');
                     }
                 }
                 
@@ -2862,24 +2956,36 @@
                 // dismisses every track still showing, by the same per-track
                 // IDs the small buttons use, so restore, the dismissed view,
                 // the counts and the report need no special case.
-                // Named to avoid shadowing the isDismissed() helper, which the
-                // per-item mapping above calls for missing/compilation cards.
+                // Not "isDismissed": that name is the top-level helper, and a
+                // local of the same name would shadow it for this whole block.
                 const isCardDismissed = issue._isDismissed;
+                const fixedTitle = 'Fixed on Last.fm - hide until new plays appear under this name';
+                const ignoreTitle = 'Not a problem - never show again';
                 let dismissButtonHtml;
                 if (issue.type === 'compilation') {
                     const n = variationsToRender.length;
                     const plural = n !== 1 ? 's' : '';
                     dismissButtonHtml = state.showDismissed
                         ? `<button class="dismiss-btn restore dismiss-all" data-issue-id="${issue._id}">↩️ Restore all ${n} track${plural}</button>`
-                        : `<button class="dismiss-btn dismiss-all" data-issue-id="${issue._id}">✓ Dismiss all ${n} track${plural}</button>`;
+                        : `<button class="dismiss-btn dismiss-all" data-issue-id="${issue._id}" data-intent="fixed" title="${fixedTitle}">✓ Fixed all ${n}</button>` +
+                          `<button class="dismiss-btn ignore dismiss-all" data-issue-id="${issue._id}" data-intent="ignored" title="${ignoreTitle}">🚫 Ignore all ${n}</button>`;
                 } else if (issue.type === 'missing') {
                     // No issue-level dismiss for these - they use per-item dismissal
                     dismissButtonHtml = '';
                 } else {
                     dismissButtonHtml = isCardDismissed
                         ? `<button class="dismiss-btn restore" data-issue-id="${issue._id}">↩️ Restore</button>`
-                        : `<button class="dismiss-btn" data-issue-id="${issue._id}">✓ Dismiss</button>`;
+                        : `<button class="dismiss-btn" data-issue-id="${issue._id}" data-intent="fixed" title="${fixedTitle}">✓ Fixed</button>` +
+                          `<button class="dismiss-btn ignore" data-issue-id="${issue._id}" data-intent="ignored" title="${ignoreTitle}">🚫 Ignore</button>`;
                 }
+
+                // Why a card-level item is back (per-track rows carry their own)
+                const cardNoteHtml = issue._status === 'recurred'
+                    ? `<div class="recurred-note">${escapeHtml(recurrenceNote(state.dismissals[issue._id], currentBaseline(issue), false))}</div>`
+                    : '';
+                const hiddenTag = isCardDismissed
+                    ? ` <span style="color: var(--text-muted); font-size: 0.75rem;">(${intentLabel(state.dismissals[issue._id])})</span>`
+                    : '';
                 
                 // Lookup button - for artist variations always show, for album/track only if needed
                 let lookupButtonHtml = '';
@@ -2908,8 +3014,9 @@
                     <div class="issue-header">
                         <span class="issue-type ${issue.type}">${issue.type}</span>
                         <div class="issue-content">
-                            <div class="issue-title">${escapeHtml(issue.title || 'Unknown')}${isCardDismissed ? ' <span style="color: var(--text-muted); font-size: 0.75rem;">(dismissed)</span>' : ''}</div>
+                            <div class="issue-title">${escapeHtml(issue.title || 'Unknown')}${hiddenTag}</div>
                             <div class="issue-description">${escapeHtml(displayDescription)}</div>
+                            ${cardNoteHtml}
                         </div>
                         <div class="issue-meta">
                             <div>
@@ -2942,10 +3049,11 @@
                     // empties (or fills), and neighbouring cards may move.
                     if (e.target.classList.contains('dismiss-all')) {
                         const isRestore = e.target.classList.contains('restore');
+                        const intent = e.target.dataset.intent;
                         (issue.variations || []).forEach(v => {
                             const itemId = getItemId(issue._id, v.name);
                             if (isRestore) unmarkDismissed(itemId);
-                            else markDismissed(itemId, v.count);
+                            else if (itemStatus(issue._id, v) !== 'hidden') markDismissed(itemId, v.count, intent);
                         });
                         saveDismissedState();
                         updateCounts();
@@ -2962,7 +3070,7 @@
                             unmarkDismissed(issueId);
                         } else {
                             // Card-level: baseline is every row's count
-                            markDismissed(issueId, currentBaseline(issue));
+                            markDismissed(issueId, currentBaseline(issue), e.target.dataset.intent);
                         }
                         saveDismissedState();
                         updateCounts();
@@ -2982,7 +3090,7 @@
                         if (isRestore) {
                             unmarkDismissed(itemId);
                         } else {
-                            markDismissed(itemId, currentBaseline(issue, itemId));
+                            markDismissed(itemId, currentBaseline(issue, itemId), e.target.dataset.intent);
                         }
                         saveDismissedState();
                         
@@ -3186,8 +3294,8 @@
             report += `Generated: ${new Date().toLocaleString()}\n`;
             report += `Total Scrobbles: ${state.scrobbles.length.toLocaleString()}\n`;
             report += includeDismissed
-                ? 'Dismissed items: included (tagged [DISMISSED])\n\n'
-                : 'Dismissed items: excluded\n\n';
+                ? 'Dismissed items: included (tagged [FIXED] / [IGNORED]; items back since being marked fixed are tagged [RECURRED])\n\n'
+                : 'Dismissed items: excluded (items back since being marked fixed are tagged [RECURRED])\n\n';
 
             const types = ['artist', 'album', 'track', 'missing', 'compilation', 'invisible'];
             types.forEach(type => {
@@ -3202,17 +3310,29 @@
                 
                 // Build the printable entries for this type, applying dismissed rules
                 const entries = [];
+                // Marker for one item: [FIXED] / [IGNORED] when hidden,
+                // [RECURRED] when back, nothing when active.
+                const marker = (status, record) => {
+                    if (status === 'hidden') return ` [${intentLabel(record).toUpperCase()}]`;
+                    if (status === 'recurred') return ' [RECURRED]';
+                    return '';
+                };
                 state.issues.filter(i => i.type === type).forEach(issue => {
                     const issueId = getIssueId(issue);
-                    const issueDismissed = isDismissed(issueId);
+                    const status = cardStatus(issue, issueId);
+                    const issueDismissed = status === 'hidden';
                     if (issueDismissed && !includeDismissed) return;
                     
-                    let variations = (issue.variations || []).map(v => ({
-                        ...v,
-                        _dismissed: ['missing', 'compilation'].includes(type)
-                            ? isDismissed(getItemId(issueId, v.name))
-                            : false
-                    }));
+                    let variations = (issue.variations || []).map(v => {
+                        const itemSt = ['missing', 'compilation'].includes(type) ? itemStatus(issueId, v) : 'active';
+                        const rec = state.dismissals[getItemId(issueId, v.name)];
+                        return {
+                            ...v,
+                            _dismissed: itemSt === 'hidden',
+                            _marker: marker(itemSt, rec),
+                            _note: itemSt === 'recurred' ? recurrenceNote(rec, v.count, true) : ''
+                        };
+                    });
                     
                     if (!includeDismissed) {
                         variations = variations.filter(v => !v._dismissed);
@@ -3220,7 +3340,12 @@
                         if (['missing', 'compilation'].includes(type) && variations.length === 0) return;
                     }
                     
-                    entries.push({ issue, issueDismissed, variations });
+                    const record = state.dismissals[issueId];
+                    entries.push({
+                        issue, issueDismissed, variations,
+                        marker: marker(status, record),
+                        note: status === 'recurred' ? recurrenceNote(record, currentBaseline(issue), false) : ''
+                    });
                 });
                 
                 if (entries.length === 0) return;
@@ -3229,13 +3354,14 @@
                 report += `${typeNames[type]} (${entries.length})\n`;
                 report += `${'='.repeat(50)}\n\n`;
 
-                entries.sort((a, b) => b.issue.totalCount - a.issue.totalCount).forEach(({ issue, issueDismissed, variations }) => {
-                    report += `${issue.title}${issueDismissed ? ' [DISMISSED]' : ''}\n`;
+                entries.sort((a, b) => b.issue.totalCount - a.issue.totalCount).forEach(({ issue, variations, marker, note }) => {
+                    report += `${issue.title}${marker}\n`;
                     report += `  ${issue.description} | ${issue.totalCount} scrobbles\n`;
+                    if (note) report += `  ${note}\n`;
                     variations.forEach(v => {
                         const invisibleNote = v.hasInvisible ? ' [HAS INVISIBLE CHARS]' : '';
-                        const dismissedNote = v._dismissed ? ' [DISMISSED]' : '';
-                        report += `    - ${v.name}${v.count ? ` (${v.count})` : ''}${invisibleNote}${dismissedNote}\n`;
+                        report += `    - ${v.name}${v.count ? ` (${v.count})` : ''}${invisibleNote}${v._marker}\n`;
+                        if (v._note) report += `      ${v._note}\n`;
                     });
                     report += '\n';
                 });
