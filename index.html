@@ -2862,7 +2862,9 @@
                 // dismisses every track still showing, by the same per-track
                 // IDs the small buttons use, so restore, the dismissed view,
                 // the counts and the report need no special case.
-                const isDismissed = issue._isDismissed;
+                // Named to avoid shadowing the isDismissed() helper, which the
+                // per-item mapping above calls for missing/compilation cards.
+                const isCardDismissed = issue._isDismissed;
                 let dismissButtonHtml;
                 if (issue.type === 'compilation') {
                     const n = variationsToRender.length;
@@ -2874,7 +2876,7 @@
                     // No issue-level dismiss for these - they use per-item dismissal
                     dismissButtonHtml = '';
                 } else {
-                    dismissButtonHtml = isDismissed 
+                    dismissButtonHtml = isCardDismissed
                         ? `<button class="dismiss-btn restore" data-issue-id="${issue._id}">↩️ Restore</button>`
                         : `<button class="dismiss-btn" data-issue-id="${issue._id}">✓ Dismiss</button>`;
                 }
@@ -2906,7 +2908,7 @@
                     <div class="issue-header">
                         <span class="issue-type ${issue.type}">${issue.type}</span>
                         <div class="issue-content">
-                            <div class="issue-title">${escapeHtml(issue.title || 'Unknown')}${isDismissed ? ' <span style="color: var(--text-muted); font-size: 0.75rem;">(dismissed)</span>' : ''}</div>
+                            <div class="issue-title">${escapeHtml(issue.title || 'Unknown')}${isCardDismissed ? ' <span style="color: var(--text-muted); font-size: 0.75rem;">(dismissed)</span>' : ''}</div>
                             <div class="issue-description">${escapeHtml(displayDescription)}</div>
                         </div>
                         <div class="issue-meta">
