@@ -300,8 +300,8 @@ function loadFinder() {
 }
 const findInvisibleCharacterIssues = loadFinder();
 
-const { dismissalStatus, migrateDismissalBlob } =
-    loadTopLevel(['dismissalStatus', 'migrateDismissalBlob', 'legacyDismissalRecord']);
+const { dismissalStatus, migrateDismissalBlob, recurrenceDelta } =
+    loadTopLevel(['dismissalStatus', 'migrateDismissalBlob', 'legacyDismissalRecord', 'recurrenceDelta']);
 
 // Dismissal status (DESIGN.md 4.5). One pure function decides whether a
 // dismissed item is hidden or has come back; everything the UI does with
@@ -346,6 +346,19 @@ const DISMISSAL_EXPECT = [
     ['legacy fixed, per-track present', LEGACY, 1, 'recurred'],
     ['legacy fixed, card present', LEGACY, { A: 1 }, 'recurred'],
     // (legacy + absent is never evaluated: nothing on screen to ask about)
+];
+
+// What the recurred note reports (phase 2). newPlays is growth in stored
+// members (or the row); newMembers are spellings that were not stored. A
+// member that shrank or vanished contributes nothing.
+// [why, record, current, expected]
+const DELTA_EXPECT = [
+    ['per-track growth', FIXED(5), 8, { newPlays: 3, newMembers: [] }],
+    ['per-track unchanged', FIXED(5), 5, { newPlays: 0, newMembers: [] }],
+    ['card: growth in two members, one shrank', FIXED_CARD({ A: 5, B: 2, C: 4 }), { A: 7, B: 3, C: 1 }, { newPlays: 3, newMembers: [] }],
+    ['card: new spelling only', FIXED_CARD({ A: 5 }), { A: 5, B: 1 }, { newPlays: 0, newMembers: ['B'] }],
+    ['card: member vanished', FIXED_CARD({ A: 5, B: 2 }), { A: 5 }, { newPlays: 0, newMembers: [] }],
+    ['legacy has nothing to measure', LEGACY, 9, { newPlays: 0, newMembers: [] }],
 ];
 
 // v1 -> v2 blob migration. Every v1 ID becomes a legacy fixed record; a v2
@@ -439,6 +452,11 @@ const dismissalFailures = [];
 DISMISSAL_EXPECT.forEach(([why, record, current, expected]) => {
     const got = dismissalStatus(record, current);
     if (got === expected) passed++;
+    else dismissalFailures.push({ why, record, current, expected, got });
+});
+DELTA_EXPECT.forEach(([why, record, current, expected]) => {
+    const got = recurrenceDelta(record, current);
+    if (JSON.stringify(got) === JSON.stringify(expected)) passed++;
     else dismissalFailures.push({ why, record, current, expected, got });
 });
 MIGRATION_EXPECT.forEach(([why, blob, expected]) => {
