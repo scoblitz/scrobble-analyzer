@@ -2227,9 +2227,15 @@
                 }
             });
 
-            // Find album issues (only where there are actual duplicates)
+            // Find album issues: visually identical twins, or a lone album
+            // whose OWN name carries an invisible character (issue #22 - a
+            // doubled space is always wrong, and is usually a lost "&"). The
+            // lone test looks at the album name only, not the artist: an
+            // artist with a doubled space already has an artist card, and
+            // repeating it on every album and track would be noise.
             albumGroups.forEach((items, visible) => {
-                if (items.length > 1) {
+                const hasIssue = items.length > 1 || items.some(i => hasInvisibleChars(i.name));
+                if (hasIssue) {
                     const total = items.reduce((sum, i) => sum + i.count, 0);
                     if (total >= 3) {
                         const [visArtist, visAlbum] = visible.split('|||');
@@ -2238,7 +2244,9 @@
                             subtype: 'album',
                             title: `${visArtist} - ${visAlbum}`,
                             artist: items[0].artist,
-                            description: `${items.length} visually identical albums with different characters`,
+                            description: items.length > 1
+                                ? `${items.length} visually identical albums with different characters`
+                                : `Album name contains invisible characters`,
                             totalCount: total,
                             variations: items.sort((a, b) => b.count - a.count).map(i => ({
                                 name: i.name,
@@ -2251,11 +2259,13 @@
                 }
             });
 
-            // Find track issues (only where there are actual duplicates,
-            // same rule as albums - a lone track with an invisible char but
-            // no visually-identical twin isn't splitting any stats)
+            // Find track issues: same rule as albums. Until issue #22 a lone
+            // track needed a twin on the grounds that it "isn't splitting any
+            // stats" - but Last.fm keeps the doubled-space spelling on its own
+            // page, so the split arrives with the next clean scrobble.
             trackGroups.forEach((items, visible) => {
-                if (items.length > 1) {
+                const hasIssue = items.length > 1 || items.some(i => hasInvisibleChars(i.name));
+                if (hasIssue) {
                     const total = items.reduce((sum, i) => sum + i.count, 0);
                     if (total >= 3) {
                         const [visArtist, visTrack] = visible.split('|||');
@@ -2264,7 +2274,9 @@
                             subtype: 'track',
                             title: `${visArtist} - ${visTrack}`,
                             artist: items[0].artist,
-                            description: `${items.length} visually identical tracks with different characters`,
+                            description: items.length > 1
+                                ? `${items.length} visually identical tracks with different characters`
+                                : `Track name contains invisible characters`,
                             totalCount: total,
                             variations: items.sort((a, b) => b.count - a.count).map(i => ({
                                 name: i.name,
