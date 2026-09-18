@@ -189,6 +189,49 @@
             font-size: 1.1rem;
         }
 
+        /* Active / Fixed / Ignored view switch (DESIGN.md 4.5) */
+        .view-switch {
+            display: flex;
+            gap: 0.25rem;
+        }
+
+        .view-btn {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.15rem;
+            padding: 0.45rem 0.25rem;
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            color: var(--text-secondary);
+            font-family: inherit;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .view-btn:hover {
+            background: var(--bg-hover);
+        }
+
+        .view-btn.active {
+            background: rgba(255, 107, 53, 0.10);
+            border-color: var(--accent-orange);
+            color: var(--accent-orange);
+        }
+
+        .view-btn .count {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+        }
+
+        .view-btn.active .count {
+            color: var(--accent-orange);
+        }
+
         /* Upload area */
         .upload-zone {
             border: 2px dashed var(--border);
@@ -977,10 +1020,12 @@
                     <span class="count" id="count-invisible">0</span>
                 </div>
                 <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border);">
-                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.85rem; color: var(--text-secondary);">
-                        <input type="checkbox" id="show-dismissed-toggle" style="cursor: pointer;">
-                        <span>View dismissed only (<span id="count-dismissed">0</span>)</span>
-                    </label>
+                    <div class="sidebar-title">View</div>
+                    <div class="view-switch" id="view-switch">
+                        <button class="view-btn active" data-view="active" title="Open issues, including ones that came back after being marked fixed">Active <span class="count" id="count-active">0</span></button>
+                        <button class="view-btn" data-view="fixed" title="Marked fixed and unchanged since">Fixed <span class="count" id="count-fixed">0</span></button>
+                        <button class="view-btn" data-view="ignored" title="Marked ignore - never shown as active">Ignored <span class="count" id="count-ignored">0</span></button>
+                    </div>
                 </div>
             </div>
 
@@ -1148,7 +1193,7 @@
             scrobbles: [],
             issues: [],
             dismissals: {},   // { id: record } - see "Dismissal records" below
-            showDismissed: false,
+            view: 'active',   // 'active' (includes recurred) | 'fixed' | 'ignored'
             fileHash: null,   // still computed - used to match old-format storage for migration
             username: null,   // parsed from the CSV's Date#username header
             currentFilter: 'all',
@@ -1319,6 +1364,19 @@
 
         function intentLabel(record) {
             return record && record.intent === 'ignored' ? 'ignored' : 'fixed';
+        }
+
+        // Does an item with this status and record belong in the current
+        // view? Active shows everything not hidden (recurred included);
+        // Fixed and Ignored show hidden items of that intent only.
+        function inView(view, status, record) {
+            if (view === 'active') return status !== 'hidden';
+            return status === 'hidden' && intentLabel(record) === view;
+        }
+
+        function setView(view) {
+            state.view = view;
+            document.querySelectorAll('.view-btn').forEach(b => b.classList.toggle('active', b.dataset.view === view));
         }
 
         function saveDismissedState() {
@@ -1607,8 +1665,7 @@
                     
                     // Load this user's dismissals (keyed by username, survives new exports)
                     state.dismissals = loadDismissedState(state.username);
-                    state.showDismissed = false;
-                    document.getElementById('show-dismissed-toggle').checked = false;
+                    setView('active');
                     console.log('Loaded dismissed issues for', state.username + ':', Object.keys(state.dismissals).length);
                     
                     console.log('Parsed scrobbles count:', state.scrobbles.length);
@@ -2574,11 +2631,8 @@
         // Update counts. Hidden (fixed and unchanged, or ignored) items leave
         // the active counts; recurred items stay in them.
         function updateCounts() {
-            // Count issue-level dismissals
-            let issueLevelDismissed = 0;
-            
-            // Count item-level dismissals (for missing/compilation)
-            let itemLevelDismissed = 0;
+            // Hidden items by intent (issue-level cards + per-track rows)
+            const hidden = { fixed: 0, ignored: 0 };
             
             // Calculate which issues have active items remaining
             const activeIssues = state.issues.filter(issue => {
@@ -2586,7 +2640,7 @@
                 
                 // Check if entire issue is hidden
                 if (cardStatus(issue, issueId) === 'hidden') {
-                    issueLevelDismissed++;
+                    hidden[intentLabel(state.dismissals[issueId])]++;
                     return false;
                 }
                 
@@ -2596,7 +2650,7 @@
                     let activeItems = 0;
                     variations.forEach((v, i) => {
                         if (itemStatus(issueId, v) === 'hidden') {
-                            itemLevelDismissed++;
+                            hidden[intentLabel(state.dismissals[getItemId(issueId, v.name)])]++;
                         } else {
                             activeItems++;
                         }
@@ -2607,8 +2661,6 @@
                 
                 return true;
             });
-            
-            const totalDismissed = issueLevelDismissed + itemLevelDismissed;
             
             // Update sidebar counts
             // For missing/compilation, count individual tracks (not artist groups)
@@ -2659,8 +2711,11 @@
                 if (summaryEl) summaryEl.textContent = value;
             });
             
-            // Update dismissed count (total of issue-level + item-level)
-            document.getElementById('count-dismissed').textContent = totalDismissed;
+            // View switch: active is the same number as All Issues, so the
+            // three add up to everything flagged
+            document.getElementById('count-active').textContent = counts.all;
+            document.getElementById('count-fixed').textContent = hidden.fixed;
+            document.getElementById('count-ignored').textContent = hidden.ignored;
         }
 
         // Render issue cards
@@ -2669,7 +2724,7 @@
             console.log('Current filter:', state.currentFilter);
             console.log('Current artist:', state.currentArtist);
             console.log('Search query:', state.searchQuery);
-            console.log('Show dismissed:', state.showDismissed);
+            console.log('View:', state.view);
             
             let filtered = [...state.issues];  // Create a copy
             
@@ -2679,16 +2734,12 @@
                 const issueId = getIssueId(issue);
                 const status = cardStatus(issue, issueId);
                 
-                // For missing/compilation, check if any items are hidden
-                let hasDismissedItems = false;
-                let hasActiveItems = false;
+                // Per-track types are governed by their rows: how many
+                // belong in the current view
+                let rowsInView = 0;
                 if (['missing', 'compilation'].includes(issue.type)) {
                     (issue.variations || []).forEach((v, i) => {
-                        if (itemStatus(issueId, v) === 'hidden') {
-                            hasDismissedItems = true;
-                        } else {
-                            hasActiveItems = true;
-                        }
+                        if (inView(state.view, itemStatus(issueId, v), state.dismissals[getItemId(issueId, v.name)])) rowsInView++;
                     });
                 }
                 
@@ -2697,27 +2748,15 @@
                     _id: issueId,
                     _status: status,
                     _isDismissed: status === 'hidden',
-                    _hasDismissedItems: hasDismissedItems,
-                    _hasActiveItems: hasActiveItems
+                    _rowsInView: rowsInView
                 };
             });
             
-            // Filter based on dismissed toggle
-            if (state.showDismissed) {
-                // Show issues that are dismissed OR have dismissed items
-                filtered = filtered.filter(i => {
-                    if (i._isDismissed) return true;
-                    if (['missing', 'compilation'].includes(i.type) && i._hasDismissedItems) return true;
-                    return false;
-                });
-            } else {
-                // Show issues that are not dismissed AND have active items (for missing/compilation)
-                filtered = filtered.filter(i => {
-                    if (i._isDismissed) return false;
-                    if (['missing', 'compilation'].includes(i.type) && !i._hasActiveItems) return false;
-                    return true;
-                });
-            }
+            // Keep what belongs in the current view
+            filtered = filtered.filter(i => {
+                if (['missing', 'compilation'].includes(i.type)) return i._rowsInView > 0;
+                return inView(state.view, i._status, state.dismissals[i._id]);
+            });
             
             console.log('Starting with issues:', filtered.length);
 
@@ -2771,16 +2810,7 @@
             // Calculate display count - for missing/compilation (or all), count tracks not cards
             let displayCount = 0;
             filtered.forEach(issue => {
-                if (issue.type === 'missing' || issue.type === 'compilation') {
-                    const issueId = getIssueId(issue);
-                    (issue.variations || []).forEach((v, i) => {
-                        if (itemStatus(issueId, v) !== 'hidden') {
-                            displayCount++;
-                        }
-                    });
-                } else {
-                    displayCount++;
-                }
+                displayCount += ['missing', 'compilation'].includes(issue.type) ? issue._rowsInView : 1;
             });
             document.getElementById('results-subtitle').textContent = `${displayCount} issues found`;
 
@@ -2816,14 +2846,8 @@
                         };
                     });
                     
-                    // Filter based on view mode
-                    if (state.showDismissed) {
-                        // Show only dismissed items
-                        variationsToRender = variationsToRender.filter(v => v._isItemDismissed);
-                    } else {
-                        // Show only active items
-                        variationsToRender = variationsToRender.filter(v => !v._isItemDismissed);
-                    }
+                    // Keep the rows that belong in the current view
+                    variationsToRender = variationsToRender.filter(v => inView(state.view, v._itemStatus, state.dismissals[v._itemId]));
                 }
                 
                 // Which rows differ from a sibling only by which diacritic
@@ -2931,8 +2955,8 @@
                 if (['missing', 'compilation'].includes(issue.type)) {
                     const totalItems = (issue.variations || []).length;
                     const visibleItems = variationsToRender.length;
-                    if (state.showDismissed) {
-                        displayDescription = `${visibleItems} dismissed track${visibleItems !== 1 ? 's' : ''}`;
+                    if (state.view !== 'active') {
+                        displayDescription = `${visibleItems} ${state.view} track${visibleItems !== 1 ? 's' : ''}`;
                     } else {
                         const hiddenRows = (issue.variations || []).filter(v => itemStatus(issue._id, v) === 'hidden');
                         const nFixed = hiddenRows.filter(v => intentLabel(state.dismissals[getItemId(issue._id, v.name)]) === 'fixed').length;
@@ -2965,7 +2989,7 @@
                 if (issue.type === 'compilation') {
                     const n = variationsToRender.length;
                     const plural = n !== 1 ? 's' : '';
-                    dismissButtonHtml = state.showDismissed
+                    dismissButtonHtml = state.view !== 'active'
                         ? `<button class="dismiss-btn restore dismiss-all" data-issue-id="${issue._id}">↩️ Restore all ${n} track${plural}</button>`
                         : `<button class="dismiss-btn dismiss-all" data-issue-id="${issue._id}" data-intent="fixed" title="${fixedTitle}">✓ Fixed all ${n}</button>` +
                           `<button class="dismiss-btn ignore dismiss-all" data-issue-id="${issue._id}" data-intent="ignored" title="${ignoreTitle}">🚫 Ignore all ${n}</button>`;
@@ -3052,8 +3076,9 @@
                         const intent = e.target.dataset.intent;
                         (issue.variations || []).forEach(v => {
                             const itemId = getItemId(issue._id, v.name);
+                            if (!inView(state.view, itemStatus(issue._id, v), state.dismissals[itemId])) return;
                             if (isRestore) unmarkDismissed(itemId);
-                            else if (itemStatus(issue._id, v) !== 'hidden') markDismissed(itemId, v.count, intent);
+                            else markDismissed(itemId, v.count, intent);
                         });
                         saveDismissedState();
                         updateCounts();
@@ -3280,8 +3305,10 @@
         });
 
         // Show dismissed toggle
-        document.getElementById('show-dismissed-toggle').addEventListener('change', (e) => {
-            state.showDismissed = e.target.checked;
+        document.getElementById('view-switch').addEventListener('click', (e) => {
+            const btn = e.target.closest('.view-btn');
+            if (!btn) return;
+            setView(btn.dataset.view);
             renderIssues();
         });
 
