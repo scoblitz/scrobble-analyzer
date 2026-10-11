@@ -15,10 +15,10 @@ function load(names, globals = {}) {
     return new Function(...Object.keys(globals), bodies.join('\n') + `\nreturn { ${names} };`)(...Object.values(globals));
 }
 const names = ['getIssueId', 'getItemId', 'getMemberKey', 'decodeDecisionId',
-    'normalizeArtist', 'normalizeAlbum', 'normalizeTrack', 'getVisibleString', 'hasInvisibleChars',
+    'normalizeArtist', 'normalizeAlbum', 'normalizeTrack', 'stripMetadataLabels', 'differsOnlyByCase', 'getVisibleString', 'hasInvisibleChars',
     'currentBaseline', 'dismissalStatus', 'recurrenceDelta', 'recurrenceNote',
     'libraryBaselines', 'observeFixedRecords', 'addRememberedRecurrences',
-    'exportObservation', 'isOlderObservation'];
+    'exportObservation', 'isOlderObservation', 'isKeptMember', 'caseOnlyMembers', 'migrateNormalizationIdentities', 'needsGroupingReview'];
 const tests = [], test = (name, fn) => tests.push([name, fn]);
 const S = (Artist, Album, Track, n, Date = '100') => Array.from({ length: n }, () => ({ Artist, Album, Track, Date }));
 let api;
@@ -260,7 +260,7 @@ test('full import sequence records disappearance, rejects older observations, an
     flow.saveDismissedState();
     await upload({ hash: 'returned', lastModified: 400, rows: S('A', 'B', 'Song (Live)', 1) });
     assert.equal(flow.decisionStatus(id, { [badKey]: 1 }), 'hidden');
-    assert.deepEqual(state.corrections[id], target);
+    assert.deepEqual(state.corrections[id], { ...target, sourceMembers: [badKey], normalizationVersion: 2 });
     // Account separation includes watermark and correction memory.
     await upload({ hash: 'other', lastModified: 1, username: 'other-user', rows: S('A', 'B', 'Song', 1) });
     assert.deepEqual(state.corrections, {});

@@ -53,7 +53,7 @@ A third class — **reference detectors**, comparing the library against an exte
 
 ### 1.7 Normalization pipeline choices
 
-**What is actually implemented today** — verified line-by-line against `index.html` on 2026-09-18 (first verified 2026-08-01, before v0.6.1 landed). An earlier revision of this document (and of CLAUDE.md) described the pipeline inaccurately; this table is the corrected record and should be re-verified whenever a normalizer changes.
+**What is actually implemented today** — verified line-by-line against `index.html` on 2026-09-18, with unreleased suffix refinements checked on 2026-10-11 (§4.8; first verified 2026-08-01, before v0.6.1 landed). An earlier revision of this document (and of CLAUDE.md) described the pipeline inaccurately; this table is the corrected record and should be re-verified whenever a normalizer changes.
 
 | Step | Artist | Album | Track |
 |---|:---:|:---:|:---:|
@@ -73,6 +73,8 @@ Rules run in roughly that order; the punctuation row runs last because the suffi
 - Normalization changes are the highest-risk edits in the codebase — they silently change what groups with what. Hence the merge contract, `tests/merge-contract.js` (§4.1.1) — **built as of 2026-08-01**. Add cases there before changing behaviour here.
 - The canonical MUST-NOT-merge example: **Elvis Costello vs. Elvis Costello & The Attractions** are different credits, correctly distinct. Any normalization change that merges them is wrong. Now enforced.
 - The title guard — numeric-punctuation titles like *3.15.20* must not normalize to "31520" — **is now enforced**, but not as a pair. It could not be: asserting that `3.15.20` and `31520` stay unmerged proves nothing, because the year rule rewrites `31520` to `3` and the two differ no matter what punctuation does. It lives in the contract's `KEY_MUST_NOT_BE` list as an assertion about the key itself. This was found by injecting the exact mistake the guard exists to catch and watching the pair form pass.
+
+**Unreleased precision refinements:** album/track metadata stripping now parses balanced parentheses after bracket canonicalization. A marker in one group cannot consume a meaningful sibling: `Song (Part 1) (Live)` retains `(Part 1)`. Nested groups are handled independently: `(Part 1 (Live))` retains Part 1, while `(Live (Berlin))` is metadata in full. Unclosed groups are retained. Removing a label inserts a space, so `Foo(Live)Bar` does not become `Foobar`. Markers require boundaries against Unicode letters, numbers and underscore; `Credit`, `Delivered`, `Mixtape` and `Inversion` are title text. Supported inflections are explicit, including Remastered/Remastering/Remasters, Remixed, Edited, Edition and Take 3A; `Alt.` keeps its literal period. Album and track vocabularies remain separate. Dash suffixes use the same whole-word principle, and bare year-plus-keyword track suffixes require whitespace on both sides of the four-digit year. The separate trailing-year rule and the artist normalizer are unchanged. These are grouping heuristics: a meaningful phrase containing a whole metadata word can still be flagged for human review.
 
 ### 1.8 Git/release conventions (and why)
 
@@ -148,16 +150,18 @@ All confirmed against the issue-#11 export on 2026-08-01 unless noted.
 
 Last.fm normalizes case to its catalog entry server-side; nothing SA flags about pure case will be user-fixable. Keep case-only differences from generating flags.
 
+**Enforced in unreleased phase 3 (§4.8):** ordinary artist/album/track detectors skip clusters whose raw names differ only by lowercase conversion. Mixed groups retain all spellings, and invisible-character detection is unchanged. Case aliases of an explicitly chosen kept member do not recur; punctuation, whitespace and accent differences still can. Old case-only fixed cards are not reconstructed as repeat offenses.
+
 ### 3.6 Container punctuation and the limits of suffix stripping
 
-The track/album suffix rule is `\s*[\(\[].*?(keyword…).*?[\)\]]`. The character classes make it *look* like brackets and parentheses are reconciled. They are not. The rule fires only when a **keyword** appears inside; when it fires it deletes the whole parenthetical including its container, and when it doesn't, both containers survive verbatim into the key:
+**Historical diagnosis, before v0.6.1:** the track/album suffix rule was `\s*[\(\[].*?(keyword…).*?[\)\]]`. The character classes made it *look* like brackets and parentheses were reconciled. They were not. The rule fired only when a **keyword** appeared inside; when it fired it deleted the whole parenthetical including its container, and when it didn't, both containers survived verbatim into the key:
 
 ```
 "Song [Acoustic]"   vs "Song (Acoustic)"    -> "song" | "song"                           grouped
 "Track [Interlude]" vs "Track (Interlude)"  -> "track [interlude]" | "track (interlude)"  NOT grouped
 ```
 
-There is no code path that treats `[` as equivalent to `(`. Consequence for issue #17: adding `feat`/`ft` to the keyword list fixes that reported pair by deleting both parentheticals, which **sidesteps** the container question rather than answering it. The two changes are independent; both are in v0.6.1 (§4.1 items 2 and 7).
+There was no code path that treated `[` as equivalent to `(`. Consequence for issue #17: adding `feat`/`ft` to the keyword list fixed that reported pair by deleting both parentheticals, which **sidestepped** the container question rather than answering it. The two changes are independent; both are in v0.6.1 (§4.1 items 2 and 7). Phase 3 (§4.8) additionally fixes the regex's ability to consume meaningful sibling parentheses or leave unmatched punctuation from nested metadata.
 
 ### 3.7 Near-miss / typo variations — no viable detector (issues #15, #16)
 
@@ -460,7 +464,7 @@ Phase 1 implementation:
 
 Validation: `node tests/merge-contract.js` (125 assertions) and `node tests/import-identity-contract.js` (23 regression scenarios, extracting shipped functions). The new cases were run against the old code first and reproduced the defects. The October 2 maintainer export still parses as 162,915 scrobbles, with 2,089 cards / 5,098 findings and **zero duplicate new IDs**. The one added card is the trailing NBSP artist variation previously erased by parsing. A synthetic legacy migration covering all current findings preserves 5,096 hidden decisions and leaves the two Marillion rows sharing one old key active; their original decision is retained as ambiguous. No listening-history fixtures are committed.
 
-Phase 2 is implemented in §4.7. Remaining phases: detection precision; desktop triage and evidence-based album candidates; browser verification and release documentation. Future normalizer changes must validate identity migration because IDs now use grouping keys; §5.1's historical measurement is not evidence for this new scheme. Changed UI still needs verification in leading browsers before release.
+Phase 2 is implemented in §4.7 and phase 3 in §4.8. Remaining phases: desktop triage and evidence-based album candidates; browser verification and release documentation. Future normalizer changes must validate identity migration because IDs now use grouping keys; §5.1's historical measurement is not evidence for this new scheme. Changed UI still needs verification in leading browsers before release.
 
 ### 4.7 Approved review plan — correction memory and recurrence (phase 2, unreleased)
 
@@ -474,6 +478,20 @@ Authorized 2026-10-11 as the next reviewable chunk. This supersedes §4.5's mark
 - **Re-marking.** Fixed stamps a new original baseline and clears previous low-water history. Restore discards the dismissal baseline while retaining the optional choice. Account switching separates decisions, choices and export chronology. Storage-read protection from phase 1 also covers invalid or future correction/history formats.
 
 Validation: `node tests/recurrence-contract.js` adds 16 scenarios for disappearance, partial correction, selected-spelling growth, below-threshold recurrence, raw artist context, compilation album boundaries, ID decoding, snapshot ordering, v4 storage, controls and full import sequences. The 23 import/identity scenarios and 125 existing assertions also pass. The October 2 export still yields 162,915 scrobbles and 2,089 cards. A synthetic stress check marking all 5,098 current findings fixed, with explicit kept choices on variation cards, produces **zero false recurrences** for unchanged data. A full inline-script smoke check with a simulated DOM confirms real-file import, controls rendering, Fixed-view memory, re-import behavior and remembered choices in reports. No listening-history fixtures are committed. These checks do not substitute for browser layout/keyboard verification, which remains in the approved pre-release phase.
+
+### 4.8 Approved review plan — detection precision (phase 3, unreleased)
+
+Authorized 2026-10-11 as the next reviewable chunk. The precision rules are described in §1.7 and the case-only exclusion in §3.5. Thresholds, artist normalization, punctuation/diacritic folding, compilation and missing-album detectors are unchanged. No correction is applied to Last.fm.
+
+- **Preserve history when grouping changes.** IDs still use `issue-v3-` and storage remains v4. Decisions and correction choices gain a separate `normalizationVersion: 2`. Recompute album/track destinations from every saved raw member, independent of the current export or detector thresholds. A single unambiguous destination moves the decision, mark-time baseline, observed low counts and choice together. Fixed choices retain `sourceMembers`, allowing remembered choices to follow a key move after Restore. Baseline-less legacy records and old restored choices without source names remain recoverable without guessing their original scope.
+- **Split and conflicting groups require review.** Keep original records and choices quarantined when members now belong to multiple groups, or several old decisions converge on one new key. Do not copy a broad Fixed/Ignore decision into its children. Even when the old ID happens to name a current child, an ambiguous record cannot hide it. A fresh decision under the new rules wins over old sources. Show migration warnings only while affected current findings are available to review; retain vanished/singleton history silently.
+- **Distinguish detection changes from new listening.** The first accepted observation after upgrading a fixed group checks for additional pre-existing spellings. If present, the card explains that refined detection expanded the group and asks for review; reports use `[REVIEW]`. An unchanged upgrade clears its transition marker, so subsequent count growth uses ordinary recurrence behavior. Re-marking establishes a fresh baseline and resolves that review. Older exports still cannot persist migration results or update recurrence history.
+
+Validation: `node tests/merge-contract.js` passes **155 assertions**; `node tests/detection-contract.js` passes **15 scenarios** covering detector exclusions, meaningful/nested labels, recurrence, key moves, split/converging histories, deliberate fresh decisions, restored memory, actionable warnings and upgrade review notes. The **23 import/identity** and **16 recurrence/correction** scenarios also pass. New merge cases first reproduced 22 failures against the previous code. The two documented typo misses remain outside this chunk.
+
+The October 2 maintainer export still parses as **162,915 scrobbles**, now yielding **2,113 cards / 5,122 findings**, compared with 2,089 / 5,098 before phase 3. There are 45 new card IDs and 21 removed IDs, including 11 case-only cards; several broad old groups split rather than disappear as problems. Newly matched variations chiefly preserve meaningful title parentheses alongside live/remaster labels and handle nested metadata correctly. Artist (52), missing-album (389), compilation (352) and invisible-character (6) card counts are unchanged; album cards change 104 → 93 and track cards 1,186 → 1,221. IDs remain unique.
+
+A synthetic upgrade using the real export preserves all **5,098 saved decisions** and **1,348 correction choices**. Four expanded groups ask for review without claiming new plays; 14 split histories are retained as ambiguous, of which eight have current findings requiring review. A full inline-script simulated-DOM check covers import, rendered review explanations, four `[REVIEW]` report tags and zero false `[RECURRED]` tags, stable re-import and unchanged storage after loading the older September export. Listening-history fixtures remain local and uncommitted. Browser layout and keyboard verification remain part of the approved pre-release phase; these checks do not substitute for them.
 
 ## 5. Open questions — flag these to the maintainer, don't guess
 

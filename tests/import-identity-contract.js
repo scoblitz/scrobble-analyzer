@@ -17,11 +17,11 @@ function load(names, globals = {}) {
     return new Function(...Object.keys(globals), bodies.join('\n') + `\nreturn { ${names} };`)(...Object.values(globals));
 }
 const names = ['parseCSV', 'parseCSVLine', 'parseCSVRecords', 'getIssueId', 'getItemId', 'getMemberKey',
-    'normalizeArtist', 'normalizeAlbum', 'normalizeTrack', 'getVisibleString',
+    'normalizeArtist', 'normalizeAlbum', 'normalizeTrack', 'stripMetadataLabels', 'differsOnlyByCase', 'getVisibleString',
     'hasInvisibleChars', 'differsOnlyInvisibly', 'findArtistVariations',
     'findAlbumVariations', 'findTrackVariations', 'findMissingAlbums',
     'findCompilations', 'findInvisibleCharacterIssues', 'currentBaseline',
-    'dismissalStatus', 'getLegacyIssueId', 'getLegacyItemId', 'migrateIssueIdentities'];
+    'dismissalStatus', 'getLegacyIssueId', 'getLegacyItemId', 'migrateIssueIdentities', 'isKeptMember'];
 const api = load(names, { console: { log() {} } });
 const tests = [];
 const test = (name, fn) => tests.push([name, fn]);
@@ -150,6 +150,7 @@ test('only the latest import can commit results or show a read error', async () 
         libraryBaselines: () => ({}), observeFixedRecords: items => items,
         addRememberedRecurrences: issues => issues, saveDismissedState() {},
         migrateIssueIdentities: items => ({ items, ambiguous: 0 }), showImportNotices() {},
+        migrateNormalizationIdentities: items => ({ items, corrections: {}, ambiguous: 0 }),
         displayResults: () => published.push({ username: state.username, artists: state.issues.map(i => i.artist) }), escapeHtml: x => x };
     for (const name of ['findArtistVariations', 'findAlbumVariations', 'findTrackVariations', 'findMissingAlbums', 'findCompilations', 'findInvisibleCharacterIssues']) {
         globals[name] = rows => [{ artist: rows[0].Artist }];

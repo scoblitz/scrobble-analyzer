@@ -92,6 +92,7 @@ Developer verification (no build step or installed dependencies):
 node tests/merge-contract.js
 node tests/import-identity-contract.js
 node tests/recurrence-contract.js
+node tests/detection-contract.js
 ```
 
 This is a collaboration between a music data nerd (me) and Claude (Anthropic's AI assistant). The entire tool is a single HTML file with no dependencies - just open it in a browser.

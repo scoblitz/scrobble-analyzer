@@ -74,7 +74,7 @@ function loadTopLevel(names, globals = {}) {
 }
 
 function loadNormalizers() {
-    return loadTopLevel(['normalizeArtist', 'normalizeAlbum', 'normalizeTrack',
+    return loadTopLevel(['normalizeArtist', 'normalizeAlbum', 'normalizeTrack', 'stripMetadataLabels',
                          'baseProfile', 'confusableMarkChars', 'lookalikeQuoteChars']);
 }
 
@@ -161,6 +161,21 @@ const MUST_MERGE = [
     ['track',  'Comfortably Numb 2022', 'Comfortably Numb',
         'found only in a second library - the first strict rule lost this'],
     ['track',  'Blue Monday 1988',      'Blue Monday', 'same shape'],
+
+    // --- approved detection-precision review: scope labels independently ---
+    ['track', 'Song (Part 1) (Live)', 'Song (Part 1)', 'removing Live must retain Part 1'],
+    ['track', 'Song [Part 1] [2013 Remastered]', 'Song (Part 1)', 'container folding with independent labels'],
+    ['album', 'Album (Volume 1) (Deluxe Edition)', 'Album (Volume 1)', 'edition suffix must not swallow volume'],
+    ['track', 'Song (Part 1 (Live))', 'Song (Part 1)', 'nested metadata must preserve the outer title part'],
+    ['track', 'Song (Live (Berlin))', 'Song', 'a nested venue stays within its own live label'],
+    ['track', 'Song 2023 Remastered', 'Song', 'a whitespace-separated year and full remastered word'],
+    ['album', 'Album (Disc 2)', 'Album', 'disc number remains an album metadata marker'],
+    ['track', 'Song (Alternate Take 2)', 'Song', 'whole words retain alternate/take metadata'],
+    ['track', 'Song (Alt. Take 2)', 'Song', 'abbreviated alt. remains supported'],
+    ['album', 'Album [Stax Remasters]', 'Album', 'plural remasters is a complete metadata word'],
+    ['track', 'Song (Take 3A)', 'Song', 'numbered takes may have a single letter suffix'],
+    ['track', 'Song (Vault Edition)', 'Song', 'edition is recognized explicitly, not through edit substring'],
+    ['track', 'Song (Alt.)', 'Song', 'the shipped alt. abbreviation keeps its literal period'],
 ];
 
 const MUST_NOT_MERGE = [
@@ -188,6 +203,25 @@ const MUST_NOT_MERGE = [
     ['track',  'Debase (Soft Palate)',                 'Debase',             '"ft" inside "Soft"'],
     ['track',  'Winter (What We Never Were After All)','Winter',             '"ft" inside "After"'],
     ['track',  'Mars and the Artist (after Cy Twombly)','Mars and the Artist','"ft" inside "after"'],
+
+    // --- ordinary words containing metadata substrings must survive ---
+    ['track', 'Song (Credit)', 'Song', 'edit inside credit is not metadata'],
+    ['track', 'Song (Delivered)', 'Song', 'live inside delivered is not metadata'],
+    ['track', 'Song (Mixtape)', 'Song', 'mix inside mixtape is not metadata'],
+    ['track', 'Song (Radiohead)', 'Song', 'radio inside Radiohead is not metadata'],
+    ['track', 'Song (Demolition)', 'Song', 'demo inside demolition is not metadata'],
+    ['track', 'Song (Acoustically)', 'Song', 'acoustic must be a complete word'],
+    ['album', 'Album (Inversion)', 'Album', 'version inside inversion is not metadata'],
+    ['album', 'Album (Reversion)', 'Album', 'version inside reversion is not metadata'],
+    ['track', 'Song - Livewire', 'Song', 'dash suffixes also require complete words'],
+    ['track', 'Song - Editorial', 'Song', 'edit inside editorial is not a dash marker'],
+    ['album', 'Album - Remasterpiece', 'Album', 'remaster prefix of an ordinary word must survive'],
+    ['track', 'Song12023remix', 'Song1', 'year stripping must not start inside a title or number'],
+    ['track', 'Song 12023 remix', 'Song 1', 'a year is a separate four-digit token'],
+    ['track', 'Song (Part 1) (Live)', 'Song (Part 2) (Live)', 'parts cannot merge across a later metadata label'],
+    ['album', 'Album (Volume 1) (Deluxe)', 'Album (Volume 2) (Deluxe)', 'volumes cannot merge across an edition label'],
+    ['track', 'Song (remasterø)', 'Song', 'non-ASCII letters are word characters too'],
+    ['track', 'Song (Alt)', 'Song', 'precision work does not silently widen the shipped alt. abbreviation'],
 ];
 
 // Assertions about a single key, not a pair.
@@ -301,7 +335,7 @@ function loadFinder() {
 const findInvisibleCharacterIssues = loadFinder();
 
 const { dismissalStatus, migrateDismissalBlob, recurrenceDelta } =
-    loadTopLevel(['dismissalStatus', 'migrateDismissalBlob', 'legacyDismissalRecord', 'recurrenceDelta']);
+    loadTopLevel(['dismissalStatus', 'migrateDismissalBlob', 'legacyDismissalRecord', 'recurrenceDelta', 'isKeptMember']);
 
 // Dismissal status (DESIGN.md 4.5). One pure function decides whether a
 // dismissed item is hidden or has come back; everything the UI does with

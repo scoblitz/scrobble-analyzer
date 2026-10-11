@@ -1322,13 +1322,19 @@
 
         function markDismissed(id, current, intent, correction) {
             if (state.historicalImport) return;
-            const record = { intent: intent === 'ignored' ? 'ignored' : 'fixed', at: Date.now(), identityVersion: 3 };
+            const record = { intent: intent === 'ignored' ? 'ignored' : 'fixed', at: Date.now(), identityVersion: 3, normalizationVersion: 2 };
             if (typeof current === 'number') record.count = current;
             else if (current && typeof current === 'object') record.members = { ...current };
             state.dismissals[id] = record;
             if (record.intent === 'fixed' && correction !== undefined) {
                 if (correction) state.corrections[id] = correction;
                 else delete state.corrections[id];
+            }
+            if (record.intent === 'fixed' && state.corrections[id] && typeof current === 'object' && current) {
+                const choice = { ...state.corrections[id], sourceMembers: Object.keys(current), normalizationVersion: 2 };
+                delete choice.normalizationAmbiguous;
+                delete choice.normalizationTargets;
+                state.corrections[id] = choice;
             }
         }
 
@@ -1366,6 +1372,7 @@
         // spelling is excluded; without a choice every member is monitored.
         function dismissalStatus(record, current, correction) {
             if (!record) return 'active';
+            if (record.identityAmbiguous) return 'active';
             if (record.intent === 'ignored') return 'hidden';
             if (record.identityReview) return 'recurred';
             // Fixed with no baseline (migrated from v1): if it is still here it
@@ -1379,7 +1386,7 @@
             const names = Object.keys(current || {});
             for (let i = 0; i < names.length; i++) {
                 const name = names[i];
-                if (correction && correction.memberKey === name) continue;
+                if (isKeptMember(name, correction)) continue;
                 if (!Object.prototype.hasOwnProperty.call(stored, name)) return 'recurred';
                 if (current[name] > stored[name]) return 'recurred';
             }
@@ -1397,7 +1404,7 @@
         function decisionStatus(id, current) {
             const record = state.dismissals[id];
             // Historical snapshots cannot establish a new recurrence.
-            if (state.historicalImport && record && !record.legacy && !record.identityReview) return 'hidden';
+            if (state.historicalImport && record && !record.legacy && !record.identityReview && !record.identityAmbiguous) return 'hidden';
             return dismissalStatus(record, current, state.corrections[id]);
         }
 
@@ -1414,7 +1421,7 @@
             let newPlays = 0;
             const newMembers = [];
             Object.keys(current || {}).forEach(name => {
-                if (correction && correction.memberKey === name) return;
+                if (isKeptMember(name, correction)) return;
                 if (!Object.prototype.hasOwnProperty.call(stored, name)) newMembers.push(name);
                 else newPlays += Math.max(0, current[name] - stored[name]);
             });
@@ -1432,6 +1439,7 @@
                     : '↻ Dismissed before v0.7 — fixed, or ignore from now on?';
             }
             const { newPlays, newMembers } = recurrenceDelta(record, current, correction);
+            if (needsGroupingReview(record, current, correction)) return '↻ Refined detection now groups additional spellings with this correction. Review your previous choice.';
             const parts = [];
             if (newPlays > 0) parts.push(`${newPlays} new play${newPlays !== 1 ? 's' : ''}`);
             if (newMembers.length > 0) parts.push(`${newMembers.length} new spelling${newMembers.length !== 1 ? 's' : ''}`);
@@ -1454,6 +1462,25 @@
             if (!choice) return '';
             const context = choice.artist ? ` (${choice.artist})` : '';
             return `Previously chosen ${choice.kind}: ${choice.name}${context}`;
+        }
+
+        function needsGroupingReview(record, current, correction) {
+            return !!(record && record.groupingReview && recurrenceDelta(record, current, correction).newMembers.length);
+        }
+
+        function isKeptMember(key, choice) {
+            if (!choice || !choice.memberKey) return false;
+            if (key === choice.memberKey) return true;
+            try {
+                const [artist, name] = JSON.parse(key);
+                const [keptArtist, keptName] = JSON.parse(choice.memberKey);
+                return artist.toLowerCase() === keptArtist.toLowerCase() && name.toLowerCase() === keptName.toLowerCase();
+            } catch (error) { return false; }
+        }
+
+        function caseOnlyMembers(members) {
+            try { return differsOnlyByCase(Object.keys(members || {}).map(key => JSON.parse(key)[1])); }
+            catch (error) { return false; }
         }
 
         function rememberedCorrectionHtml(id) {
@@ -1578,7 +1605,7 @@
                 const corrections = data.corrections || {};
                 if (typeof corrections !== 'object' || Array.isArray(corrections)) throw new Error('Invalid correction memory.');
                 Object.values(corrections).forEach(choice => {
-                    if (!choice || !['artist', 'album', 'track'].includes(choice.kind) || typeof choice.name !== 'string' || !choice.name || typeof choice.artist !== 'string' || (choice.memberKey !== undefined && typeof choice.memberKey !== 'string')) throw new Error('Invalid remembered correction.');
+                    if (!choice || !['artist', 'album', 'track'].includes(choice.kind) || typeof choice.name !== 'string' || !choice.name || typeof choice.artist !== 'string' || (choice.memberKey !== undefined && typeof choice.memberKey !== 'string') || (choice.sourceMembers !== undefined && (!Array.isArray(choice.sourceMembers) || choice.sourceMembers.some(key => typeof key !== 'string')))) throw new Error('Invalid remembered correction.');
                 });
                 const observation = data.lastObservation || null;
                 if (observation && (!Number.isSafeInteger(observation.latestScrobble) || observation.latestScrobble < 0 || !Number.isSafeInteger(observation.modified) || observation.modified < 0 || typeof observation.hash !== 'string')) throw new Error('Invalid export observation.');
@@ -1669,6 +1696,7 @@
             Object.entries(items).forEach(([id, record]) => {
                 if (record.intent !== 'fixed' || record.legacy || record.identityReview || record.identityAmbiguous) return;
                 const identity = decodeDecisionId(id);
+                if (identity && ['artist', 'album', 'track'].includes(identity.type) && caseOnlyMembers(record.members)) return;
                 if (identity) requests.set(id, identity);
             });
             const current = Object.create(null);
@@ -1710,7 +1738,7 @@
         // Preserve the mark-time baseline and separately track the lowest
         // observed counts. Growth above that minimum is a repeat offense,
         // including 10 -> 0 -> 1. Called only for accepted complete snapshots.
-        function observeFixedRecords(items, baselines) {
+        function observeFixedRecords(items, baselines, corrections = {}) {
             const observed = { ...items };
             Object.entries(baselines).forEach(([id, current]) => {
                 const record = items[id];
@@ -1722,6 +1750,10 @@
                     const members = Object.create(null);
                     Object.keys(previous).forEach(name => { members[name] = Math.min(previous[name], current[name] || 0); });
                     observed[id] = { ...record, observedMembers: members };
+                    if (record.normalizationUpgrade) {
+                        delete observed[id].normalizationUpgrade;
+                        if (Object.keys(current).some(name => !Object.prototype.hasOwnProperty.call(record.members, name) && !isKeptMember(name, corrections[id]))) observed[id].groupingReview = true;
+                    }
                 }
             });
             return observed;
@@ -1757,6 +1789,7 @@
                         return { artist: rowArtist, name: rowName, count, hasInvisible: hasInvisibleChars(rowName) || hasInvisibleChars(rowArtist) };
                     }).sort((a, b) => b.count - a.count);
                     if (!rows.length) return;
+                    if (['artist', 'album', 'track'].includes(type) && differsOnlyByCase(rows.map(row => row.name))) return;
                     const title = type === 'artist' || (type === 'invisible' && subtype === 'artist') ? rows[0].name : `${artist} - ${rows[0].name}`;
                     const issue = { type, subtype, artist, normalized: name, title, description: 'Previously fixed spelling returned', totalCount: rows.reduce((sum, row) => sum + row.count, 0), variations: rows };
                     result.push(issue);
@@ -1764,6 +1797,85 @@
                 }
             });
             return result;
+        }
+
+        // Normalizer refinements can move or split grouping-key IDs. Match
+        // using saved raw members, independent of the current export or which
+        // cards its detectors emit. Never copy a broad decision to children.
+        function migrateNormalizationIdentities(items, corrections, issues) {
+            const migrated = { ...items }, choices = { ...corrections }, targets = new Map();
+            let ambiguous = 0;
+            const fresh = id => (items[id] && items[id].normalizationVersion === 2 && !items[id].identityAmbiguous && !items[id].groupingReview && !items[id].normalizationUpgrade)
+                || (!items[id] && choices[id] && choices[id].normalizationVersion === 2 && !choices[id].normalizationAmbiguous);
+            const quarantine = (id, destinations) => {
+                if (items[id]) migrated[id] = { ...items[id], identityAmbiguous: true, normalizationTargets: destinations };
+                if (choices[id]) choices[id] = { ...choices[id], normalizationAmbiguous: true, normalizationTargets: destinations };
+                if (!destinations.length || destinations.some(target => !fresh(target))) ambiguous++;
+            };
+            const ids = new Set([...Object.keys(items), ...Object.keys(choices)]);
+            ids.forEach(id => {
+                const identity = decodeDecisionId(id);
+                if (!identity || !['album', 'track'].includes(identity.type) || identity.itemName !== undefined) return;
+                const record = items[id], choice = choices[id];
+                const members = record && record.members ? Object.keys(record.members) : choice && choice.sourceMembers;
+                if (!members || !members.length) return; // Retain baseline-less legacy or restored memory without source names.
+                if (choice) choices[id] = { ...choice, sourceMembers: [...members] };
+                const destinations = new Set();
+                try {
+                    members.forEach(key => {
+                        const tuple = JSON.parse(key);
+                        if (!Array.isArray(tuple) || tuple.length !== 2 || tuple.some(part => typeof part !== 'string')) throw new Error('Invalid member key.');
+                        const [artist, name] = tuple;
+                        destinations.add(getIssueId({ type: identity.type, artist, normalized: identity.type === 'album' ? normalizeAlbum(name) : normalizeTrack(name) }));
+                    });
+                } catch (error) { quarantine(id, []); return; }
+                const nextIds = [...destinations].sort();
+                if ((record && record.identityAmbiguous) || (choice && choice.normalizationAmbiguous) || nextIds.length !== 1) {
+                    quarantine(id, nextIds);
+                    return;
+                }
+                const nextId = nextIds[0];
+                if (!targets.has(nextId)) targets.set(nextId, []);
+                targets.get(nextId).push(id);
+            });
+            targets.forEach((sources, nextId) => {
+                // A deliberate choice made under these rules wins. Old sources
+                // remain quarantined and recoverable, with no ongoing warning.
+                if (fresh(nextId)) {
+                    sources.filter(id => id !== nextId).forEach(id => quarantine(id, [nextId]));
+                    return;
+                }
+                if (sources.length !== 1 || (migrated[nextId] && !sources.includes(nextId))) {
+                    sources.forEach(id => quarantine(id, [nextId]));
+                    return;
+                }
+                const id = sources[0];
+                if (items[id]) migrated[nextId] = {
+                    ...items[id], normalizationVersion: 2,
+                    ...(items[id].normalizationVersion !== 2 && items[id].intent === 'fixed' && !items[id].legacy ? { normalizationUpgrade: true } : {})
+                };
+                if (choices[id]) choices[nextId] = { ...choices[id], normalizationVersion: 2 };
+                if (id !== nextId) {
+                    delete migrated[id];
+                    delete choices[id];
+                }
+            });
+            if (issues) {
+                // A split into singletons may leave nothing to triage. Keep
+                // its history but show a notice only when a current finding
+                // is available to review, rather than a permanent dead end.
+                const present = new Map(issues.map(issue => [getIssueId(issue), issue]));
+                ambiguous = [...new Set([...Object.keys(migrated), ...Object.keys(choices)])].filter(id => {
+                    const entry = migrated[id] && migrated[id].identityAmbiguous ? migrated[id] : choices[id] && choices[id].normalizationAmbiguous ? choices[id] : null;
+                    if (!entry || !entry.normalizationTargets) return false;
+                    const destinations = entry.normalizationTargets.length ? entry.normalizationTargets : [id];
+                    return destinations.some(target => {
+                        const issue = present.get(target);
+                        return issue && !fresh(target) && dismissalStatus(migrated[target], currentBaseline(issue), choices[target]) !== 'hidden';
+                    });
+                }).length;
+            }
+            return { items: migrated, corrections: choices, ambiguous };
         }
 
         // Resolve legacy aliases against the whole issue set, never one card
@@ -2133,13 +2245,17 @@
                     if (!state.historicalImport) migrateOldDismissals(state.fileHash, state.issues);
                     
                     const migration = migrateIssueIdentities(state.dismissals, state.issues);
-                    state.dismissals = migration.items;
-                    state.importNotice = migration.ambiguous
+                    const normalization = migrateNormalizationIdentities(migration.items, state.corrections, state.issues);
+                    state.dismissals = normalization.items;
+                    state.corrections = normalization.corrections;
+                    state.importNotice = (migration.ambiguous
                         ? `${migration.ambiguous} previous decision${migration.ambiguous === 1 ? '' : 's'} could not be matched safely. Affected findings are active again; the original records are retained.`
-                        : '';
+                        : '') + (normalization.ambiguous
+                            ? ` ${normalization.ambiguous} saved decision${normalization.ambiguous === 1 ? ' or correction' : 's or corrections'} span changed variation groups. Review and re-mark affected findings; the original records are retained.`
+                            : '');
                     if (!state.historicalImport) {
                         const baselines = libraryBaselines(scrobbles, state.dismissals);
-                        state.dismissals = observeFixedRecords(state.dismissals, baselines);
+                        state.dismissals = observeFixedRecords(state.dismissals, baselines, state.corrections);
                         state.issues = addRememberedRecurrences(state.issues, state.dismissals, baselines, state.corrections);
                         // Identical contents with an older file time may be
                         // reviewed again, but cannot roll back the watermark.
@@ -2296,6 +2412,10 @@
             return new Set(names.map(getVisibleString)).size === 1;
         }
 
+        function differsOnlyByCase(names) {
+            return names.length > 1 && new Set(names.map(name => name.toLowerCase())).size === 1;
+        }
+
         // --- Confusable diacritics -------------------------------------------
         // Folding diacritics (see the normalizers) groups names the user may not
         // be able to tell apart: "Subcarpati" spelled with comma-below vs cedilla
@@ -2415,6 +2535,35 @@
             return norm;
         }
 
+        // Strip metadata without crossing into a sibling title label.
+        function stripMetadataLabels(value, pattern) {
+            // A stack keeps siblings and nested title parts independent.
+            // Only a group's own text can mark it as metadata: in
+            // (Part 1 (Live)), Live is removed and Part 1 survives.
+            const stack = [{ text: '', own: '', changed: false }];
+            for (let i = 0; i < value.length; i++) {
+                const ch = value[i];
+                if (ch === '(') {
+                    stack.push({ text: '', own: '', changed: false, start: i });
+                } else if (ch === ')' && stack.length > 1) {
+                    const group = stack.pop();
+                    const metadata = pattern.test(group.own);
+                    const body = group.changed ? group.text.trim() : group.text;
+                    const replacement = metadata || (group.changed && !body) ? ' ' : `(${body})`;
+                    const parent = stack[stack.length - 1];
+                    parent.text += replacement;
+                    parent.own += ' ';
+                    parent.changed = parent.changed || group.changed || metadata;
+                } else {
+                    const group = stack[stack.length - 1];
+                    group.text += ch;
+                    group.own += ch;
+                }
+            }
+            // An unclosed group is title text, not evidence for stripping.
+            return stack[0].text + (stack.length > 1 ? value.slice(stack[1].start) : '');
+        }
+
         // Album: strips edition/remaster suffixes. Does NOT strip a leading
         // "the" - "The Wall" and "Wall" are different albums.
         function normalizeAlbum(album) {
@@ -2446,9 +2595,9 @@
             // decompose, so o-slash, l-stroke and d-stroke are left alone.
             norm = norm.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
             // Remove remaster/deluxe/edition suffixes
-            norm = norm.replace(/\s*[\(\[].*?(remaster|deluxe|edition|bonus|expanded|anniversary|version|disc \d).*?[\)\]]/gi, '');
+            norm = stripMetadataLabels(norm, /(?:^|[^\p{L}\p{N}_])(?:remaster(?:ed|ing|s)?|deluxe|edition|bonus|expanded|anniversary|version|disc\s+\d+)(?=$|[^\p{L}\p{N}_])/u);
             // Optional year, as in normalizeTrack ("Aja - 1999 Remaster")
-            norm = norm.replace(/\s*-\s*(\d{4}\s+)?(remaster|deluxe|expanded).*$/i, '');
+            norm = norm.replace(/\s*-\s*(\d{4}\s+)?(?:remaster(?:ed|ing|s)?|deluxe|expanded)(?=$|[^\p{L}\p{N}_]).*$/u, '');
             // Same &/and unification the artist normalizer has always had. Its
             // absence here (and on tracks) is why discussion #10 went unflagged.
             norm = norm.replace(/\s*&\s*/g, ' and ');
@@ -2487,23 +2636,19 @@
             // Known limit - letters with a stroke rather than a mark do not
             // decompose, so o-slash, l-stroke and d-stroke are left alone.
             norm = norm.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-            // Remove common suffixes
-            // The \b around feat/ft are load-bearing: without them "ft" matches
-            // inside ordinary words and strips real titles - "Quattro (World
-            // Drifts In)", "Debase (Soft Palate)", "Winter (What We Never Were
-            // After All)" all lose their parenthetical. "feat(uring)?" is one
-            // token so "(Featuring Beth Ditto)" is caught too.
-            norm = norm.replace(/\s*[\(\[].*?(remaster|live|remix|edit|version|mix|demo|acoustic|mono|stereo|single|radio|extended|instrumental|reprise|take \d+|alternate|alt\.|bonus|\bfeat(?:uring)?\b|\bft\b).*?[\)\]]/gi, '');
+            // Every marker is a whole word, bounded by Unicode letters and
+            // numbers too. "credit", "delivered" and "mixtape" are titles.
+            norm = stripMetadataLabels(norm, /(?:^|[^\p{L}\p{N}_])(?:remaster(?:ed|ing|s)?|live|remix(?:ed)?|edit(?:ed)?|edition|version|mix|demo|acoustic|mono|stereo|single|radio|extended|instrumental|reprise|take\s+\d+[a-z]?|alternate|alt\.|bonus|feat(?:uring)?|ft)(?=$|[^\p{L}\p{N}_])/u);
             // A year may sit between the dash and the keyword ("Midtown - 2023
             // Remaster" - the common Spotify shape). Without the optional year
             // group the rule below strips "2023 Remaster" and orphans the dash,
             // leaving "midtown -" which groups with nothing.
-            norm = norm.replace(/\s*-\s*(\d{4}\s+)?(remaster|live|remix|edit|version|demo|acoustic|mono|stereo|single|radio|extended).*$/i, '');
+            norm = norm.replace(/\s*-\s*(\d{4}\s+)?(?:remaster(?:ed|ing|s)?|live|remix(?:ed)?|edit(?:ed)?|edition|version|demo|acoustic|mono|stereo|single|radio|extended)(?=$|[^\p{L}\p{N}_]).*$/u, '');
             // Year suffixes. The keyword is REQUIRED: a bare trailing number is
             // part of the title, not a suffix. Without it this ate real titles
             // ("1991" and "1983" both became "" and wrongly merged; "19-2000"
             // became "19-").
-            norm = norm.replace(/\s*\d{4}\s*(remaster|remix|version)$/i, '');
+            norm = norm.replace(/\s+\d{4}\s+(?:remaster(?:ed|ing|s)?|remix(?:ed)?|version)$/u, '');
             // Same &/and unification the artist normalizer has always had. Its
             // absence here is the whole of discussion #10: "9th & Hennepin" and
             // "9th and Hennepin" both existed and never grouped.
@@ -2550,6 +2695,7 @@
             const issues = [];
             normalized.forEach((artists, norm) => {
                 if (artists.length > 1) {
+                    if (differsOnlyByCase(artists.map(a => a.name))) return;
                     // Groups that differ only by invisible characters are routed
                     // to the Invisible Characters category instead
                     if (differsOnlyInvisibly(artists.map(a => a.name))) return;
@@ -2607,6 +2753,7 @@
             const issues = [];
             grouped.forEach((albums, groupKey) => {
                 if (albums.length > 1) {
+                    if (differsOnlyByCase(albums.map(a => a.name))) return;
                     // Invisible-only differences are routed to Invisible Characters
                     if (differsOnlyInvisibly(albums.map(a => a.name))) return;
                     const total = albums.reduce((sum, a) => sum + a.count, 0);
@@ -2794,6 +2941,7 @@
             const issues = [];
             grouped.forEach((tracks, groupKey) => {
                 if (tracks.length > 1) {
+                    if (differsOnlyByCase(tracks.map(t => t.name))) return;
                     // Invisible-only differences are routed to Invisible Characters
                     if (differsOnlyInvisibly(tracks.map(t => t.name))) return;
                     const total = tracks.reduce((sum, t) => sum + t.count, 0);
@@ -3766,6 +3914,7 @@
             report += '========================\n\n';
             report += `Generated: ${new Date().toLocaleString()}\n`;
             report += `Total Scrobbles: ${state.scrobbles.length.toLocaleString()}\n`;
+            report += 'Changes to prior correction groups after detection refinements are tagged [REVIEW].\n';
             if (state.historicalImport) report += 'Historical or unordered export: saved history unchanged; recurrence not evaluated.\n';
             report += includeDismissed
                 ? 'Dismissed items: included (tagged [FIXED] / [IGNORED]; items back since being marked fixed are tagged [RECURRED])\n\n'
@@ -3786,8 +3935,9 @@
                 const entries = [];
                 // Marker for one item: [FIXED] / [IGNORED] when hidden,
                 // [RECURRED] when back, nothing when active.
-                const marker = (status, record) => {
+                const marker = (status, record, current, correction) => {
                     if (status === 'hidden') return ` [${intentLabel(record).toUpperCase()}]`;
+                    if (status === 'recurred' && needsGroupingReview(record, current, correction)) return ' [REVIEW]';
                     if (status === 'recurred') return ' [RECURRED]';
                     return '';
                 };
@@ -3818,7 +3968,7 @@
                     const record = state.dismissals[issueId];
                     entries.push({
                         issue, issueDismissed, variations,
-                        marker: marker(status, record),
+                        marker: marker(status, record, currentBaseline(issue), state.corrections[issueId]),
                         note: status === 'recurred' ? recurrenceNote(record, currentBaseline(issue), false, state.corrections[issueId]) : '',
                         correction: correctionLabel(state.corrections[issueId])
                     });
