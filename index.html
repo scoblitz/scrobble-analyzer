@@ -563,6 +563,38 @@
             white-space: nowrap;
         }
 
+        .correction-memory, .remembered-correction {
+            margin-top: 0.65rem;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .correction-memory label, .correction-memory small {
+            display: block;
+            margin-top: 0.4rem;
+        }
+
+        .correction-memory select, .correction-memory input {
+            display: block;
+            max-width: 100%;
+            width: 28rem;
+            margin-top: 0.35rem;
+            padding: 0.5rem;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            font: inherit;
+        }
+
+        .correction-memory [hidden] { display: none; }
+        .correction-memory summary { cursor: pointer; }
+        .correction-memory :is(input, select, summary):focus-visible {
+            outline: 2px solid var(--accent-blue);
+            outline-offset: 3px;
+        }
+
         /* Small dismiss button for individual items */
         .dismiss-btn-small {
             padding: 0.2rem 0.5rem;
@@ -1106,6 +1138,7 @@
             </div>
 
             <!-- Results -->
+            <p id="import-notice" role="status" style="display: none; color: var(--accent-yellow); margin-bottom: 1rem;"></p>
             <div id="results-container" style="display: none;">
                 <div class="content-header">
                     <div>
@@ -1198,7 +1231,16 @@
             currentFilter: 'all',
             currentArtist: '',
             searchQuery: '',
-            sortBy: 'count'
+            sortBy: 'count',
+            importSequence: 0,
+            importNotice: '',
+            persistenceNotice: '',
+            persistenceReadFailed: false,
+            corrections: {},   // explicit user choices, retained after Restore
+            savedObservation: null,
+            currentObservation: null,
+            historicalImport: false,
+            observationNotice: ''
         };
 
         // Generate a simple hash of file contents (used to locate old-format saved state)
@@ -1212,9 +1254,22 @@
             return hash.toString(16);
         }
 
-        // Generate unique ID for an issue
+        // Versioned, reversible name keys. Display titles can change when a
+        // different member becomes most played; grouping identity must not.
         function getIssueId(issue) {
-            return `${issue.type}-${issue.title}`.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
+            const row = (issue.variations || [])[0] || {};
+            let artist = issue.artist || '';
+            let name = issue.normalized;
+            if (issue.type === 'artist') name = name ?? normalizeArtist(issue.title);
+            else if (issue.type === 'album') name = name ?? normalizeAlbum(row.name || issue.title);
+            else if (issue.type === 'track') name = name ?? normalizeTrack(row.name || issue.title);
+            else if (issue.type === 'missing') { artist = artist || issue.title; name = ''; }
+            else if (issue.type === 'compilation') name = issue.album ?? issue.title.slice(artist.length + 3);
+            else if (issue.type === 'invisible') {
+                artist = issue.subtype === 'artist' ? '' : getVisibleString(artist || row.artist || '');
+                name = getVisibleString(row.name || issue.title);
+            }
+            return 'issue-v3-' + encodeURIComponent(JSON.stringify([issue.type, issue.subtype || '', artist, name || '']));
         }
 
         // Generate unique ID for an item within an issue (missing/compilation tracks).
@@ -1222,8 +1277,19 @@
         // right track even when play counts (and therefore sort order) change
         // between exports.
         function getItemId(issueId, itemName) {
-            const namePart = String(itemName || '').replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
-            return `${issueId}-item-${namePart}`;
+            return `${issueId}-item-${encodeURIComponent(JSON.stringify(String(itemName || '')))}`;
+        }
+
+        function getLegacyIssueId(issue) {
+            return `${issue.type}-${issue.title}`.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
+        }
+
+        function getLegacyItemId(issueId, itemName) {
+            return `${issueId}-item-${String(itemName || '').replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()}`;
+        }
+
+        function getMemberKey(issue, row) {
+            return JSON.stringify([row.artist || issue.artist || '', row.name || '']);
         }
 
         // --- Persistence -----------------------------------------------------
@@ -1236,12 +1302,12 @@
             return `scrobble-analyzer-user-${username || 'default'}`;
         }
 
-        // --- Dismissal records (storage v2) ----------------------------------
+        // --- Dismissal records (storage v4, with v1/v2/v3 migration) ------------
         // One record per dismissed ID (DESIGN.md 4.5):
         //
         //   { intent: 'fixed' | 'ignored',
         //     count: <number>,           // per-track items (missing/compilation rows)
-        //     members: { name: count },  // card-level items (every row on the card)
+        //     members: { tuple: count }, // JSON [artist, name] keys for card rows
         //     at: <ms timestamp>,
         //     legacy: true }             // migrated from v1, no baseline; dropped on re-mark
         //
@@ -1254,28 +1320,34 @@
             return Object.prototype.hasOwnProperty.call(state.dismissals, id);
         }
 
-        function markDismissed(id, current, intent) {
-            const record = { intent: intent === 'ignored' ? 'ignored' : 'fixed', at: Date.now() };
+        function markDismissed(id, current, intent, correction) {
+            if (state.historicalImport) return;
+            const record = { intent: intent === 'ignored' ? 'ignored' : 'fixed', at: Date.now(), identityVersion: 3 };
             if (typeof current === 'number') record.count = current;
             else if (current && typeof current === 'object') record.members = { ...current };
             state.dismissals[id] = record;
+            if (record.intent === 'fixed' && correction !== undefined) {
+                if (correction) state.corrections[id] = correction;
+                else delete state.corrections[id];
+            }
         }
 
         function unmarkDismissed(id) {
+            if (state.historicalImport) return;
             delete state.dismissals[id];
         }
 
         // What an issue looks like right now, in the shape dismissalStatus
         // compares against: one row's play count when itemId is given, else
-        // { name: count } for every row on the card.
+        // { JSON [artist, name]: count } for every row on the card.
         function currentBaseline(issue, itemId) {
             const rows = issue.variations || [];
             if (itemId !== undefined) {
-                const row = rows.find(v => getItemId(issue._id, v.name) === itemId);
+                const row = rows.find(v => getItemId(issue._id || getIssueId(issue), v.name) === itemId);
                 return row ? row.count : 0;
             }
-            const members = {};
-            rows.forEach(v => { members[v.name] = v.count; });
+            const members = Object.create(null);
+            rows.forEach(v => { members[getMemberKey(issue, v)] = v.count; });
             return members;
         }
 
@@ -1287,27 +1359,27 @@
         //   current - this row's play count, or a card's { name: count } map
         // Returns 'active' | 'hidden' | 'recurred'.
         //
-        // Counts, not presence: an item marked fixed stays hidden while its
-        // count is unchanged, so re-exporting before the Last.fm edit has
-        // propagated (or reloading the same file) does not un-hide it. Only
-        // genuinely new scrobbles under the flagged name do. On a card, a
-        // member that disappears is not a recurrence; a member that appears,
-        // or any member whose count grew, is - including the winner, which
-        // the tool cannot tell from the losers (accepted tradeoff, 4.5).
-        function dismissalStatus(record, current) {
+        // Re-exporting unchanged data stays hidden. Counts compare with the
+        // lowest accepted observation, so corrected-away plays returning
+        // below the mark-time count still recur. On a card, a disappeared
+        // member contributes nothing. Growth in an explicitly chosen kept
+        // spelling is excluded; without a choice every member is monitored.
+        function dismissalStatus(record, current, correction) {
             if (!record) return 'active';
             if (record.intent === 'ignored') return 'hidden';
+            if (record.identityReview) return 'recurred';
             // Fixed with no baseline (migrated from v1): if it is still here it
             // recurred, was never fixed, or was meant as ignore. All three
             // need one human decision, so it surfaces once.
             if (record.legacy) return 'recurred';
             if (typeof current === 'number') {
-                return current > (record.count || 0) ? 'recurred' : 'hidden';
+                return current > (record.observedCount ?? record.count ?? 0) ? 'recurred' : 'hidden';
             }
-            const stored = record.members || {};
+            const stored = record.observedMembers || record.members || {};
             const names = Object.keys(current || {});
             for (let i = 0; i < names.length; i++) {
                 const name = names[i];
+                if (correction && correction.memberKey === name) continue;
                 if (!Object.prototype.hasOwnProperty.call(stored, name)) return 'recurred';
                 if (current[name] > stored[name]) return 'recurred';
             }
@@ -1315,26 +1387,34 @@
         }
 
         function cardStatus(issue, issueId) {
-            return dismissalStatus(state.dismissals[issueId], currentBaseline(issue));
+            return decisionStatus(issueId, currentBaseline(issue));
         }
 
         function itemStatus(issueId, row) {
-            return dismissalStatus(state.dismissals[getItemId(issueId, row.name)], row.count);
+            return decisionStatus(getItemId(issueId, row.name), row.count);
+        }
+
+        function decisionStatus(id, current) {
+            const record = state.dismissals[id];
+            // Historical snapshots cannot establish a new recurrence.
+            if (state.historicalImport && record && !record.legacy && !record.identityReview) return 'hidden';
+            return dismissalStatus(record, current, state.corrections[id]);
         }
 
         // What changed since a fixed item was marked. Pure and top-level for
         // the contract. newPlays counts growth in members that were stored
         // (or the row itself); newMembers lists spellings not stored at all.
         // A legacy record has no baseline, so nothing is measurable.
-        function recurrenceDelta(record, current) {
+        function recurrenceDelta(record, current, correction) {
             if (!record || record.legacy) return { newPlays: 0, newMembers: [] };
             if (typeof current === 'number') {
-                return { newPlays: Math.max(0, current - (record.count || 0)), newMembers: [] };
+                return { newPlays: Math.max(0, current - (record.observedCount ?? record.count ?? 0)), newMembers: [] };
             }
-            const stored = record.members || {};
+            const stored = record.observedMembers || record.members || {};
             let newPlays = 0;
             const newMembers = [];
             Object.keys(current || {}).forEach(name => {
+                if (correction && correction.memberKey === name) return;
                 if (!Object.prototype.hasOwnProperty.call(stored, name)) newMembers.push(name);
                 else newPlays += Math.max(0, current[name] - stored[name]);
             });
@@ -1343,18 +1423,23 @@
 
         // The line a recurred item carries so a reappearance does not look
         // like the tool forgot. `short` is the inline form for a track row.
-        function recurrenceNote(record, current, short) {
+        function recurrenceNote(record, current, short, correction) {
             if (!record) return '';
+            if (record.identityReview) return '↻ Previous counts could not be matched safely — please confirm fixed or ignore.';
             if (record.legacy) {
                 return short
                     ? '↻ dismissed before v0.7 — fixed, or ignore?'
                     : '↻ Dismissed before v0.7 — fixed, or ignore from now on?';
             }
-            const { newPlays, newMembers } = recurrenceDelta(record, current);
+            const { newPlays, newMembers } = recurrenceDelta(record, current, correction);
             const parts = [];
             if (newPlays > 0) parts.push(`${newPlays} new play${newPlays !== 1 ? 's' : ''}`);
             if (newMembers.length > 0) parts.push(`${newMembers.length} new spelling${newMembers.length !== 1 ? 's' : ''}`);
             const what = parts.join(' and ') || 'changes';
+            const reduced = typeof current === 'number'
+                ? record.observedCount < record.count
+                : Object.keys(record.members || {}).some(name => record.observedMembers && record.observedMembers[name] < record.members[name]);
+            if (reduced) return `↻ ${what} after previously corrected plays disappeared or decreased`;
             if (short) return `↻ ${what} since marked fixed`;
             const when = new Date(record.at || 0).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
             const atPlays = typeof current === 'number' ? ` at ${record.count || 0} play${record.count !== 1 ? 's' : ''}` : '';
@@ -1363,6 +1448,80 @@
 
         function intentLabel(record) {
             return record && record.intent === 'ignored' ? 'ignored' : 'fixed';
+        }
+
+        function correctionLabel(choice) {
+            if (!choice) return '';
+            const context = choice.artist ? ` (${choice.artist})` : '';
+            return `Previously chosen ${choice.kind}: ${choice.name}${context}`;
+        }
+
+        function rememberedCorrectionHtml(id) {
+            const choice = state.corrections[id];
+            if (!choice) return '';
+            return `<div class="remembered-correction">Previously chosen ${choice.kind}: ${escapeHtml(correctionChoiceLabel(choice))}</div>`;
+        }
+
+        // Options expose non-space whitespace; their values retain exact raw
+        // member keys. Count order never selects a preferred spelling.
+        function correctionChoiceLabel(row) {
+            const describe = name => String(name || '').replace(/[^\S ]|[\u200B-\u200D\u2060\uFEFF]/gu, ch => `[U+${ch.codePointAt(0).toString(16).toUpperCase().padStart(4, '0')}]`).replace(/^ +| +$/g, spaces => `[${spaces.length}×SP]`).replace(/ {2,}/g, spaces => `[${spaces.length}×SP]`);
+            return describe(row.name) + (row.artist ? ` (${describe(row.artist)})` : '');
+        }
+
+        function correctionControlsHtml(issue, id, perTrack) {
+            if (state.view !== 'active' || state.historicalImport) return '';
+            const choice = state.corrections[id];
+            if (perTrack) return `<details class="correction-memory" data-correction-id="${id}">
+                <summary>Remember album correction</summary>
+                <label>Album chosen on Last.fm (optional)
+                    <input class="correction-album" type="text" value="${escapeHtml(choice ? choice.name : '')}" placeholder="Exact album name" autocomplete="off">
+                </label>
+                <small>Saved when you mark Fixed. Leave empty to forget a previous choice.</small>
+            </details>`;
+            const rows = issue.variations || [];
+            const kind = issue.type === 'invisible' ? issue.subtype : issue.type;
+            const matches = choice && rows.some(row => getMemberKey(issue, row) === choice.memberKey);
+            const selected = !choice ? '' : matches ? encodeURIComponent(choice.memberKey) : 'custom';
+            const options = rows.map(row => {
+                const value = encodeURIComponent(getMemberKey(issue, row));
+                return `<option value="${value}"${selected === value ? ' selected' : ''}>${escapeHtml(correctionChoiceLabel(row))}</option>`;
+            }).join('');
+            return `<div class="correction-memory" data-correction-id="${id}">
+                <label>Spelling kept on Last.fm (optional)
+                    <select class="correction-choice">
+                        <option value=""${!selected ? ' selected' : ''}>No remembered spelling</option>
+                        ${options}
+                        <option value="custom"${selected === 'custom' ? ' selected' : ''}>Another spelling…</option>
+                    </select>
+                </label>
+                <div class="correction-custom-fields"${selected !== 'custom' ? ' hidden' : ''}>
+                    <label>Exact spelling you kept
+                        <input class="correction-custom" type="text" value="${escapeHtml(selected === 'custom' ? choice.name : '')}" autocomplete="off">
+                    </label>
+                    ${kind !== 'artist' ? `<label>Artist for this spelling
+                        <input class="correction-custom-artist" type="text" value="${escapeHtml(choice ? choice.artist : issue.artist || '')}" autocomplete="off">
+                    </label>` : ''}
+                </div>
+                <small>Saved when you mark Fixed. Plays under this spelling won't count as a recurrence.</small>
+            </div>`;
+        }
+
+        function readCorrectionChoice(card, id, issue) {
+            const control = [...card.querySelectorAll('.correction-memory')].find(el => el.dataset.correctionId === id);
+            if (!control) return undefined;
+            const albumInput = control.querySelector('.correction-album');
+            if (albumInput) return albumInput.value.trim() ? { kind: 'album', artist: issue.artist || '', name: albumInput.value } : null;
+            const select = control.querySelector('.correction-choice');
+            if (!select || !select.value) return null;
+            const kind = issue.type === 'invisible' ? issue.subtype : issue.type;
+            let artist, name;
+            if (select.value === 'custom') {
+                name = control.querySelector('.correction-custom').value;
+                artist = kind === 'artist' ? '' : control.querySelector('.correction-custom-artist').value;
+                if (!name.trim()) return null;
+            } else [artist, name] = JSON.parse(decodeURIComponent(select.value));
+            return { kind, artist, name, memberKey: JSON.stringify([artist, name]) };
         }
 
         // Does an item with this status and record belong in the current
@@ -1379,34 +1538,61 @@
         }
 
         function saveDismissedState() {
-            if (!state.username) return;
+            if (!state.username || state.historicalImport) return false;
+            if (state.persistenceReadFailed) {
+                state.persistenceNotice = 'Your decisions are kept for this session. Existing saved data could not be read, so it has been left untouched.';
+                showImportNotices();
+                return false;
+            }
             const data = {
-                version: 2,
+                version: 4,
                 items: state.dismissals,
-                // Shadow of the v1 shape, so a pre-split build of the tool
-                // still sees these dismissals if someone opens one. Drop once
-                // the split has shipped.
-                dismissed: Object.keys(state.dismissals),
+                corrections: state.corrections || {},
+                lastObservation: state.savedObservation || null,
                 savedAt: Date.now()
             };
-            localStorage.setItem(userStorageKey(state.username), JSON.stringify(data));
+            try {
+                localStorage.setItem(userStorageKey(state.username), JSON.stringify(data));
+                state.persistenceNotice = '';
+                showImportNotices();
+                return true;
+            } catch (error) {
+                state.persistenceNotice = 'Your decisions are kept for this session, but could not be saved in this browser.';
+                showImportNotices();
+                return false;
+            }
         }
 
         // Returns the { id: record } map for this user. A v1 blob is converted
-        // in memory here and written back as v2 on the next save.
+        // in memory here; identity migration follows detection, and the next
+        // save writes v4. A failed read never authorizes replacing old data.
         function loadDismissedState(username) {
-            const stored = localStorage.getItem(userStorageKey(username));
-            if (stored) {
-                try {
-                    return migrateDismissalBlob(JSON.parse(stored));
-                } catch (e) {
-                    console.error('Error loading dismissed state:', e);
-                }
+            state.persistenceReadFailed = false;
+            state.corrections = {};
+            state.savedObservation = null;
+            try {
+                const stored = localStorage.getItem(userStorageKey(username));
+                if (!stored) return {};
+                const data = JSON.parse(stored);
+                const items = migrateDismissalBlob(data);
+                const corrections = data.corrections || {};
+                if (typeof corrections !== 'object' || Array.isArray(corrections)) throw new Error('Invalid correction memory.');
+                Object.values(corrections).forEach(choice => {
+                    if (!choice || !['artist', 'album', 'track'].includes(choice.kind) || typeof choice.name !== 'string' || !choice.name || typeof choice.artist !== 'string' || (choice.memberKey !== undefined && typeof choice.memberKey !== 'string')) throw new Error('Invalid remembered correction.');
+                });
+                const observation = data.lastObservation || null;
+                if (observation && (!Number.isSafeInteger(observation.latestScrobble) || observation.latestScrobble < 0 || !Number.isSafeInteger(observation.modified) || observation.modified < 0 || typeof observation.hash !== 'string')) throw new Error('Invalid export observation.');
+                state.corrections = corrections;
+                state.savedObservation = observation;
+                return items;
+            } catch (error) {
+                state.persistenceReadFailed = true;
+                state.persistenceNotice = 'Saved decisions could not be loaded. This review starts with all findings active.';
+                return {};
             }
-            return {};
         }
 
-        // v2 ({ items }) passes through. v1 ({ dismissed: [id, ...] }) becomes
+        // v2/v3/v4 ({ items }) passes through. v1 ({ dismissed: [id, ...] }) becomes
         // one legacy 'fixed' record per ID, with no baseline (DESIGN.md 4.5):
         // whatever is still present in the next export surfaces once, tagged,
         // so nothing that recurred before the upgrade is swallowed. Migration
@@ -1414,10 +1600,19 @@
         // are cards, which is why a legacy record carries neither count nor
         // members; dismissalStatus treats it by its flag alone.
         function migrateDismissalBlob(data) {
-            if (data && data.items && typeof data.items === 'object') return data.items;
+            if (data && data.version > 4) throw new Error('Unsupported saved-decision version.');
+            if (data && data.items !== undefined) {
+                if (!data.items || typeof data.items !== 'object' || Array.isArray(data.items)) throw new Error('Invalid saved decisions.');
+                Object.values(data.items).forEach(record => {
+                    if (!record || !['fixed', 'ignored'].includes(record.intent)) throw new Error('Invalid saved decision.');
+                });
+                return data.items;
+            }
             const at = (data && data.savedAt) || Date.now();
             const items = {};
-            ((data && data.dismissed) || []).forEach(id => {
+            const dismissed = (data && data.dismissed) || [];
+            if (!Array.isArray(dismissed) || dismissed.some(id => typeof id !== 'string')) throw new Error('Invalid legacy decisions.');
+            dismissed.forEach(id => {
                 items[id] = legacyDismissalRecord(at);
             });
             return items;
@@ -1425,6 +1620,225 @@
 
         function legacyDismissalRecord(at) {
             return { intent: 'fixed', legacy: true, at };
+        }
+
+        // IDs contain enough raw context to observe a former finding even
+        // when the detector no longer emits its card. Never decode legacy IDs.
+        function decodeDecisionId(id) {
+            if (!id.startsWith('issue-v3-')) return null;
+            const encoded = id.slice('issue-v3-'.length);
+            const candidates = [[encoded, undefined, id]];
+            let position = encoded.indexOf('%5D-item-');
+            while (position !== -1) {
+                candidates.push([encoded.slice(0, position + 3), encoded.slice(position + 9), 'issue-v3-' + encoded.slice(0, position + 3)]);
+                position = encoded.indexOf('%5D-item-', position + 1);
+            }
+            for (const [card, item, cardId] of candidates) {
+                try {
+                    const [type, subtype, artist, name] = JSON.parse(decodeURIComponent(card));
+                    const itemName = item === undefined ? undefined : JSON.parse(decodeURIComponent(item));
+                    if (!['artist', 'album', 'track', 'invisible', 'missing', 'compilation'].includes(type)) continue;
+                    if (item !== undefined && (typeof itemName !== 'string' || !['missing', 'compilation'].includes(type))) continue;
+                    return { type, subtype, artist, name, album: type === 'compilation' ? name : undefined, itemName, cardId };
+                } catch (error) { /* Try the next possible closing bracket. */ }
+            }
+            return null;
+        }
+
+        function exportObservation(scrobbles, file, hash) {
+            let latestScrobble = 0;
+            scrobbles.forEach(row => { latestScrobble = Math.max(latestScrobble, Number(row.Date) || 0); });
+            return { latestScrobble, modified: Number(file.lastModified) || 0, hash };
+        }
+
+        // Last-play time orders snapshots with new listening. For edits made
+        // without new listening, use the export file's modification time.
+        // Equal times with different contents cannot establish chronology.
+        function isOlderObservation(previous, current) {
+            if (!previous) return false;
+            if (current.latestScrobble !== previous.latestScrobble) return current.latestScrobble < previous.latestScrobble;
+            if (current.hash === previous.hash) return false;
+            return !current.modified || current.modified <= previous.modified;
+        }
+
+        // Count exact metadata throughout the complete library. Thresholds
+        // and variation-card presence must not hide a remembered recurrence.
+        // Only requested card groups are retained, to bound memory use.
+        function libraryBaselines(scrobbles, items) {
+            const requests = new Map();
+            Object.entries(items).forEach(([id, record]) => {
+                if (record.intent !== 'fixed' || record.legacy || record.identityReview || record.identityAmbiguous) return;
+                const identity = decodeDecisionId(id);
+                if (identity) requests.set(id, identity);
+            });
+            const current = Object.create(null);
+            if (!requests.size) return current;
+            const artists = new Map(), albums = new Map(), tracks = new Map(), missing = new Map(), albumTracks = new Map();
+            const increment = (map, key) => map.set(key, (map.get(key) || 0) + 1);
+            scrobbles.forEach(row => {
+                if (!row.Artist) return;
+                increment(artists, row.Artist);
+                if (row.Album) increment(albums, JSON.stringify([row.Artist, row.Album]));
+                if (row.Track) {
+                    increment(tracks, JSON.stringify([row.Artist, row.Track]));
+                    if (!row.Album || !row.Album.trim()) increment(missing, JSON.stringify([row.Artist, row.Track]));
+                    if (row.Album) increment(albumTracks, JSON.stringify([row.Artist, row.Album, row.Track]));
+                }
+            });
+            requests.forEach((identity, id) => {
+                if (identity.itemName !== undefined) {
+                    current[id] = identity.type === 'missing'
+                        ? missing.get(JSON.stringify([identity.artist, identity.itemName])) || 0
+                        : albumTracks.get(JSON.stringify([identity.artist, identity.album, identity.itemName])) || 0;
+                } else current[id] = Object.create(null);
+            });
+            const normalizers = { artist: normalizeArtist, album: normalizeAlbum, track: normalizeTrack };
+            [[artists, 'artist'], [albums, 'album'], [tracks, 'track']].forEach(([entities, kind]) => {
+                entities.forEach((count, raw) => {
+                    const [artist, name] = kind === 'artist' ? ['', raw] : JSON.parse(raw);
+                    const row = { artist, name, count };
+                    const ordinary = getIssueId({ type: kind, artist, normalized: normalizers[kind](name) });
+                    const invisible = getIssueId({ type: 'invisible', subtype: kind, artist, variations: [row] });
+                    [ordinary, invisible].forEach(id => {
+                        if (requests.has(id)) current[id][JSON.stringify([artist, name])] = count;
+                    });
+                });
+            });
+            return current;
+        }
+
+        // Preserve the mark-time baseline and separately track the lowest
+        // observed counts. Growth above that minimum is a repeat offense,
+        // including 10 -> 0 -> 1. Called only for accepted complete snapshots.
+        function observeFixedRecords(items, baselines) {
+            const observed = { ...items };
+            Object.entries(baselines).forEach(([id, current]) => {
+                const record = items[id];
+                if (!record || record.intent !== 'fixed' || record.legacy || record.identityReview || record.identityAmbiguous) return;
+                if (typeof current === 'number') {
+                    observed[id] = { ...record, observedCount: Math.min(record.observedCount ?? record.count ?? 0, current) };
+                } else if (record.members) {
+                    const previous = record.observedMembers || record.members;
+                    const members = Object.create(null);
+                    Object.keys(previous).forEach(name => { members[name] = Math.min(previous[name], current[name] || 0); });
+                    observed[id] = { ...record, observedMembers: members };
+                }
+            });
+            return observed;
+        }
+
+        function addRememberedRecurrences(issues, items, baselines, corrections) {
+            const result = [...issues];
+            const existing = new Map(issues.map(issue => [getIssueId(issue), issue]));
+            Object.entries(baselines).forEach(([id, current]) => {
+                const record = items[id];
+                if (dismissalStatus(record, current, corrections[id]) !== 'recurred') return;
+                const identity = decodeDecisionId(id);
+                if (!identity) return;
+                const { type, subtype, artist, name, album, itemName, cardId } = identity;
+                if (itemName !== undefined) {
+                    if (!current) return;
+                    const card = existing.get(cardId);
+                    if (card) {
+                        // Normally present already; never mutate a detector's rows.
+                        if ((card.variations || []).some(row => row.name === itemName)) return;
+                    }
+                    const row = { name: itemName, count: current };
+                    const issue = card
+                        ? { ...card, variations: [...card.variations, row], totalCount: card.totalCount + current }
+                        : { type, artist, album, title: type === 'missing' ? artist : `${artist} - ${album}`, description: 'Previously fixed track returned', totalCount: current, variations: [row] };
+                    if (card) result[result.indexOf(card)] = issue;
+                    else result.push(issue);
+                    existing.set(cardId, issue);
+                } else {
+                    if (existing.has(cardId)) return;
+                    const rows = Object.entries(current).filter(([, count]) => count > 0).map(([key, count]) => {
+                        const [rowArtist, rowName] = JSON.parse(key);
+                        return { artist: rowArtist, name: rowName, count, hasInvisible: hasInvisibleChars(rowName) || hasInvisibleChars(rowArtist) };
+                    }).sort((a, b) => b.count - a.count);
+                    if (!rows.length) return;
+                    const title = type === 'artist' || (type === 'invisible' && subtype === 'artist') ? rows[0].name : `${artist} - ${rows[0].name}`;
+                    const issue = { type, subtype, artist, normalized: name, title, description: 'Previously fixed spelling returned', totalCount: rows.reduce((sum, row) => sum + row.count, 0), variations: rows };
+                    result.push(issue);
+                    existing.set(cardId, issue);
+                }
+            });
+            return result;
+        }
+
+        // Resolve legacy aliases against the whole issue set, never one card
+        // at a time: an old punctuation-only key may refer to several rows.
+        // Unmatched records are retained for later exports. Ambiguous records
+        // are retained but quarantined, so they cannot silently hide a sibling.
+        function migrateIssueIdentities(items, issues) {
+            const migrated = { ...items };
+            const aliases = new Map();
+            const targets = new Map();
+            const add = (oldId, newId, issue, row) => {
+                if (!aliases.has(oldId)) aliases.set(oldId, new Map());
+                aliases.get(oldId).set(newId, { issue, row });
+            };
+            issues.forEach(issue => {
+                const id = getIssueId(issue);
+                const oldId = getLegacyIssueId(issue);
+                if (['missing', 'compilation'].includes(issue.type)) {
+                    (issue.variations || []).forEach(row => add(getLegacyItemId(oldId, row.name), getItemId(id, row.name), issue, row));
+                } else {
+                    add(oldId, id, issue);
+                    if (['artist', 'album', 'track'].includes(issue.type)) {
+                        (issue.variations || []).forEach(row => {
+                            const title = issue.type === 'artist' ? row.name : `${issue.artist} - ${row.name}`;
+                            add(getLegacyIssueId({ type: issue.type, title }), id, issue);
+                        });
+                    }
+                }
+            });
+            let ambiguous = 0;
+            Object.entries(items).forEach(([oldId, record]) => {
+                if (oldId.startsWith('issue-v3-')) return;
+                const matches = aliases.get(oldId);
+                if (!matches) return;
+                if (record.identityAmbiguous || matches.size !== 1) {
+                    migrated[oldId] = { ...record, identityAmbiguous: true };
+                    if ([...matches.keys()].some(id => !items[id])) ambiguous++;
+                    return;
+                }
+                const [newId, target] = [...matches][0];
+                if (!targets.has(newId)) targets.set(newId, []);
+                targets.get(newId).push({ oldId, record, ...target });
+            });
+            targets.forEach((sources, newId) => {
+                if (sources.length !== 1 && !items[newId]) {
+                    sources.forEach(({ oldId, record }) => { migrated[oldId] = { ...record, identityAmbiguous: true }; });
+                    ambiguous += sources.length;
+                    return;
+                }
+                if (!items[newId]) {
+                    const { record, issue, row } = sources[0];
+                    const next = { ...record, identityVersion: 3 };
+                    if (!row && record.members && !record.legacy) {
+                        const members = Object.create(null);
+                        Object.entries(record.members).forEach(([name, count]) => {
+                            const rows = (issue.variations || []).filter(v => v.name === name);
+                            if (rows.length > 1 || (issue.type === 'invisible' && issue.subtype !== 'artist' && rows.length === 0)) {
+                                next.identityReview = true;
+                            } else {
+                                members[getMemberKey(issue, rows[0] || { name })] = count;
+                            }
+                        });
+                        next.members = members;
+                    }
+                    migrated[newId] = next;
+                }
+                sources.forEach(({ oldId }) => { delete migrated[oldId]; });
+            });
+            return { items: migrated, ambiguous };
+        }
+
+        function showImportNotices() {
+            const el = document.getElementById('import-notice');
+            el.textContent = [state.importNotice, state.observationNotice, state.persistenceNotice].filter(Boolean).join(' ');
+            el.style.display = el.textContent ? 'block' : 'none';
         }
 
         // Migrate dismissals saved by pre-v0.6.0 versions (keyed by file hash).
@@ -1445,14 +1859,17 @@
             const itemIdTranslation = {};
             issues.forEach(issue => {
                 if (!['missing', 'compilation'].includes(issue.type)) return;
-                const issueId = getIssueId(issue);
+                const issueId = getLegacyIssueId(issue);
                 (issue.variations || []).forEach((v, i) => {
-                    itemIdTranslation[`${issueId}-item-${i}`] = getItemId(issueId, v.name);
+                    itemIdTranslation[`${issueId}-item-${i}`] = getLegacyItemId(issueId, v.name);
                 });
             });
 
-            for (let k = 0; k < localStorage.length; k++) {
-                const key = localStorage.key(k);
+            let storageKeys;
+            try {
+                storageKeys = Array.from({ length: localStorage.length }, (_, k) => localStorage.key(k));
+            } catch (error) { return; }
+            for (const key of storageKeys) {
                 if (!key || !key.startsWith('scrobble-analyzer-')) continue;
                 if (key.startsWith('scrobble-analyzer-user-')) continue; // already new format
 
@@ -1489,11 +1906,15 @@
                 if (isMatchingFile) consumedKeys.push(key);
             }
 
-            consumedKeys.forEach(key => localStorage.removeItem(key));
-
             if (migratedIssueLevel || migratedItemLevel) {
                 console.log(`Migrated dismissals from old storage: ${migratedIssueLevel} issue-level, ${migratedItemLevel} item-level`);
-                saveDismissedState();
+                const migration = migrateIssueIdentities(state.dismissals, issues);
+                state.dismissals = migration.items;
+                if (saveDismissedState()) {
+                    consumedKeys.forEach(key => {
+                        try { localStorage.removeItem(key); } catch (error) { /* Keep the recoverable source. */ }
+                    });
+                }
             }
         }
 
@@ -1540,103 +1961,87 @@
             fileInput.value = '';
         });
 
-        // Parse CSV
-        function parseCSV(text) {
-            const lines = text.trim().split('\n');
-            
-            // Detect delimiter from first line
-            const firstLine = lines[0];
-            const delimiter = firstLine.includes(';') ? ';' : ',';
-            
-            const rawHeaders = parseCSVLine(firstLine.replace(/^\uFEFF/, ''), delimiter);
-            
-            // Normalize headers - map various possible names to our standard names.
-            // The lastfmstats.com export embeds the username in the date header
-            // ("Date#scoblitz") - capture it for per-user dismissal storage.
-            const headerMap = {};
-            let username = null;
-            rawHeaders.forEach((header, index) => {
-                const h = header.trim().toLowerCase();
-                if (h.includes('artist')) headerMap[index] = 'Artist';
-                else if (h.includes('album') && h.includes('id')) headerMap[index] = 'AlbumId';
-                else if (h.includes('album')) headerMap[index] = 'Album';
-                else if (h.includes('track') || h.includes('song') || h.includes('title')) headerMap[index] = 'Track';
-                else if (h.includes('date') || h.includes('time')) {
-                    headerMap[index] = 'Date';
-                    const usernameMatch = header.trim().match(/#(.+)$/);
-                    if (usernameMatch) username = usernameMatch[1].trim().toLowerCase();
+        // Parse the complete CSV stream: quoted line breaks are metadata,
+        // whereas unquoted line breaks separate records. Never trim raw names.
+        function parseCSVRecords(text, delimiter) {
+            const records = [];
+            let row = [], field = '', quoted = false, closedQuote = false;
+            for (let i = 0; i < text.length; i++) {
+                const ch = text[i];
+                if (quoted) {
+                    if (ch === '"' && text[i + 1] === '"') { field += '"'; i++; }
+                    else if (ch === '"') { quoted = false; closedQuote = true; }
+                    else field += ch;
+                } else if (ch === delimiter || ch === '\n' || ch === '\r') {
+                    row.push(field);
+                    field = '';
+                    closedQuote = false;
+                    if (ch !== delimiter) {
+                        records.push(row);
+                        row = [];
+                        if (ch === '\r' && text[i + 1] === '\n') i++;
+                    }
+                } else if (ch === '"' && field === '' && !closedQuote) {
+                    quoted = true;
+                } else {
+                    if (closedQuote || ch === '"') throw new Error('INVALID_HEADERS:Malformed CSV quoting. Please export a fresh file from lastfmstats.com.');
+                    field += ch;
                 }
-                else headerMap[index] = header.trim(); // Keep original if no match
+            }
+            if (quoted) throw new Error('INVALID_HEADERS:Unterminated quoted CSV field. Please export a fresh file.');
+            if (field !== '' || row.length || closedQuote) {
+                row.push(field);
+                records.push(row);
+            }
+            return records;
+        }
+
+        function parseCSV(text) {
+            text = text.replace(/^\uFEFF/, '');
+            const firstLine = text.split(/[\r\n]/, 1)[0];
+            const delimiter = firstLine.includes(';') ? ';' : ',';
+            const records = parseCSVRecords(text, delimiter);
+            const rawHeaders = records.shift() || [];
+            const seen = new Set();
+            let username = null;
+            const headers = rawHeaders.map(header => {
+                const h = header.trim().toLowerCase();
+                let mapped;
+                if (h === 'artist') mapped = 'Artist';
+                else if (h === 'albumid') mapped = 'AlbumId';
+                else if (h === 'album') mapped = 'Album';
+                else if (['track', 'song', 'title'].includes(h)) mapped = 'Track';
+                else if (h === 'date' || h.startsWith('date#')) {
+                    mapped = 'Date';
+                    username = header.trim().match(/^date#([a-z0-9_-]+)$/i)?.[1].toLowerCase() || null;
+                } else mapped = header.trim();
+                if (seen.has(mapped)) throw new Error('INVALID_HEADERS:Duplicate CSV column. Please use a complete lastfmstats.com export.');
+                seen.add(mapped);
+                return mapped;
             });
-            
-            console.log('Detected delimiter:', delimiter);
-            console.log('Raw headers:', rawHeaders);
-            console.log('Mapped headers:', headerMap);
-            
-            // Validate that we have required headers
-            const mappedValues = Object.values(headerMap);
-            const hasArtist = mappedValues.includes('Artist');
-            const hasTrack = mappedValues.includes('Track');
-            
-            if (!hasArtist || !hasTrack) {
-                const missingHeaders = [];
-                if (!hasArtist) missingHeaders.push('Artist');
-                if (!hasTrack) missingHeaders.push('Track');
-                
-                throw new Error(`INVALID_HEADERS:Missing required columns: ${missingHeaders.join(', ')}. Expected a CSV with Artist, Album, and Track columns. See the README for supported export formats.`);
-            }
-            
+            const missing = ['Artist', 'Album', 'Track', 'Date'].filter(name => !seen.has(name));
+            if (missing.length) throw new Error(`INVALID_HEADERS:Missing required columns: ${missing.join(', ')}. Please use a complete lastfmstats.com export.`);
+            if (!username) throw new Error('INVALID_HEADERS:Missing Last.fm username in the Date#username header. Please use a complete lastfmstats.com export.');
             const data = [];
-            for (let i = 1; i < lines.length; i++) {
-                if (!lines[i].trim()) continue; // Skip empty lines
-                
-                const values = parseCSVLine(lines[i], delimiter);
-                const row = {};
-                Object.entries(headerMap).forEach(([index, header]) => {
-                    row[header] = values[index] ? values[index].trim() : '';
-                });
+            records.forEach((values, index) => {
+                if (values.length === 1 && values[0] === '') return;
+                if (values.length !== headers.length) throw new Error(`INVALID_HEADERS:Record ${index + 2} has ${values.length} fields; expected ${headers.length} columns. Please export a fresh file.`);
+                const row = Object.fromEntries(headers.map((header, i) => [header, values[i]]));
+                if (!/^\d+$/.test(row.Date) || !Number.isSafeInteger(Number(row.Date))) throw new Error(`INVALID_HEADERS:Record ${index + 2} has an invalid timestamp. Expected milliseconds from lastfmstats.com.`);
                 data.push(row);
-            }
-            
-            // Debug: log first few rows
-            console.log('First 3 rows:', data.slice(0, 3));
-            console.log('Username from header:', username || '(none found, using default)');
-            
-            return { rows: data, username: username };
+            });
+            if (!data.length) throw new Error('INVALID_HEADERS:This export contains no scrobbles.');
+            return { rows: data, username };
         }
 
         function parseCSVLine(line, delimiter = ',') {
-            const result = [];
-            let current = '';
-            let inQuotes = false;
-            
-            for (let i = 0; i < line.length; i++) {
-                const char = line[i];
-                
-                if (char === '"') {
-                    if (inQuotes && line[i + 1] === '"') {
-                        current += '"';
-                        i++;
-                    } else {
-                        inQuotes = !inQuotes;
-                    }
-                } else if (char === delimiter && !inQuotes) {
-                    result.push(current);
-                    current = '';
-                } else {
-                    current += char;
-                }
-            }
-            result.push(current);
-            
-            // Note: no quote-stripping pass here. The loop above already handles
-            // quoting/escaping, so stripping again would corrupt values that
-            // legitimately begin/end with quotes (e.g. Bowie's "Heroes").
-            return result;
+            return parseCSVRecords(line, delimiter)[0] || [];
         }
 
         // Process uploaded file
         async function processFile(file) {
+            const importSequence = ++state.importSequence;
+            document.getElementById('import-notice').style.display = 'none';
             emptyState.style.display = 'none';
             loadingState.style.display = 'flex';
             resultsContainer.style.display = 'none';
@@ -1644,6 +2049,7 @@
             const reader = new FileReader();
             
             reader.onload = async (e) => {
+                if (importSequence !== state.importSequence) return;
                 try {
                     progressText.textContent = 'Parsing CSV...';
                     progressFill.style.width = '10%';
@@ -1655,70 +2061,100 @@
                     text = text.replace(/^\xEF\xBB\xBF/, ''); // UTF-8 BOM as bytes
                     
                     // Hash the file - used to locate old-format saved state for migration
-                    state.fileHash = hashString(text);
-                    console.log('File hash:', state.fileHash);
+                    const fileHash = hashString(text);
+                    console.log('File hash:', fileHash);
                     
                     const parsed = parseCSV(text);
-                    state.scrobbles = parsed.rows;
-                    state.username = parsed.username || 'default';
-                    
-                    // Load this user's dismissals (keyed by username, survives new exports)
-                    state.dismissals = loadDismissedState(state.username);
-                    setView('active');
-                    console.log('Loaded dismissed issues for', state.username + ':', Object.keys(state.dismissals).length);
-                    
-                    console.log('Parsed scrobbles count:', state.scrobbles.length);
-                    console.log('Sample scrobble:', state.scrobbles[0]);
-                    
+                    const scrobbles = parsed.rows;
+
                     progressText.textContent = 'Analyzing artist variations...';
                     progressFill.style.width = '20%';
                     await sleep(50);
+                    if (importSequence !== state.importSequence) return;
                     
-                    const artistIssues = findArtistVariations(state.scrobbles);
+                    const artistIssues = findArtistVariations(scrobbles);
                     
                     progressText.textContent = 'Analyzing album variations...';
                     progressFill.style.width = '35%';
                     await sleep(50);
+                    if (importSequence !== state.importSequence) return;
                     
-                    const albumIssues = findAlbumVariations(state.scrobbles);
+                    const albumIssues = findAlbumVariations(scrobbles);
                     
                     progressText.textContent = 'Analyzing track variations...';
                     progressFill.style.width = '50%';
                     await sleep(50);
+                    if (importSequence !== state.importSequence) return;
                     
-                    const trackIssues = findTrackVariations(state.scrobbles);
+                    const trackIssues = findTrackVariations(scrobbles);
                     
                     progressText.textContent = 'Finding missing albums...';
                     progressFill.style.width = '65%';
                     await sleep(50);
+                    if (importSequence !== state.importSequence) return;
                     
-                    const missingIssues = findMissingAlbums(state.scrobbles);
+                    const missingIssues = findMissingAlbums(scrobbles);
                     
                     progressText.textContent = 'Detecting compilations...';
                     progressFill.style.width = '80%';
                     await sleep(50);
+                    if (importSequence !== state.importSequence) return;
                     
-                    const compilationIssues = findCompilations(state.scrobbles);
+                    const compilationIssues = findCompilations(scrobbles);
                     
                     progressText.textContent = 'Detecting invisible characters...';
                     progressFill.style.width = '92%';
                     await sleep(50);
+                    if (importSequence !== state.importSequence) return;
                     
-                    const invisibleIssues = findInvisibleCharacterIssues(state.scrobbles);
+                    const invisibleIssues = findInvisibleCharacterIssues(scrobbles);
                     
                     progressText.textContent = 'Finalizing...';
                     progressFill.style.width = '100%';
                     await sleep(100);
+                    if (importSequence !== state.importSequence) return;
                     
+                    state.scrobbles = scrobbles;
+                    state.username = parsed.username;
+                    state.fileHash = fileHash;
+                    state.persistenceNotice = '';
+                    state.dismissals = loadDismissedState(parsed.username);
+                    state.currentObservation = exportObservation(scrobbles, file, fileHash);
+                    state.historicalImport = isOlderObservation(state.savedObservation, state.currentObservation);
+                    state.observationNotice = state.historicalImport
+                        ? 'This export is older than the saved review, or its order cannot be established. Review only: recurrence tracking and saved decisions are unchanged. Import your latest complete export to make decisions.'
+                        : '';
+                    setView('active');
                     state.issues = [...artistIssues, ...albumIssues, ...trackIssues, ...missingIssues, ...compilationIssues, ...invisibleIssues];
                     
                     // Migrate any dismissals saved by pre-v0.6.0 versions.
                     // Must run after issues are built (item-level translation
                     // needs the current variation lists).
-                    migrateOldDismissals(state.fileHash, state.issues);
+                    if (!state.historicalImport) migrateOldDismissals(state.fileHash, state.issues);
                     
+                    const migration = migrateIssueIdentities(state.dismissals, state.issues);
+                    state.dismissals = migration.items;
+                    state.importNotice = migration.ambiguous
+                        ? `${migration.ambiguous} previous decision${migration.ambiguous === 1 ? '' : 's'} could not be matched safely. Affected findings are active again; the original records are retained.`
+                        : '';
+                    if (!state.historicalImport) {
+                        const baselines = libraryBaselines(scrobbles, state.dismissals);
+                        state.dismissals = observeFixedRecords(state.dismissals, baselines);
+                        state.issues = addRememberedRecurrences(state.issues, state.dismissals, baselines, state.corrections);
+                        // Identical contents with an older file time may be
+                        // reviewed again, but cannot roll back the watermark.
+                        state.savedObservation = {
+                            ...state.currentObservation,
+                            modified: state.savedObservation && state.savedObservation.latestScrobble === state.currentObservation.latestScrobble
+                                ? Math.max(state.savedObservation.modified, state.currentObservation.modified)
+                                : state.currentObservation.modified
+                        };
+                        saveDismissedState();
+                    }
+                    showImportNotices();
                     displayResults();
                 } catch (error) {
+                    if (importSequence !== state.importSequence) return;
                     console.error('Error processing file:', error);
                     loadingState.style.display = 'none';
                     emptyState.style.display = 'flex';
@@ -1729,7 +2165,7 @@
                         emptyState.innerHTML = `
                             <div class="empty-state-icon">⚠️</div>
                             <h2>Invalid File Format</h2>
-                            <p style="color: var(--accent-red); max-width: 500px; margin: 1rem auto;">${errorMsg}</p>
+                            <p style="color: var(--accent-red); max-width: 500px; margin: 1rem auto;">${escapeHtml(errorMsg)}</p>
                             <p style="max-width: 500px; margin: 1rem auto;">Please export your data from <a href="https://lastfmstats.com" target="_blank" style="color: var(--accent-blue);">lastfmstats.com</a> which provides the correct format.</p>
                             <p style="margin-top: 1rem;"><a href="https://github.com/scoblitz/scrobble-analyzer#getting-your-data" target="_blank" style="color: var(--accent-blue);">See the README for more details →</a></p>
                             <button onclick="location.reload()" style="margin-top: 1.5rem; padding: 0.75rem 1.5rem; background: var(--accent-orange); border: none; border-radius: 6px; color: white; cursor: pointer; font-family: inherit;">Try Again</button>
@@ -1738,7 +2174,7 @@
                         emptyState.innerHTML = `
                             <div class="empty-state-icon">❌</div>
                             <h2>Error Processing File</h2>
-                            <p style="color: var(--accent-red);">${error.message}</p>
+                            <p style="color: var(--accent-red);">${escapeHtml(error.message)}</p>
                             <button onclick="location.reload()" style="margin-top: 1.5rem; padding: 0.75rem 1.5rem; background: var(--accent-orange); border: none; border-radius: 6px; color: white; cursor: pointer; font-family: inherit;">Try Again</button>
                         `;
                     }
@@ -1746,6 +2182,7 @@
             };
             
             reader.onerror = () => {
+                if (importSequence !== state.importSequence) return;
                 console.error('FileReader error:', reader.error);
                 loadingState.style.display = 'none';
                 emptyState.style.display = 'flex';
@@ -2093,7 +2530,7 @@
         function findArtistVariations(scrobbles) {
             console.log('Finding artist variations...');
             
-            const artistCounts = {};
+            const artistCounts = Object.create(null);
             scrobbles.forEach(s => {
                 if (s.Artist) {
                     artistCounts[s.Artist] = (artistCounts[s.Artist] || 0) + 1;
@@ -2142,10 +2579,10 @@
         function findAlbumVariations(scrobbles) {
             console.log('Finding album variations...');
             
-            const albumCounts = {};
+            const albumCounts = Object.create(null);
             scrobbles.forEach(s => {
                 if (s.Album) {
-                    const key = `${s.Artist}|||${s.Album}`;
+                    const key = JSON.stringify([s.Artist, s.Album]);
                     albumCounts[key] = (albumCounts[key] || 0) + 1;
                 }
             });
@@ -2154,9 +2591,9 @@
 
             const grouped = new Map();
             Object.keys(albumCounts).forEach(key => {
-                const [artist, album] = key.split('|||');
+                const [artist, album] = JSON.parse(key);
                 const normAlbum = normalizeAlbum(album);
-                const groupKey = `${artist}|||${normAlbum}`;
+                const groupKey = JSON.stringify([artist, normAlbum]);
                 
                 if (!grouped.has(groupKey)) grouped.set(groupKey, []);
                 grouped.get(groupKey).push({ 
@@ -2174,7 +2611,7 @@
                     if (differsOnlyInvisibly(albums.map(a => a.name))) return;
                     const total = albums.reduce((sum, a) => sum + a.count, 0);
                     if (total >= 5) {
-                        const [artist, normAlbum] = groupKey.split('|||');
+                        const [artist, normAlbum] = JSON.parse(groupKey);
                         issues.push({
                             type: 'album',
                             title: `${artist} - ${albums.sort((a, b) => b.count - a.count)[0].name}`,
@@ -2197,10 +2634,10 @@
         function findMissingAlbums(scrobbles) {
             console.log('Finding missing albums...');
             
-            const missing = {};
+            const missing = Object.create(null);
             scrobbles.forEach(s => {
                 if (!s.Album || s.Album.trim() === '') {
-                    const key = `${s.Artist}|||${s.Track}`;
+                    const key = JSON.stringify([s.Artist, s.Track]);
                     if (!missing[key]) {
                         missing[key] = { artist: s.Artist, track: s.Track, count: 0 };
                     }
@@ -2211,7 +2648,7 @@
             console.log('Tracks missing album:', Object.keys(missing).length);
 
             // Group by artist
-            const byArtist = {};
+            const byArtist = Object.create(null);
             Object.values(missing).forEach(m => {
                 if (!m.artist) return;  // Skip if no artist
                 if (!byArtist[m.artist]) {
@@ -2267,7 +2704,7 @@
                 'the gold experience', // Prince album
             ];
 
-            const compilations = {};
+            const compilations = Object.create(null);
             scrobbles.forEach(s => {
                 if (!s.Album || !s.Artist) return;
                 const albumLower = s.Album.toLowerCase();
@@ -2280,12 +2717,12 @@
 
                 const isCompilation = compilationPatterns.some(p => p.test(s.Album));
                 if (isCompilation) {
-                    const key = `${s.Artist}|||${s.Album}`;
+                    const key = JSON.stringify([s.Artist, s.Album]);
                     if (!compilations[key]) {
                         compilations[key] = { 
                             artist: s.Artist, 
                             album: s.Album, 
-                            tracks: {},  // Changed from Set to object for counting
+                            tracks: Object.create(null),  // Changed from Set to object for counting
                             count: 0 
                         };
                     }
@@ -2312,6 +2749,7 @@
                         type: 'compilation',
                         title: `${c.artist} - ${c.album}`,
                         artist: c.artist,
+                        album: c.album,
                         description: `${tracksArray.length} tracks from compilation`,
                         totalCount: c.count,
                         variations: tracksArray
@@ -2328,10 +2766,10 @@
         function findTrackVariations(scrobbles) {
             console.log('Finding track variations...');
             
-            const trackCounts = {};
+            const trackCounts = Object.create(null);
             scrobbles.forEach(s => {
                 if (s.Track && s.Artist) {
-                    const key = `${s.Artist}|||${s.Track}`;
+                    const key = JSON.stringify([s.Artist, s.Track]);
                     trackCounts[key] = (trackCounts[key] || 0) + 1;
                 }
             });
@@ -2340,9 +2778,9 @@
 
             const grouped = new Map();
             Object.keys(trackCounts).forEach(key => {
-                const [artist, track] = key.split('|||');
+                const [artist, track] = JSON.parse(key);
                 const normTrack = normalizeTrack(track);
-                const groupKey = `${artist}|||${normTrack}`;
+                const groupKey = JSON.stringify([artist, normTrack]);
                 
                 if (!grouped.has(groupKey)) grouped.set(groupKey, []);
                 grouped.get(groupKey).push({ 
@@ -2360,7 +2798,7 @@
                     if (differsOnlyInvisibly(tracks.map(t => t.name))) return;
                     const total = tracks.reduce((sum, t) => sum + t.count, 0);
                     if (total >= 3) {
-                        const [artist, normTrack] = groupKey.split('|||');
+                        const [artist, normTrack] = JSON.parse(groupKey);
                         issues.push({
                             type: 'track',
                             title: `${artist} - ${tracks.sort((a, b) => b.count - a.count)[0].name}`,
@@ -2384,20 +2822,20 @@
             console.log('Finding invisible character issues...');
             
             // Get all unique artists, albums, and tracks
-            const artists = {};
-            const albums = {};
-            const tracks = {};
+            const artists = Object.create(null);
+            const albums = Object.create(null);
+            const tracks = Object.create(null);
             
             scrobbles.forEach(s => {
                 if (s.Artist) {
                     artists[s.Artist] = (artists[s.Artist] || 0) + 1;
                 }
                 if (s.Album && s.Artist) {
-                    const key = `${s.Artist}|||${s.Album}`;
+                    const key = JSON.stringify([s.Artist, s.Album]);
                     albums[key] = (albums[key] || 0) + 1;
                 }
                 if (s.Track && s.Artist) {
-                    const key = `${s.Artist}|||${s.Track}`;
+                    const key = JSON.stringify([s.Artist, s.Track]);
                     tracks[key] = (tracks[key] || 0) + 1;
                 }
             });
@@ -2417,8 +2855,8 @@
             // Group albums by visible string
             const albumGroups = new Map();
             Object.keys(albums).forEach(key => {
-                const [artist, album] = key.split('|||');
-                const visible = `${getVisibleString(artist)}|||${getVisibleString(album)}`;
+                const [artist, album] = JSON.parse(key);
+                const visible = JSON.stringify([getVisibleString(artist), getVisibleString(album)]);
                 if (!albumGroups.has(visible)) albumGroups.set(visible, []);
                 albumGroups.get(visible).push({ 
                     name: album,
@@ -2432,8 +2870,8 @@
             // Group tracks by visible string (same pattern as albums)
             const trackGroups = new Map();
             Object.keys(tracks).forEach(key => {
-                const [artist, track] = key.split('|||');
-                const visible = `${getVisibleString(artist)}|||${getVisibleString(track)}`;
+                const [artist, track] = JSON.parse(key);
+                const visible = JSON.stringify([getVisibleString(artist), getVisibleString(track)]);
                 if (!trackGroups.has(visible)) trackGroups.set(visible, []);
                 trackGroups.get(visible).push({ 
                     name: track,
@@ -2481,7 +2919,7 @@
                 if (hasIssue) {
                     const total = items.reduce((sum, i) => sum + i.count, 0);
                     if (total >= 3) {
-                        const [visArtist, visAlbum] = visible.split('|||');
+                        const [visArtist, visAlbum] = JSON.parse(visible);
                         issues.push({
                             type: 'invisible',
                             subtype: 'album',
@@ -2511,7 +2949,7 @@
                 if (hasIssue) {
                     const total = items.reduce((sum, i) => sum + i.count, 0);
                     if (total >= 3) {
-                        const [visArtist, visTrack] = visible.split('|||');
+                        const [visArtist, visTrack] = JSON.parse(visible);
                         issues.push({
                             type: 'invisible',
                             subtype: 'track',
@@ -2922,7 +3360,7 @@
                                 `<button class="dismiss-btn-small ignore" data-item-id="${v._itemId}" data-intent="ignored" title="Not a problem - never show again">🚫</button>`;
                         }
                         if (v._itemStatus === 'recurred') {
-                            itemNoteHtml = `<span class="recurred-note small">${escapeHtml(recurrenceNote(state.dismissals[v._itemId], v.count, true))}</span>`;
+                            itemNoteHtml = `<span class="recurred-note small">${escapeHtml(recurrenceNote(state.dismissals[v._itemId], v.count, true, state.corrections[v._itemId]))}</span>`;
                         }
                     }
                     
@@ -2934,7 +3372,7 @@
                     
                     return `
                         <div class="variation-item">
-                            <span class="variation-value">${nameHtml}${lookalikeHtml}${invisibleWarning}</span>
+                            <div class="variation-value">${nameHtml}${lookalikeHtml}${invisibleWarning}${v._itemId ? rememberedCorrectionHtml(v._itemId) + correctionControlsHtml(issue, v._itemId, true) : ''}</div>
                             ${itemNoteHtml}
                             ${v.count ? `<span class="variation-count">${v.count}</span>` : ''}
                             ${lastFmLinkHtml}
@@ -3004,7 +3442,7 @@
 
                 // Why a card-level item is back (per-track rows carry their own)
                 const cardNoteHtml = issue._status === 'recurred'
-                    ? `<div class="recurred-note">${escapeHtml(recurrenceNote(state.dismissals[issue._id], currentBaseline(issue), false))}</div>`
+                    ? `<div class="recurred-note">${escapeHtml(recurrenceNote(state.dismissals[issue._id], currentBaseline(issue), false, state.corrections[issue._id]))}</div>`
                     : '';
                 const hiddenTag = isCardDismissed
                     ? ` <span style="color: var(--text-muted); font-size: 0.75rem;">(${intentLabel(state.dismissals[issue._id])})</span>`
@@ -3052,9 +3490,17 @@
                         <div class="variation-list">
                             ${variationsHtml}
                         </div>
+                        ${!['missing', 'compilation'].includes(issue.type) ? rememberedCorrectionHtml(issue._id) + correctionControlsHtml(issue, issue._id, false) : ''}
                         ${buttonsHtml}
                     </div>
                 `;
+
+                if (state.historicalImport) card.querySelectorAll('button').forEach(button => { button.disabled = true; });
+                card.addEventListener('change', e => {
+                    if (!e.target.classList.contains('correction-choice')) return;
+                    const control = e.target.closest('.correction-memory');
+                    control.querySelector('.correction-custom-fields').hidden = e.target.value !== 'custom';
+                });
 
                 // Track mousedown position to distinguish click from drag
                 let mouseDownX, mouseDownY;
@@ -3065,6 +3511,7 @@
                 });
                 
                 card.addEventListener('click', (e) => {
+                    if (state.historicalImport && e.target.closest('button')) return;
                     // "Dismiss all" / "Restore all" on a compilation card: every
                     // track currently showing, by its per-track ID. Checked
                     // before the plain dismiss-btn branch, which it would
@@ -3077,7 +3524,7 @@
                             const itemId = getItemId(issue._id, v.name);
                             if (!inView(state.view, itemStatus(issue._id, v), state.dismissals[itemId])) return;
                             if (isRestore) unmarkDismissed(itemId);
-                            else markDismissed(itemId, v.count, intent);
+                            else markDismissed(itemId, v.count, intent, intent === 'fixed' ? readCorrectionChoice(card, itemId, issue) : undefined);
                         });
                         saveDismissedState();
                         updateCounts();
@@ -3094,7 +3541,7 @@
                             unmarkDismissed(issueId);
                         } else {
                             // Card-level: baseline is every row's count
-                            markDismissed(issueId, currentBaseline(issue), e.target.dataset.intent);
+                            markDismissed(issueId, currentBaseline(issue), e.target.dataset.intent, e.target.dataset.intent === 'fixed' ? readCorrectionChoice(card, issueId, issue) : undefined);
                         }
                         saveDismissedState();
                         updateCounts();
@@ -3114,7 +3561,7 @@
                         if (isRestore) {
                             unmarkDismissed(itemId);
                         } else {
-                            markDismissed(itemId, currentBaseline(issue, itemId), e.target.dataset.intent);
+                            markDismissed(itemId, currentBaseline(issue, itemId), e.target.dataset.intent, e.target.dataset.intent === 'fixed' ? readCorrectionChoice(card, itemId, issue) : undefined);
                         }
                         saveDismissedState();
                         
@@ -3179,7 +3626,7 @@
                     }
                     
                     // Don't toggle if clicking action buttons or links
-                    if (e.target.classList.contains('variation-action') || 
+                    if (e.target.closest('.correction-memory') || e.target.classList.contains('variation-action') ||
                         e.target.classList.contains('lastfm-link') ||
                         e.target.classList.contains('lookup-btn') ||
                         e.target.classList.contains('lookup-btn-small') ||
@@ -3319,6 +3766,7 @@
             report += '========================\n\n';
             report += `Generated: ${new Date().toLocaleString()}\n`;
             report += `Total Scrobbles: ${state.scrobbles.length.toLocaleString()}\n`;
+            if (state.historicalImport) report += 'Historical or unordered export: saved history unchanged; recurrence not evaluated.\n';
             report += includeDismissed
                 ? 'Dismissed items: included (tagged [FIXED] / [IGNORED]; items back since being marked fixed are tagged [RECURRED])\n\n'
                 : 'Dismissed items: excluded (items back since being marked fixed are tagged [RECURRED])\n\n';
@@ -3356,7 +3804,8 @@
                             ...v,
                             _dismissed: itemSt === 'hidden',
                             _marker: marker(itemSt, rec),
-                            _note: itemSt === 'recurred' ? recurrenceNote(rec, v.count, true) : ''
+                            _note: itemSt === 'recurred' ? recurrenceNote(rec, v.count, true, state.corrections[getItemId(issueId, v.name)]) : '',
+                            _correction: correctionLabel(state.corrections[getItemId(issueId, v.name)])
                         };
                     });
                     
@@ -3370,7 +3819,8 @@
                     entries.push({
                         issue, issueDismissed, variations,
                         marker: marker(status, record),
-                        note: status === 'recurred' ? recurrenceNote(record, currentBaseline(issue), false) : ''
+                        note: status === 'recurred' ? recurrenceNote(record, currentBaseline(issue), false, state.corrections[issueId]) : '',
+                        correction: correctionLabel(state.corrections[issueId])
                     });
                 });
                 
@@ -3380,14 +3830,16 @@
                 report += `${typeNames[type]} (${entries.length})\n`;
                 report += `${'='.repeat(50)}\n\n`;
 
-                entries.sort((a, b) => b.issue.totalCount - a.issue.totalCount).forEach(({ issue, variations, marker, note }) => {
+                entries.sort((a, b) => b.issue.totalCount - a.issue.totalCount).forEach(({ issue, variations, marker, note, correction }) => {
                     report += `${issue.title}${marker}\n`;
                     report += `  ${issue.description} | ${issue.totalCount} scrobbles\n`;
                     if (note) report += `  ${note}\n`;
+                    if (correction) report += `  ${correction}\n`;
                     variations.forEach(v => {
                         const invisibleNote = v.hasInvisible ? ' [HAS INVISIBLE CHARS]' : '';
                         report += `    - ${v.name}${v.count ? ` (${v.count})` : ''}${invisibleNote}${v._marker}\n`;
                         if (v._note) report += `      ${v._note}\n`;
+                        if (v._correction) report += `      ${v._correction}\n`;
                     });
                     report += '\n';
                 });

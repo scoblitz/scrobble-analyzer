@@ -43,7 +43,7 @@ Or [download index.html](index.html) to run locally (note: you won't receive upd
 3. Use the Export feature to download your scrobble history as CSV
 4. Drop the CSV file into the upload area in Scrobble Analyzer
 
-**Required CSV format:** Must have a header row with columns for `Artist`, `Album`, `Track`, and `Date`. This is exactly what lastfmstats.com exports - no preparation needed.
+**Required CSV format:** Use a complete lastfmstats.com export with `Artist`, `Album`, `Track`, and `Date#username` columns. The username identifies whose saved decisions to load. This is exactly what lastfmstats.com exports - no preparation needed. Raw names are preserved, including hidden characters and surrounding whitespace.
 
 ## Current Status
 
@@ -85,6 +85,14 @@ This project came out of my own frustration with messy scrobble data. If you:
 Please [open an issue](../../issues) or start a [discussion](../../discussions)! I'd love to hear what problems you're finding in your data.
 
 ## Built With
+
+Developer verification (no build step or installed dependencies):
+
+```sh
+node tests/merge-contract.js
+node tests/import-identity-contract.js
+node tests/recurrence-contract.js
+```
 
 This is a collaboration between a music data nerd (me) and Claude (Anthropic's AI assistant). The entire tool is a single HTML file with no dependencies - just open it in a browser.
 
