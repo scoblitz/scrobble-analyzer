@@ -15,7 +15,7 @@ const api = load(['normalizeArtist', 'normalizeAlbum', 'normalizeTrack', 'stripM
     'differsOnlyByCase', 'differsOnlyInvisibly', 'findArtistVariations', 'findAlbumVariations', 'findTrackVariations', 'findInvisibleCharacterIssues',
     'getIssueId', 'getItemId', 'getMemberKey', 'getLegacyIssueId', 'getLegacyItemId', 'currentBaseline', 'decodeDecisionId',
     'migrateIssueIdentities', 'libraryBaselines', 'dismissalStatus', 'recurrenceDelta', 'addRememberedRecurrences', 'isKeptMember', 'caseOnlyMembers',
-    'observeFixedRecords', 'recurrenceNote', 'needsGroupingReview'], { console: { log() {} } });
+    'observeFixedRecords', 'recurrenceNote', 'needsGroupingReview', 'freshNormalizationDecision'], { console: { log() {} } });
 const S = (Artist, Album, Track, n) => Array.from({ length: n }, () => ({ Artist, Album, Track }));
 const tests = [], test = (name, fn) => tests.push([name, fn]);
 let migrate;
@@ -109,6 +109,17 @@ test('a fresh decision at the new key takes precedence over old migration source
     assert.equal(result.corrections[newId].name, 'SONG');
     assert.equal(result.items[oldId].identityAmbiguous, true);
     assert.equal(result.ambiguous, 0);
+});
+test('a fresh Ignore on a split child stays effective when old correction memory is ambiguous', () => {
+    const old = issue('song', ['Song', 'Song (Part 1) (Live)']), id = api.getIssueId(old);
+    const first = migrate({ [id]: fixed(old) }, { [id]: target('Song') });
+    const next = issue('song', ['Song', 'Song (Live)']);
+    first.items[id] = { ...fixed(next), intent: 'ignored', normalizationVersion: 2 };
+    const again = migrate(first.items, first.corrections, [next]);
+    assert.equal(api.dismissalStatus(again.items[id], api.currentBaseline(next), again.corrections[id]), 'hidden');
+    assert.equal(again.items[id].identityAmbiguous, undefined);
+    assert.equal(again.corrections[id].normalizationAmbiguous, true);
+    assert.equal(again.ambiguous, 0);
 });
 test('migration is idempotent; unmatched legacy decisions and choices stay recoverable', () => {
     const old = issue('song', ['Song (Part 1) (Live)', 'Song (Part 1) (Remastered)']), id = api.getIssueId(old);

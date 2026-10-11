@@ -20,7 +20,7 @@ const names = ['parseCSV', 'parseCSVLine', 'parseCSVRecords', 'getIssueId', 'get
     'normalizeArtist', 'normalizeAlbum', 'normalizeTrack', 'stripMetadataLabels', 'differsOnlyByCase', 'getVisibleString',
     'hasInvisibleChars', 'differsOnlyInvisibly', 'findArtistVariations',
     'findAlbumVariations', 'findTrackVariations', 'findMissingAlbums',
-    'findCompilations', 'findInvisibleCharacterIssues', 'currentBaseline',
+    'findCompilations', 'isCompilationAlbum', 'findInvisibleCharacterIssues', 'currentBaseline',
     'dismissalStatus', 'getLegacyIssueId', 'getLegacyItemId', 'migrateIssueIdentities', 'isKeptMember'];
 const api = load(names, { console: { log() {} } });
 const tests = [];
@@ -134,7 +134,7 @@ test('existing v3 decisions win and unrelated legacy records remain recoverable'
 });
 
 test('only the latest import can commit results or show a read error', async () => {
-    const state = { importSequence: 0 };
+    const state = { importSequence: 0, expandedIssues: new Set(), correctionDrafts: new Map() };
     const readers = [], pending = [], published = [];
     class FileReader {
         constructor() { readers.push(this); }
@@ -151,6 +151,7 @@ test('only the latest import can commit results or show a read error', async () 
         addRememberedRecurrences: issues => issues, saveDismissedState() {},
         migrateIssueIdentities: items => ({ items, ambiguous: 0 }), showImportNotices() {},
         migrateNormalizationIdentities: items => ({ items, corrections: {}, ambiguous: 0 }),
+        buildAlbumEvidence: () => new Map(), issueGrid: { innerHTML: '' },
         displayResults: () => published.push({ username: state.username, artists: state.issues.map(i => i.artist) }), escapeHtml: x => x };
     for (const name of ['findArtistVariations', 'findAlbumVariations', 'findTrackVariations', 'findMissingAlbums', 'findCompilations', 'findInvisibleCharacterIssues']) {
         globals[name] = rows => [{ artist: rows[0].Artist }];

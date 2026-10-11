@@ -18,7 +18,8 @@ const names = ['getIssueId', 'getItemId', 'getMemberKey', 'decodeDecisionId',
     'normalizeArtist', 'normalizeAlbum', 'normalizeTrack', 'stripMetadataLabels', 'differsOnlyByCase', 'getVisibleString', 'hasInvisibleChars',
     'currentBaseline', 'dismissalStatus', 'recurrenceDelta', 'recurrenceNote',
     'libraryBaselines', 'observeFixedRecords', 'addRememberedRecurrences',
-    'exportObservation', 'isOlderObservation', 'isKeptMember', 'caseOnlyMembers', 'migrateNormalizationIdentities', 'needsGroupingReview'];
+    'exportObservation', 'isOlderObservation', 'isKeptMember', 'caseOnlyMembers', 'migrateNormalizationIdentities', 'needsGroupingReview',
+    'isCompilationAlbum', 'buildAlbumEvidence', 'freshNormalizationDecision'];
 const tests = [], test = (name, fn) => tests.push([name, fn]);
 const S = (Artist, Album, Track, n, Date = '100') => Array.from({ length: n }, () => ({ Artist, Album, Track, Date }));
 let api;
@@ -213,7 +214,7 @@ test('optional controls use raw choices, escape metadata, and do not imply a def
     assert.equal(ui.correctionControlsHtml(issue, id, false), '');
 });
 test('full import sequence records disappearance, rejects older observations, and reopens a lone recurrence', async () => {
-    const state = { importSequence: 0 }, records = new Map();
+    const state = { importSequence: 0, expandedIssues: new Set(), correctionDrafts: new Map() }, records = new Map();
     let finished;
     class FileReader {
         readAsText(file) { finished = this.onload({ target: { result: JSON.stringify(file) } }); }
@@ -222,6 +223,7 @@ test('full import sequence records disappearance, rejects older observations, an
     const globals = { ...api, ...nodes, state, FileReader, document: { getElementById: () => ({ style: {} }) },
         console: { log() {}, error(...errors) { throw errors[1] || new Error(errors[0]); } }, parseCSV: text => { const file = JSON.parse(text); return { username: file.username || 'test-user', rows: file.rows }; },
         hashString: text => JSON.parse(text).hash, sleep: () => Promise.resolve(), setView() {}, migrateOldDismissals() {},
+        issueGrid: { innerHTML: '' },
         migrateIssueIdentities: items => ({ items, ambiguous: 0 }), showImportNotices() {}, displayResults() {}, escapeHtml: x => x,
         localStorage: { getItem: key => records.get(key), setItem: (key, value) => records.set(key, value) },
         findArtistVariations: () => [], findAlbumVariations: () => [], findInvisibleCharacterIssues: () => [], findMissingAlbums: () => [], findCompilations: () => [],

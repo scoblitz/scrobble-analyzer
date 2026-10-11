@@ -444,6 +444,27 @@
             border-color: rgba(255, 107, 53, 0.45);
         }
 
+        .details-toggle, .page-btn, .album-candidate button {
+            background: var(--bg-dark);
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 0.4rem 0.65rem;
+            font: inherit;
+            font-size: 0.75rem;
+            cursor: pointer;
+        }
+        button:focus-visible, a:focus-visible, select:focus-visible, input:focus-visible, [role="button"]:focus-visible {
+            outline: 2px solid var(--accent-orange);
+            outline-offset: 3px;
+        }
+        .page-btn:disabled { opacity: 0.4; cursor: default; }
+        .pagination { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; margin: 1rem 0; color: var(--text-secondary); font-size: 0.8rem; }
+        .pagination[hidden], .issue-details[hidden] { display: none; }
+        .album-candidates { margin-top: 0.5rem; }
+        .album-candidate { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; padding: 0.4rem 0; }
+        .album-candidate small { color: var(--text-muted); }
+
         .issue-header {
             display: flex;
             align-items: flex-start;
@@ -998,7 +1019,7 @@
         <aside class="sidebar">
             <div class="sidebar-section">
                 <div class="sidebar-title">Data Source</div>
-                <div class="upload-zone" id="upload-zone">
+                <div class="upload-zone" id="upload-zone" role="button" tabindex="0" aria-label="Upload a Last.fm CSV export">
                     <div class="upload-icon">📁</div>
                     <div class="upload-text">
                         Drop your <strong>Last.fm CSV</strong> here<br>
@@ -1016,37 +1037,37 @@
 
             <div class="sidebar-section" id="nav-section" style="display: none;">
                 <div class="sidebar-title">Issue Types</div>
-                <div class="nav-item active" data-filter="all">
+                <div class="nav-item active" role="button" tabindex="0" aria-pressed="true" data-filter="all">
                     <span class="nav-icon">📋</span>
                     <span>All Issues</span>
                     <span class="count" id="count-all">0</span>
                 </div>
-                <div class="nav-item" data-filter="artist">
+                <div class="nav-item" role="button" tabindex="0" aria-pressed="false" data-filter="artist">
                     <span class="nav-icon">🎤</span>
                     <span>Artist Variations</span>
                     <span class="count" id="count-artist">0</span>
                 </div>
-                <div class="nav-item" data-filter="album">
+                <div class="nav-item" role="button" tabindex="0" aria-pressed="false" data-filter="album">
                     <span class="nav-icon">💿</span>
                     <span>Album Variations</span>
                     <span class="count" id="count-album">0</span>
                 </div>
-                <div class="nav-item" data-filter="track">
+                <div class="nav-item" role="button" tabindex="0" aria-pressed="false" data-filter="track">
                     <span class="nav-icon">🎵</span>
                     <span>Track Variations</span>
                     <span class="count" id="count-track">0</span>
                 </div>
-                <div class="nav-item" data-filter="missing">
+                <div class="nav-item" role="button" tabindex="0" aria-pressed="false" data-filter="missing">
                     <span class="nav-icon">❓</span>
                     <span>Tracks Missing Albums</span>
                     <span class="count" id="count-missing">0</span>
                 </div>
-                <div class="nav-item" data-filter="compilation">
+                <div class="nav-item" role="button" tabindex="0" aria-pressed="false" data-filter="compilation">
                     <span class="nav-icon">📀</span>
                     <span>Tracks on Compilations</span>
                     <span class="count" id="count-compilation">0</span>
                 </div>
-                <div class="nav-item" data-filter="invisible">
+                <div class="nav-item" role="button" tabindex="0" aria-pressed="false" data-filter="invisible">
                     <span class="nav-icon">👻</span>
                     <span>Invisible Characters</span>
                     <span class="count" id="count-invisible">0</span>
@@ -1054,9 +1075,9 @@
                 <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border);">
                     <div class="sidebar-title">View</div>
                     <div class="view-switch" id="view-switch">
-                        <button class="view-btn active" data-view="active" title="Open issues, including ones that came back after being marked fixed">Active <span class="count" id="count-active">0</span></button>
-                        <button class="view-btn" data-view="fixed" title="Marked fixed and unchanged since">Fixed <span class="count" id="count-fixed">0</span></button>
-                        <button class="view-btn" data-view="ignored" title="Marked ignore - never shown as active">Ignored <span class="count" id="count-ignored">0</span></button>
+                        <button class="view-btn active" aria-pressed="true" data-view="active" title="Open issues, including ones that came back after being marked fixed">Active <span class="count" id="count-active">0</span></button>
+                        <button class="view-btn" aria-pressed="false" data-view="fixed" title="Marked fixed and unchanged since">Fixed <span class="count" id="count-fixed">0</span></button>
+                        <button class="view-btn" aria-pressed="false" data-view="ignored" title="Marked ignore - never shown as active">Ignored <span class="count" id="count-ignored">0</span></button>
                     </div>
                 </div>
             </div>
@@ -1064,7 +1085,7 @@
             <div class="sidebar-section" id="artist-filter-section" style="display: none;">
                 <div class="sidebar-title">Filter by Artist</div>
                 <div class="filter-row">
-                    <select id="artist-filter" style="width: 100%; padding: 0.5rem; background: var(--bg-dark); border: 1px solid var(--border); border-radius: 4px; color: var(--text-primary); font-family: inherit;">
+                    <select id="artist-filter" aria-label="Filter by artist" style="width: 100%; padding: 0.5rem; background: var(--bg-dark); border: 1px solid var(--border); border-radius: 4px; color: var(--text-primary); font-family: inherit;">
                         <option value="">All Artists</option>
                     </select>
                     <button class="filter-clear" id="artist-filter-clear" title="Show all artists" aria-label="Clear artist filter">✕</button>
@@ -1143,15 +1164,16 @@
                 <div class="content-header">
                     <div>
                         <div class="content-title" id="results-title">All Issues</div>
-                        <div class="content-subtitle" id="results-subtitle">Sorted by impact (scrobble count)</div>
+                        <div class="content-subtitle" id="results-subtitle" role="status" tabindex="-1">Sorted by impact (scrobble count)</div>
                     </div>
                     <div style="display: flex; gap: 1rem; align-items: flex-start;">
                         <div class="sort-controls">
-                            <span>Sort by:</span>
+                            <label for="sort-select">Sort by:</label>
                             <select id="sort-select">
                                 <option value="count">Impact (Count)</option>
                                 <option value="variations">Variations</option>
                                 <option value="name">Name</option>
+                                <option value="followups">Follow-ups first</option>
                             </select>
                         </div>
                         <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 0.35rem;">
@@ -1168,9 +1190,13 @@
 
                 <div class="toolbar">
                     <div class="search-box">
-                        <input type="text" id="search-input" placeholder="Search artists, albums, tracks...">
+                        <input type="text" id="search-input" aria-label="Search artists, albums, tracks and remembered corrections" placeholder="Search artists, albums, tracks...">
                         <button class="search-clear" id="search-clear" title="Clear search" aria-label="Clear search">✕</button>
                     </div>
+                    <label style="display: flex; align-items: center; gap: 0.5rem; color: var(--text-secondary); font-size: 0.8rem;">
+                        <input type="checkbox" id="followups-only">
+                        Follow-ups only (Active)
+                    </label>
                 </div>
 
                 <div class="summary-bar" id="summary-bar">
@@ -1206,9 +1232,11 @@
                     </div>
                 </div>
 
+                <nav class="pagination" id="pagination-top" aria-label="Issue pages"></nav>
                 <div class="issue-grid" id="issue-grid">
                     <!-- Issues will be populated here -->
                 </div>
+                <nav class="pagination" id="pagination-bottom" aria-label="Issue pages"></nav>
             </div>
         </section>
     </main>
@@ -1232,6 +1260,13 @@
             currentArtist: '',
             searchQuery: '',
             sortBy: 'count',
+            followupsOnly: false,
+            page: 0,
+            pageSize: 100,
+            expandedIssues: new Set(),
+            correctionDrafts: new Map(),
+            albumEvidence: new Map(),
+            albumMemory: new Map(),
             importSequence: 0,
             importNotice: '',
             persistenceNotice: '',
@@ -1461,7 +1496,7 @@
         function correctionLabel(choice) {
             if (!choice) return '';
             const context = choice.artist ? ` (${choice.artist})` : '';
-            return `Previously chosen ${choice.kind}: ${choice.name}${context}`;
+            return `Previously chosen ${choice.kind}: ${choice.name}${context}${choice.normalizationAmbiguous ? ' — review this choice after grouping changes' : ''}`;
         }
 
         function needsGroupingReview(record, current, correction) {
@@ -1486,7 +1521,7 @@
         function rememberedCorrectionHtml(id) {
             const choice = state.corrections[id];
             if (!choice) return '';
-            return `<div class="remembered-correction">Previously chosen ${choice.kind}: ${escapeHtml(correctionChoiceLabel(choice))}</div>`;
+            return `<div class="remembered-correction">Previously chosen ${choice.kind}: ${escapeHtml(correctionChoiceLabel(choice))}${choice.normalizationAmbiguous ? ' — review this choice after grouping changes' : ''}</div>`;
         }
 
         // Options expose non-space whitespace; their values retain exact raw
@@ -1496,7 +1531,7 @@
             return describe(row.name) + (row.artist ? ` (${describe(row.artist)})` : '');
         }
 
-        function correctionControlsHtml(issue, id, perTrack) {
+        function correctionControlsHtml(issue, id, perTrack, row) {
             if (state.view !== 'active' || state.historicalImport) return '';
             const choice = state.corrections[id];
             if (perTrack) return `<details class="correction-memory" data-correction-id="${id}">
@@ -1504,6 +1539,7 @@
                 <label>Album chosen on Last.fm (optional)
                     <input class="correction-album" type="text" value="${escapeHtml(choice ? choice.name : '')}" placeholder="Exact album name" autocomplete="off">
                 </label>
+                ${row ? albumCandidatesHtml(issue, row) : ''}
                 <small>Saved when you mark Fixed. Leave empty to forget a previous choice.</small>
             </details>`;
             const rows = issue.variations || [];
@@ -1534,6 +1570,16 @@
             </div>`;
         }
 
+        function albumCandidatesHtml(issue, row) {
+            const candidates = getAlbumCandidates(state.albumEvidence, state.albumMemory, issue.artist || '', row.name, issue.album || '');
+            if (!candidates.length) return '<small>No album evidence for this exact artist and track in this export or your saved choices. Use the lookup to research it.</small>';
+            return `<div class="album-candidates"><small>Albums to consider — evidence, not a verified original release:</small>${candidates.map(candidate => {
+                const url = getLastFmUrl(issue.artist, candidate.name, null);
+                const evidence = [candidate.remembered ? 'Previously chosen for this artist and track' : '', candidate.count ? `${candidate.count.toLocaleString()} play${candidate.count === 1 ? '' : 's'} of this exact track in your library` : ''].filter(Boolean).join(' · ');
+                return `<div class="album-candidate"><span>${escapeHtml(correctionChoiceLabel({ name: candidate.name }))}</span><small>${escapeHtml(evidence)}</small><a class="lastfm-link" href="${url}" target="_blank" rel="noopener">Last.fm</a><button type="button" class="use-album" data-album="${escapeHtml(candidate.name)}">Use this album</button></div>`;
+            }).join('')}</div>`;
+        }
+
         function readCorrectionChoice(card, id, issue) {
             const control = [...card.querySelectorAll('.correction-memory')].find(el => el.dataset.correctionId === id);
             if (!control) return undefined;
@@ -1561,7 +1607,10 @@
 
         function setView(view) {
             state.view = view;
-            document.querySelectorAll('.view-btn').forEach(b => b.classList.toggle('active', b.dataset.view === view));
+            document.querySelectorAll('.view-btn').forEach(b => {
+                b.classList.toggle('active', b.dataset.view === view);
+                b.setAttribute('aria-pressed', String(b.dataset.view === view));
+            });
         }
 
         function saveDismissedState() {
@@ -1799,14 +1848,18 @@
             return result;
         }
 
+        function freshNormalizationDecision(id, items, choices) {
+            return !!((items[id] && items[id].normalizationVersion === 2 && !items[id].identityAmbiguous && !items[id].groupingReview && !items[id].normalizationUpgrade)
+                || (!items[id] && choices[id] && choices[id].normalizationVersion === 2 && !choices[id].normalizationAmbiguous));
+        }
+
         // Normalizer refinements can move or split grouping-key IDs. Match
         // using saved raw members, independent of the current export or which
         // cards its detectors emit. Never copy a broad decision to children.
         function migrateNormalizationIdentities(items, corrections, issues) {
             const migrated = { ...items }, choices = { ...corrections }, targets = new Map();
             let ambiguous = 0;
-            const fresh = id => (items[id] && items[id].normalizationVersion === 2 && !items[id].identityAmbiguous && !items[id].groupingReview && !items[id].normalizationUpgrade)
-                || (!items[id] && choices[id] && choices[id].normalizationVersion === 2 && !choices[id].normalizationAmbiguous);
+            const fresh = id => freshNormalizationDecision(id, items, choices);
             const quarantine = (id, destinations) => {
                 if (items[id]) migrated[id] = { ...items[id], identityAmbiguous: true, normalizationTargets: destinations };
                 if (choices[id]) choices[id] = { ...choices[id], normalizationAmbiguous: true, normalizationTargets: destinations };
@@ -1816,6 +1869,9 @@
             ids.forEach(id => {
                 const identity = decodeDecisionId(id);
                 if (!identity || !['album', 'track'].includes(identity.type) || identity.itemName !== undefined) return;
+                // Ignore deliberately keeps old correction memory. Its
+                // ambiguity must not undo a fresh decision on this child.
+                if (fresh(id)) return;
                 const record = items[id], choice = choices[id];
                 const members = record && record.members ? Object.keys(record.members) : choice && choice.sourceMembers;
                 if (!members || !members.length) return; // Retain baseline-less legacy or restored memory without source names.
@@ -2220,6 +2276,7 @@
                     if (importSequence !== state.importSequence) return;
                     
                     const invisibleIssues = findInvisibleCharacterIssues(scrobbles);
+                    const albumEvidence = buildAlbumEvidence(scrobbles);
                     
                     progressText.textContent = 'Finalizing...';
                     progressFill.style.width = '100%';
@@ -2229,6 +2286,11 @@
                     state.scrobbles = scrobbles;
                     state.username = parsed.username;
                     state.fileHash = fileHash;
+                    state.albumEvidence = albumEvidence;
+                    state.expandedIssues.clear();
+                    state.correctionDrafts.clear();
+                    state.page = 0;
+                    issueGrid.innerHTML = '';
                     state.persistenceNotice = '';
                     state.dismissals = loadDismissedState(parsed.username);
                     state.currentObservation = exportObservation(scrobbles, file, fileHash);
@@ -2824,10 +2886,7 @@
             return issues;
         }
 
-        // Find compilation albums
-        function findCompilations(scrobbles) {
-            console.log('Finding compilations...');
-            
+        function isCompilationAlbum(album) {
             const compilationPatterns = [
                 /greatest hits/i,
                 /best of/i,
@@ -2851,18 +2910,56 @@
                 'the gold experience', // Prince album
             ];
 
-            const compilations = Object.create(null);
+            return !falsePositives.includes(album.toLowerCase()) && compilationPatterns.some(pattern => pattern.test(album));
+        }
+
+        // Exact local evidence only: a live or remastered track title must
+        // not silently suggest an album for a different recording.
+        function buildAlbumEvidence(scrobbles) {
+            const evidence = new Map(), compilationCache = new Map();
+            scrobbles.forEach(row => {
+                if (!row.Artist || !row.Track || !row.Album || !row.Album.trim()) return;
+                if (!compilationCache.has(row.Album)) compilationCache.set(row.Album, isCompilationAlbum(row.Album));
+                if (compilationCache.get(row.Album)) return;
+                const key = JSON.stringify([row.Artist, row.Track]);
+                if (!evidence.has(key)) evidence.set(key, new Map());
+                const albums = evidence.get(key);
+                albums.set(row.Album, (albums.get(row.Album) || 0) + 1);
+            });
+            return evidence;
+        }
+
+        function rememberedAlbumEvidence(corrections) {
+            const memory = new Map();
+            Object.entries(corrections).forEach(([id, choice]) => {
+                const identity = decodeDecisionId(id);
+                if (!identity || !['missing', 'compilation'].includes(identity.type) || identity.itemName === undefined || choice.kind !== 'album' || choice.normalizationAmbiguous || choice.artist !== identity.artist) return;
+                const key = JSON.stringify([identity.artist, identity.itemName]);
+                if (!memory.has(key)) memory.set(key, new Set());
+                memory.get(key).add(choice.name);
+            });
+            return memory;
+        }
+
+        function getAlbumCandidates(evidence, memory, artist, track, sourceAlbum) {
+            const key = JSON.stringify([artist, track]), candidates = new Map();
+            (evidence.get(key) || new Map()).forEach((count, name) => {
+                if (name !== sourceAlbum) candidates.set(name, { name, count, remembered: false });
+            });
+            (memory.get(key) || new Set()).forEach(name => {
+                if (name !== sourceAlbum) candidates.set(name, { name, count: candidates.get(name)?.count || 0, remembered: true });
+            });
+            return [...candidates.values()].sort((a, b) => Number(b.remembered) - Number(a.remembered) || b.count - a.count || a.name.localeCompare(b.name));
+        }
+
+        // Find compilation albums
+        function findCompilations(scrobbles) {
+            console.log('Finding compilations...');
+            const compilations = Object.create(null), compilationCache = new Map();
             scrobbles.forEach(s => {
                 if (!s.Album || !s.Artist) return;
-                const albumLower = s.Album.toLowerCase();
-                
-                // Skip known false positives (exact match only — a substring check
-                // would wrongly exclude real compilations like ABBA's "Gold: Greatest Hits")
-                if (falsePositives.includes(albumLower)) {
-                    return;
-                }
-
-                const isCompilation = compilationPatterns.some(p => p.test(s.Album));
+                if (!compilationCache.has(s.Album)) compilationCache.set(s.Album, isCompilationAlbum(s.Album));
+                const isCompilation = compilationCache.get(s.Album);
                 if (isCompilation) {
                     const key = JSON.stringify([s.Artist, s.Album]);
                     if (!compilations[key]) {
@@ -3190,11 +3287,9 @@
             // Populate artist filter - get artist from either .artist property or extract from .title
             const artistsSet = new Set();
             state.issues.forEach(i => {
-                if (i.artist) {
-                    artistsSet.add(i.artist);
-                } else if (i.title && i.type === 'artist') {
-                    artistsSet.add(i.title);
-                }
+                if (i.type === 'artist' || (i.type === 'invisible' && i.subtype === 'artist')) {
+                    (i.variations || []).forEach(row => artistsSet.add(row.name));
+                } else if (i.artist) artistsSet.add(i.artist);
             });
             const artists = [...artistsSet].sort();
             
@@ -3303,138 +3398,158 @@
             document.getElementById('count-ignored').textContent = hidden.ignored;
         }
 
-        // Render issue cards
-        function renderIssues() {
-            console.log('Rendering issues...');
-            console.log('Current filter:', state.currentFilter);
-            console.log('Current artist:', state.currentArtist);
-            console.log('Search query:', state.searchQuery);
-            console.log('View:', state.view);
-            
-            let filtered = [...state.issues];  // Create a copy
-            
-            // Add issue IDs and dismissal status. "Dismissed" below means
-            // hidden; a recurred item counts as active everywhere.
-            filtered = filtered.map(issue => {
-                const issueId = getIssueId(issue);
-                const status = cardStatus(issue, issueId);
-                
-                // Per-track types are governed by their rows: how many
-                // belong in the current view
-                let rowsInView = 0;
-                if (['missing', 'compilation'].includes(issue.type)) {
-                    (issue.variations || []).forEach((v, i) => {
-                        if (inView(state.view, itemStatus(issueId, v), state.dismissals[getItemId(issueId, v.name)])) rowsInView++;
-                    });
-                }
-                
-                return {
-                    ...issue,
-                    _id: issueId,
-                    _status: status,
-                    _isDismissed: status === 'hidden',
-                    _rowsInView: rowsInView
-                };
-            });
-            
-            // Keep what belongs in the current view
-            filtered = filtered.filter(i => {
-                if (['missing', 'compilation'].includes(i.type)) return i._rowsInView > 0;
-                return inView(state.view, i._status, state.dismissals[i._id]);
-            });
-            
-            console.log('Starting with issues:', filtered.length);
-
-            // Apply type filter
-            if (state.currentFilter !== 'all') {
-                filtered = filtered.filter(i => i.type === state.currentFilter);
-                console.log('After type filter:', filtered.length);
-            }
-
-            // Apply artist filter
-            if (state.currentArtist) {
-                filtered = filtered.filter(i => {
-                    const issueArtist = i.artist || (i.type === 'artist' ? i.title : null);
-                    return issueArtist === state.currentArtist;
+        // View membership precedes search. Per-track matches narrow rows;
+        // variation matches retain their siblings for comparison.
+        function selectIssueRows(issues, options, items, corrections, statusForCard, statusForItem) {
+            const query = options.searchQuery.toLowerCase().trim();
+            const contains = value => typeof value === 'string' && value.toLowerCase().includes(query);
+            const reviewIds = new Set();
+            [...Object.entries(items), ...Object.entries(corrections)].forEach(([id, record]) => {
+                if (!record.identityAmbiguous && !record.normalizationAmbiguous) return;
+                [id, ...(record.normalizationTargets || [])].forEach(target => {
+                    if (!freshNormalizationDecision(target, items, corrections)) reviewIds.add(target);
                 });
-                console.log('After artist filter:', filtered.length);
-            }
-
-            // Apply search
-            if (state.searchQuery) {
-                const query = state.searchQuery.toLowerCase();
-                filtered = filtered.filter(i => 
-                    (i.title && i.title.toLowerCase().includes(query)) ||
-                    (i.description && i.description.toLowerCase().includes(query)) ||
-                    (i.variations && i.variations.some(v => v.name && v.name.toLowerCase().includes(query)))
-                );
-                console.log('After search filter:', filtered.length);
-            }
-
-            // Sort
-            if (state.sortBy === 'count') {
-                filtered.sort((a, b) => b.totalCount - a.totalCount);
-            } else if (state.sortBy === 'variations') {
-                filtered.sort((a, b) => (b.variations?.length || 0) - (a.variations?.length || 0));
-            } else if (state.sortBy === 'name') {
-                filtered.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
-            }
-
-            // Update title
-            const filterNames = {
-                all: 'All Issues',
-                artist: 'Artist Variations',
-                album: 'Album Variations',
-                track: 'Track Variations',
-                missing: 'Tracks Missing Albums',
-                compilation: 'Tracks on Compilations',
-                invisible: 'Invisible Characters'
-            };
-            document.getElementById('results-title').textContent = filterNames[state.currentFilter] || 'All Issues';
-            
-            // Calculate display count - for missing/compilation (or all), count tracks not cards
-            let displayCount = 0;
-            filtered.forEach(issue => {
-                displayCount += ['missing', 'compilation'].includes(issue.type) ? issue._rowsInView : 1;
             });
-            document.getElementById('results-subtitle').textContent = `${displayCount} issues found`;
+            const result = [];
+            issues.forEach(issue => {
+                if (options.currentFilter !== 'all' && issue.type !== options.currentFilter) return;
+                const artistCard = issue.type === 'artist' || (issue.type === 'invisible' && issue.subtype === 'artist');
+                if (options.currentArtist && !(artistCard ? (issue.variations || []).some(row => row.name === options.currentArtist) : issue.artist === options.currentArtist)) return;
+                const id = getIssueId(issue), status = statusForCard(issue, id), perTrack = ['missing', 'compilation'].includes(issue.type);
+                let rows = (issue.variations || []).map(row => {
+                    if (!perTrack) return row;
+                    const itemId = getItemId(id, row.name), itemStatus = statusForItem(id, row);
+                    return { ...row, _itemId: itemId, _itemStatus: itemStatus, _isItemDismissed: itemStatus === 'hidden' };
+                });
+                if (perTrack) rows = rows.filter(row => inView(options.view, row._itemStatus, items[row._itemId]));
+                else if (!inView(options.view, status, items[id])) return;
+                const followup = status === 'recurred' || reviewIds.has(id);
+                const rowFollowup = row => row._itemStatus === 'recurred' || reviewIds.has(row._itemId);
+                if (options.followupsOnly && options.view === 'active') {
+                    if (perTrack) rows = rows.filter(rowFollowup);
+                    else if (!followup) return;
+                }
+                if (query) {
+                    const contextMatch = [issue.title, issue.artist, issue.album].some(contains);
+                    const rowMatch = row => [row.name, row.artist, corrections[row._itemId]?.name, corrections[row._itemId]?.artist].some(contains);
+                    if (perTrack) {
+                        if (!contextMatch) rows = rows.filter(rowMatch);
+                    } else if (!contextMatch && !contains(issue.description) && !contains(corrections[id]?.name) && !rows.some(rowMatch)) return;
+                }
+                if (perTrack && !rows.length) return;
+                result.push({ ...issue, _id: id, _status: status, _isDismissed: status === 'hidden', _rowsInView: perTrack ? rows.length : 0,
+                    _identityReview: reviewIds.has(id),
+                    _followups: perTrack ? rows.filter(rowFollowup).length : Number(followup),
+                    _visibleRows: rows, _visibleCount: rows.reduce((sum, row) => sum + (row.count || 0), 0) });
+            });
+            result.sort((a, b) => {
+                const nameOrder = (a.title || '').localeCompare(b.title || '') || a._id.localeCompare(b._id);
+                if (options.sortBy === 'followups') return b._followups - a._followups || b._visibleCount - a._visibleCount || nameOrder;
+                if (options.sortBy === 'variations') return b._visibleRows.length - a._visibleRows.length || nameOrder;
+                if (options.sortBy === 'name') return nameOrder;
+                return b._visibleCount - a._visibleCount || nameOrder;
+            });
+            return result;
+        }
 
-            // Render
+        function issuePage(issues, requestedPage, size) {
+            const pages = Math.ceil(issues.length / size), page = Math.max(0, Math.min(requestedPage, Math.max(0, pages - 1)));
+            return { cards: issues.slice(page * size, (page + 1) * size), page, pages,
+                start: issues.length ? page * size + 1 : 0, end: Math.min((page + 1) * size, issues.length),
+                findings: issues.reduce((sum, issue) => sum + (['missing', 'compilation'].includes(issue.type) ? issue._rowsInView : 1), 0) };
+        }
+
+        function toggleIssueDetails(card) {
+            const expanded = !state.expandedIssues.has(card.dataset.issueId);
+            if (expanded) state.expandedIssues.add(card.dataset.issueId);
+            else state.expandedIssues.delete(card.dataset.issueId);
+            card.classList.toggle('expanded', expanded);
+            const button = card.querySelector('.details-toggle');
+            button.setAttribute('aria-expanded', String(expanded));
+            button.textContent = expanded ? 'Hide details ▴' : 'Show details ▾';
+            card.querySelector('.issue-details').hidden = !expanded;
+        }
+
+        function renderFromFirstPage() {
+            state.page = 0;
+            renderIssues();
+            document.querySelector('.content').scrollTop = 0;
+        }
+
+        function changeIssuePage(action) {
+            state.page += action === 'next' ? 1 : -1;
+            renderIssues();
+            document.querySelector('.content').scrollTop = 0;
+            const navigation = document.getElementById('pagination-top');
+            const preferred = navigation.querySelector(`[data-page-action="${action}"]`);
+            (preferred && !preferred.disabled ? preferred : navigation.querySelector('.page-btn:not(:disabled)'))?.focus({ preventScroll: true });
+        }
+
+        // Draft fields remain local to this import and survive paging, search
+        // and actions on other rows. They become saved choices only on Fixed.
+        function captureCorrectionDrafts() {
+            issueGrid.querySelectorAll('.correction-memory').forEach(control => {
+                const fields = {};
+                ['correction-album', 'correction-choice', 'correction-custom', 'correction-custom-artist'].forEach(name => {
+                    const field = control.querySelector('.' + name);
+                    if (field) fields[name] = field.value;
+                });
+                state.correctionDrafts.set(control.dataset.correctionId, { fields, open: control.open });
+            });
+        }
+
+        function applyCorrectionDrafts(card) {
+            card.querySelectorAll('.correction-memory').forEach(control => {
+                const draft = state.correctionDrafts.get(control.dataset.correctionId);
+                if (!draft) return;
+                Object.entries(draft.fields).forEach(([name, value]) => {
+                    const field = control.querySelector('.' + name);
+                    if (field) field.value = value;
+                });
+                if (control.tagName === 'DETAILS') control.open = draft.open;
+                const custom = control.querySelector('.correction-custom-fields');
+                if (custom) custom.hidden = control.querySelector('.correction-choice').value !== 'custom';
+            });
+        }
+
+        // Render issue cards
+        function renderIssues(resetDrafts = []) {
+            captureCorrectionDrafts();
+            resetDrafts.forEach(id => state.correctionDrafts.delete(id));
+            state.albumMemory = rememberedAlbumEvidence(state.corrections);
+            const focused = document.activeElement;
+            const focusedCard = focused?.closest?.('.issue-card');
+            const focusedId = focusedCard?.dataset.issueId;
+            const focusedItem = focused?.dataset.itemId;
+            const focusedIndex = [...issueGrid.querySelectorAll('.issue-card')].indexOf(focusedCard);
+            const filtered = selectIssueRows(state.issues, state, state.dismissals, state.corrections, cardStatus, itemStatus);
+            const page = issuePage(filtered, state.page, state.pageSize);
+            state.page = page.page;
+            document.getElementById('followups-only').disabled = state.view !== 'active';
+            const filterNames = { all: 'All Issues', artist: 'Artist Variations', album: 'Album Variations', track: 'Track Variations',
+                missing: 'Tracks Missing Albums', compilation: 'Tracks on Compilations', invisible: 'Invisible Characters' };
+            document.getElementById('results-title').textContent = filterNames[state.currentFilter] || 'All Issues';
+            document.getElementById('results-subtitle').textContent = `${page.findings.toLocaleString()} findings in ${filtered.length.toLocaleString()} cards · showing cards ${page.start.toLocaleString()}–${page.end.toLocaleString()}`;
+            ['pagination-top', 'pagination-bottom'].forEach(id => {
+                const navigation = document.getElementById(id);
+                navigation.hidden = page.pages <= 1;
+                navigation.innerHTML = `<button type="button" class="page-btn" data-page-action="previous"${!page.page ? ' disabled' : ''}>← Previous</button>
+                    <span role="status">Page ${page.page + 1} of ${page.pages} · ${page.start}–${page.end} of ${filtered.length} cards</span>
+                    <button type="button" class="page-btn" data-page-action="next"${page.page + 1 >= page.pages ? ' disabled' : ''}>Next →</button>`;
+            });
             issueGrid.innerHTML = '';
-            
-            if (filtered.length === 0) {
+            if (!filtered.length) {
                 issueGrid.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--text-secondary);">No issues found matching your filters.</div>';
+                if (focusedId) document.getElementById('results-subtitle').focus();
                 return;
             }
-            
-            // Limit to first 100 for performance
-            const toRender = filtered.slice(0, 100);
-            console.log('Rendering', toRender.length, 'of', filtered.length, 'issues');
-            
+            const toRender = page.cards;
             toRender.forEach((issue, index) => {
                 const card = document.createElement('div');
-                card.className = 'issue-card';
+                card.className = 'issue-card' + (state.expandedIssues.has(issue._id) ? ' expanded' : '');
                 card.dataset.issueId = issue._id; // For finding card after re-render
                 
-                // Build variations HTML with Last.fm links
-                // For missing/compilation, filter items based on dismissed state
-                let variationsToRender = issue.variations || [];
-                
-                if (['missing', 'compilation'].includes(issue.type)) {
-                    variationsToRender = variationsToRender.map((v, i) => {
-                        const status = itemStatus(issue._id, v);
-                        return {
-                            ...v,
-                            _itemId: getItemId(issue._id, v.name),
-                            _itemStatus: status,
-                            _isItemDismissed: status === 'hidden'
-                        };
-                    });
-                    
-                    // Keep the rows that belong in the current view
-                    variationsToRender = variationsToRender.filter(v => inView(state.view, v._itemStatus, state.dismissals[v._itemId]));
-                }
-                
+                const variationsToRender = issue._visibleRows;
                 // Which rows differ from a sibling only by which diacritic
                 // they carry - the ones the eye cannot separate (1.9).
                 const confusableByRow = confusableMarkChars(variationsToRender.map(v => v.name || ''));
@@ -3490,7 +3605,7 @@
                             trackName: v.name
                         });
                         if (trackSearchUrl) {
-                            itemLookupHtml = `<a href="${trackSearchUrl}" target="_blank" class="lookup-btn-small" onclick="event.stopPropagation()" title="Look up original album">🔍</a>`;
+                            itemLookupHtml = `<a href="${trackSearchUrl}" target="_blank" class="lookup-btn-small" onclick="event.stopPropagation()" title="Look up original album" aria-label="Research an album for ${escapeHtml(v.name)}">🔍</a>`;
                         }
                     }
                     
@@ -3501,11 +3616,11 @@
                     let itemNoteHtml = '';
                     if (['missing', 'compilation'].includes(issue.type) && v._itemId) {
                         if (v._isItemDismissed) {
-                            itemDismissHtml = `<button class="dismiss-btn-small restore" data-item-id="${v._itemId}" title="Restore">↩️</button>`;
+                            itemDismissHtml = `<button class="dismiss-btn-small restore" data-item-id="${v._itemId}" title="Restore" aria-label="Restore ${escapeHtml(v.name)}">↩️</button>`;
                         } else {
                             itemDismissHtml =
-                                `<button class="dismiss-btn-small" data-item-id="${v._itemId}" data-intent="fixed" title="Fixed on Last.fm - hide until new plays appear under this name">✓</button>` +
-                                `<button class="dismiss-btn-small ignore" data-item-id="${v._itemId}" data-intent="ignored" title="Not a problem - never show again">🚫</button>`;
+                                `<button class="dismiss-btn-small" data-item-id="${v._itemId}" data-intent="fixed" title="Fixed on Last.fm - hide until new plays appear under this name" aria-label="Mark ${escapeHtml(v.name)} fixed">✓</button>` +
+                                `<button class="dismiss-btn-small ignore" data-item-id="${v._itemId}" data-intent="ignored" title="Not a problem - never show again" aria-label="Ignore ${escapeHtml(v.name)}">🚫</button>`;
                         }
                         if (v._itemStatus === 'recurred') {
                             itemNoteHtml = `<span class="recurred-note small">${escapeHtml(recurrenceNote(state.dismissals[v._itemId], v.count, true, state.corrections[v._itemId]))}</span>`;
@@ -3520,7 +3635,7 @@
                     
                     return `
                         <div class="variation-item">
-                            <div class="variation-value">${nameHtml}${lookalikeHtml}${invisibleWarning}${v._itemId ? rememberedCorrectionHtml(v._itemId) + correctionControlsHtml(issue, v._itemId, true) : ''}</div>
+                            <div class="variation-value">${nameHtml}${lookalikeHtml}${invisibleWarning}${v._itemId ? rememberedCorrectionHtml(v._itemId) + correctionControlsHtml(issue, v._itemId, true, v) : ''}</div>
                             ${itemNoteHtml}
                             ${v.count ? `<span class="variation-count">${v.count}</span>` : ''}
                             ${lastFmLinkHtml}
@@ -3591,7 +3706,7 @@
                 // Why a card-level item is back (per-track rows carry their own)
                 const cardNoteHtml = issue._status === 'recurred'
                     ? `<div class="recurred-note">${escapeHtml(recurrenceNote(state.dismissals[issue._id], currentBaseline(issue), false, state.corrections[issue._id]))}</div>`
-                    : '';
+                    : issue._identityReview ? '<div class="recurred-note">Refined detection changed this group’s boundary. Review the prior decision and re-mark this finding.</div>' : '';
                 const hiddenTag = isCardDismissed
                     ? ` <span style="color: var(--text-muted); font-size: 0.75rem;">(${intentLabel(state.dismissals[issue._id])})</span>`
                     : '';
@@ -3629,12 +3744,13 @@
                         </div>
                         <div class="issue-meta">
                             <div>
-                                <div class="issue-count">${(issue.totalCount || 0).toLocaleString()}</div>
+                                <div class="issue-count">${issue._visibleCount.toLocaleString()}</div>
                                 <div class="issue-count-label">scrobbles</div>
                             </div>
                         </div>
                     </div>
-                    <div class="issue-details">
+                    <button type="button" class="details-toggle" aria-expanded="${state.expandedIssues.has(issue._id)}" aria-controls="issue-details-${index}" aria-label="Details for ${escapeHtml(issue.title)}">${state.expandedIssues.has(issue._id) ? 'Hide details ▴' : 'Show details ▾'}</button>
+                    <div class="issue-details" id="issue-details-${index}"${state.expandedIssues.has(issue._id) ? '' : ' hidden'}>
                         <div class="variation-list">
                             ${variationsHtml}
                         </div>
@@ -3643,7 +3759,8 @@
                     </div>
                 `;
 
-                if (state.historicalImport) card.querySelectorAll('button').forEach(button => { button.disabled = true; });
+                if (state.historicalImport) card.querySelectorAll('button:not(.details-toggle)').forEach(button => { button.disabled = true; });
+                applyCorrectionDrafts(card);
                 card.addEventListener('change', e => {
                     if (!e.target.classList.contains('correction-choice')) return;
                     const control = e.target.closest('.correction-memory');
@@ -3659,7 +3776,16 @@
                 });
                 
                 card.addEventListener('click', (e) => {
+                    const detailsButton = e.target.closest('.details-toggle');
+                    if (detailsButton) { toggleIssueDetails(card); return; }
                     if (state.historicalImport && e.target.closest('button')) return;
+                    const albumButton = e.target.closest('.use-album');
+                    if (albumButton) {
+                        const input = albumButton.closest('.correction-memory').querySelector('.correction-album');
+                        input.value = albumButton.dataset.album;
+                        input.focus();
+                        return;
+                    }
                     // "Dismiss all" / "Restore all" on a compilation card: every
                     // track currently showing, by its per-track ID. Checked
                     // before the plain dismiss-btn branch, which it would
@@ -3668,7 +3794,7 @@
                     if (e.target.classList.contains('dismiss-all')) {
                         const isRestore = e.target.classList.contains('restore');
                         const intent = e.target.dataset.intent;
-                        (issue.variations || []).forEach(v => {
+                        variationsToRender.forEach(v => {
                             const itemId = getItemId(issue._id, v.name);
                             if (!inView(state.view, itemStatus(issue._id, v), state.dismissals[itemId])) return;
                             if (isRestore) unmarkDismissed(itemId);
@@ -3677,7 +3803,7 @@
                         saveDismissedState();
                         updateCounts();
                         const scrollTop = document.querySelector('.content').scrollTop;
-                        renderIssues();
+                        renderIssues(variationsToRender.map(v => v._itemId));
                         document.querySelector('.content').scrollTop = scrollTop;
                         return;
                     }
@@ -3696,7 +3822,7 @@
                         
                         // Save scroll position, re-render, restore scroll
                         const scrollTop = document.querySelector('.content').scrollTop;
-                        renderIssues();
+                        renderIssues([issueId]);
                         document.querySelector('.content').scrollTop = scrollTop;
                         return;
                     }
@@ -3713,68 +3839,15 @@
                         }
                         saveDismissedState();
                         
-                        // Find the variation item element
-                        const variationItem = e.target.closest('.variation-item');
-                        const variationList = card.querySelector('.variation-list');
-                        const remainingItems = variationList.querySelectorAll('.variation-item');
-                        
-                        // Count how many items will remain after this action
-                        const currentCount = remainingItems.length;
-                        const isLastItem = currentCount === 1 && !isRestore;
-                        
-                        if (isLastItem) {
-                            // Last item being dismissed - need full re-render to pull in new cards
-                            const scrollTop = document.querySelector('.content').scrollTop;
-                            updateCounts();
-                            renderIssues();
-                            document.querySelector('.content').scrollTop = scrollTop;
-                        } else {
-                            // Just update this item in place
-                            if (isRestore) {
-                                // This shouldn't happen in normal view, but handle it
-                                updateCounts();
-                                const scrollTop = document.querySelector('.content').scrollTop;
-                                renderIssues();
-                                document.querySelector('.content').scrollTop = scrollTop;
-                            } else {
-                                // Hide the item with animation
-                                variationItem.style.transition = 'opacity 0.2s, height 0.2s, margin 0.2s, padding 0.2s';
-                                variationItem.style.opacity = '0';
-                                variationItem.style.height = '0';
-                                variationItem.style.margin = '0';
-                                variationItem.style.padding = '0';
-                                variationItem.style.overflow = 'hidden';
-                                
-                                setTimeout(() => {
-                                    variationItem.remove();
-                                    
-                                    // Update the card's description (e.g., "3 tracks" -> "2 tracks")
-                                    const descEl = card.querySelector('.issue-description');
-                                    if (descEl) {
-                                        const newCount = variationList.querySelectorAll('.variation-item').length;
-                                        descEl.textContent = `${newCount} track${newCount !== 1 ? 's' : ''} remaining`;
-                                    }
-                                    
-                                    // Update the card's scrobble count
-                                    const countEl = card.querySelector('.issue-count');
-                                    if (countEl && (issue.type === 'missing' || issue.type === 'compilation')) {
-                                        // Calculate remaining scrobbles
-                                        let remainingScrobbles = 0;
-                                        variationList.querySelectorAll('.variation-count').forEach(vc => {
-                                            remainingScrobbles += parseInt(vc.textContent) || 0;
-                                        });
-                                        countEl.textContent = remainingScrobbles.toLocaleString();
-                                    }
-                                }, 200);
-                                
-                                updateCounts();
-                            }
-                        }
+                        const scrollTop = document.querySelector('.content').scrollTop;
+                        updateCounts();
+                        renderIssues([itemId]);
+                        document.querySelector('.content').scrollTop = scrollTop;
                         return;
                     }
                     
                     // Don't toggle if clicking action buttons or links
-                    if (e.target.closest('.correction-memory') || e.target.classList.contains('variation-action') ||
+                    if (e.target.closest('a, button, input, select, label, summary') || e.target.closest('.correction-memory') || e.target.classList.contains('variation-action') ||
                         e.target.classList.contains('lastfm-link') ||
                         e.target.classList.contains('lookup-btn') ||
                         e.target.classList.contains('lookup-btn-small') ||
@@ -3786,26 +3859,29 @@
                     const deltaY = Math.abs(e.clientY - mouseDownY);
                     if (deltaX > dragThreshold || deltaY > dragThreshold) return;
                     
-                    card.classList.toggle('expanded');
+                    toggleIssueDetails(card);
                 });
 
                 issueGrid.appendChild(card);
             });
             
-            // Show message if there are more cards than we're displaying
-            if (filtered.length > 100) {
-                const moreMsg = document.createElement('div');
-                moreMsg.style.cssText = 'text-align: center; padding: 1rem; color: var(--text-secondary);';
-                moreMsg.textContent = `Showing first 100 issue cards of ${displayCount} total issues. Use search or filters to narrow down.`;
-                issueGrid.appendChild(moreMsg);
+            // Keep keyboard focus on a surviving row/card, or the next card
+            // occupying its slot when the acted-on finding leaves this view.
+            if (focusedId) {
+                const cards = [...issueGrid.querySelectorAll('.issue-card')];
+                const next = cards.find(card => card.dataset.issueId === focusedId) || cards[Math.min(Math.max(0, focusedIndex), cards.length - 1)];
+                const rowButton = focusedItem && next && [...next.querySelectorAll('button')].find(button => button.dataset.itemId === focusedItem);
+                (rowButton || next?.querySelector('.details-toggle'))?.focus();
             }
+
         }
 
         function escapeHtml(str) {
             if (!str) return '';
-            const div = document.createElement('div');
-            div.textContent = str;
-            return div.innerHTML;
+            // This helper is also used inside quoted attributes. A text
+            // node's innerHTML escapes markup but leaves quotes unchanged.
+            const entities = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+            return String(str).replace(/[&<>"']/g, character => entities[character]);
         }
 
         // Render a name with invisible characters exposed as labeled chips,
@@ -3851,12 +3927,29 @@
         }
 
         // Event listeners
+        document.querySelectorAll('.nav-item, #upload-zone').forEach(control => {
+            control.addEventListener('keydown', event => {
+                if (event.key !== 'Enter' && event.key !== ' ') return;
+                event.preventDefault();
+                control.click();
+            });
+        });
+
+        ['pagination-top', 'pagination-bottom'].forEach(id => {
+            document.getElementById(id).addEventListener('click', event => {
+                const button = event.target.closest('[data-page-action]');
+                if (!button || button.disabled) return;
+                changeIssuePage(button.dataset.pageAction);
+            });
+        });
+
         document.querySelectorAll('.nav-item').forEach(item => {
             item.addEventListener('click', () => {
                 document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
                 item.classList.add('active');
+                document.querySelectorAll('.nav-item').forEach(i => i.setAttribute('aria-pressed', String(i === item)));
                 state.currentFilter = item.dataset.filter;
-                renderIssues();
+                renderFromFirstPage();
             });
         });
 
@@ -3865,9 +3958,10 @@
         let searchDebounceTimer = null;
         searchInput.addEventListener('input', (e) => {
             state.searchQuery = e.target.value;
+            state.page = 0;
             searchClearBtn.style.display = e.target.value ? 'block' : 'none';
             clearTimeout(searchDebounceTimer);
-            searchDebounceTimer = setTimeout(renderIssues, 200);
+            searchDebounceTimer = setTimeout(renderFromFirstPage, 200);
         });
 
         searchClearBtn.addEventListener('click', () => {
@@ -3875,27 +3969,32 @@
             state.searchQuery = '';
             searchClearBtn.style.display = 'none';
             clearTimeout(searchDebounceTimer); // clearing is instant, no debounce
-            renderIssues();
+            renderFromFirstPage();
             searchInput.focus();
         });
 
         sortSelect.addEventListener('change', (e) => {
             state.sortBy = e.target.value;
-            renderIssues();
+            renderFromFirstPage();
+        });
+
+        document.getElementById('followups-only').addEventListener('change', event => {
+            state.followupsOnly = event.target.checked;
+            renderFromFirstPage();
         });
 
         const artistFilterClearBtn = document.getElementById('artist-filter-clear');
         artistFilter.addEventListener('change', (e) => {
             state.currentArtist = e.target.value;
             artistFilterClearBtn.style.display = e.target.value ? 'block' : 'none';
-            renderIssues();
+            renderFromFirstPage();
         });
 
         artistFilterClearBtn.addEventListener('click', () => {
             artistFilter.value = '';
             state.currentArtist = '';
             artistFilterClearBtn.style.display = 'none';
-            renderIssues();
+            renderFromFirstPage();
         });
 
         // Show dismissed toggle
@@ -3903,7 +4002,7 @@
             const btn = e.target.closest('.view-btn');
             if (!btn) return;
             setView(btn.dataset.view);
-            renderIssues();
+            renderFromFirstPage();
         });
 
         // Export functionality

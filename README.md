@@ -51,10 +51,11 @@ Or [download index.html](index.html) to run locally (note: you won't receive upd
 
 v0.7.0 changes what dismissing means. **✓ Fixed** hides an item until new plays appear under the old name, then brings it back tagged so you can see it recurred. **🚫 Ignore** hides it for good. Everything you dismissed in an earlier version is treated as fixed: whatever is still in your next export shows once more with a note asking which you meant, and items you genuinely fixed stay gone.
 
+**Unreleased review work:** browse every result with Previous/Next pages of 100 cards. Search narrows missing-album and compilation cards to matching tracks; counts and impact sorting reflect the rows shown. “Follow-ups only” and “Follow-ups first” help revisit prior corrections. Album-correction controls offer candidates from plays of the exact artist and track in your export, plus your prior album choices. Each candidate shows its evidence; choosing one fills the optional field and saves only when you mark Fixed. It is not verification of an original release.
+
 ### Current Limitations
 
 - Analysis only (doesn't modify your Last.fm data directly - you'll use Last.fm's edit interface)
-- Shows first 100 issue cards per category (use search/filters to find more)
 - Compilations spanning multiple track artists (e.g. an Eric Clapton compilation containing Cream tracks) appear split across those artists, because the export only carries the track artist
 - The `AlbumId` column in the export is currently ignored - it turns out those IDs aren't always trustworthy (ask me about the two Clapton compilations sometime)
 - Genuine misspellings aren't detected - `Citzen Erased` won't be matched to `Citizen Erased`. Everything above works by treating two spellings as the same name; a typo is a different name. Matching by similarity instead sounds obvious but flags far more real songs than typos (`Song for the Dead` and `Song for the Deaf` are both QOTSA tracks, one letter apart), so it isn't in yet
@@ -93,6 +94,7 @@ node tests/merge-contract.js
 node tests/import-identity-contract.js
 node tests/recurrence-contract.js
 node tests/detection-contract.js
+node tests/triage-contract.js
 ```
 
 This is a collaboration between a music data nerd (me) and Claude (Anthropic's AI assistant). The entire tool is a single HTML file with no dependencies - just open it in a browser.
