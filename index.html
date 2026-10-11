@@ -996,7 +996,7 @@
             <div class="logo-icon">📊</div>
             <div class="logo-text">
                 <h1>Scrobble Analyzer</h1>
-                <div class="tagline">Find & Fix Your Last.fm Data <span style="color: var(--accent-orange); margin-left: 0.5rem;">v0.7.0</span></div>
+                <div class="tagline">Find & Fix Your Last.fm Data <span style="color: var(--accent-orange); margin-left: 0.5rem;">v0.8.0</span></div>
             </div>
         </div>
         <div class="header-stats" id="header-stats" style="display: none;">
@@ -1104,25 +1104,25 @@
                     <h3 style="font-size: 1rem; color: var(--accent-orange); margin-bottom: 1rem;">📁 How to Get Your Export File</h3>
                     <ol style="color: var(--text-secondary); font-size: 0.9rem; padding-left: 1.25rem; margin-bottom: 1.5rem;">
                         <li style="margin-bottom: 0.5rem;">Go to <a href="https://lastfmstats.com" target="_blank" style="color: var(--accent-blue);">lastfmstats.com</a></li>
-                        <li style="margin-bottom: 0.5rem;">Enter your Last.fm username and wait for data to load</li>
+                        <li style="margin-bottom: 0.5rem;">Enter your Last.fm username and wait for your complete library to load</li>
                         <li style="margin-bottom: 0.5rem;">Click the <strong>Export</strong> button to download your CSV</li>
                         <li>Drag the file to the upload box in the sidebar, or click the box to browse</li>
                     </ol>
+                    <p style="color: var(--text-secondary); font-size: 0.9rem; max-width: none; margin: 0 0 1.5rem;"><strong>After corrections on Last.fm:</strong> lastfmstats can reuse saved history and retrieve only new plays. On its homepage, open <strong>Database</strong>, use <strong>Remove from database</strong> beside your username, then retrieve your library again by username and wait for it to finish before exporting. Do not re-import your old file. A newly downloaded CSV alone does not prove older metadata was refreshed.</p>
                     
-                    <h3 style="font-size: 1rem; color: var(--accent-orange); margin-bottom: 1rem;">🆕 What's New in v0.7.0</h3>
+                    <h3 style="font-size: 1rem; color: var(--accent-orange); margin-bottom: 1rem;">🆕 What's New in v0.8.0</h3>
                     <!-- max-width/margin override: .empty-state p centres text in a
                          400px column, which is right for the intro blurb above but
                          indents this one oddly inside the card. -->
-                    <p style="color: var(--text-secondary); font-size: 0.9rem; max-width: none; margin: 0 0 0.75rem;">This release changes what dismissing means. One button has become two, and the tool can now tell you when something you fixed has come back.</p>
+                    <p style="color: var(--text-secondary); font-size: 0.9rem; max-width: none; margin: 0 0 0.75rem;">Browse every finding, remember your correction choices, and revisit names that return after their old plays were corrected away.</p>
                     <ul style="color: var(--text-secondary); font-size: 0.9rem; padding-left: 1.25rem; margin-bottom: 1.5rem;">
-                        <li style="margin-bottom: 0.5rem;"><strong>✓ Fixed or 🚫 Ignore</strong> - Fixed means "I corrected this on Last.fm": the item hides until new plays appear under the old name. Ignore means "not a problem": the item hides for good. Both can be restored</li>
-                        <li style="margin-bottom: 0.5rem;"><strong>Recurrences come back tagged</strong> - When a fixed item picks up new scrobbles or a new spelling, it returns to the active list with a line saying when you marked it and what changed since</li>
-                        <li style="margin-bottom: 0.5rem;"><strong>Your existing dismissals</strong> - Everything you dismissed before is treated as fixed. Anything still in your export shows once more with a note, so you can confirm it or switch it to ignore. Items you genuinely fixed never reappear</li>
-                        <li style="margin-bottom: 0.5rem;"><strong>Active / Fixed / Ignored views</strong> - The "view dismissed only" checkbox is now a three-way switch in the sidebar, each with its own count</li>
-                        <li style="margin-bottom: 0.5rem;"><strong>Compilations in one click</strong> - "Fixed all" and "Ignore all" on a compilation card act on every track still showing</li>
-                        <li style="margin-bottom: 0.5rem;"><strong>Report markers</strong> - [FIXED], [IGNORED] and [RECURRED] replace [DISMISSED]</li>
-                        <li style="margin-bottom: 0.5rem;"><strong>Hyphens</strong> - "Hip Hop" now groups with "Hip-Hop", and dashes are treated like other punctuation in artist, album and track names</li>
-                        <li style="margin-bottom: 0.5rem;"><strong>Lone invisible characters</strong> - An album or track with a hidden character in its name is flagged even when there is no clean spelling to compare it with</li>
+                        <li style="margin-bottom: 0.5rem;"><strong>Every result is reachable</strong> - Previous/Next pages show 100 cards at a time. Search narrows missing-album and compilation rows; counts and impact sorting reflect the rows shown</li>
+                        <li style="margin-bottom: 0.5rem;"><strong>Remember your choices</strong> - Optionally record the spelling or album you kept when marking Fixed. Your choice remains available after Restore and appears in reports</li>
+                        <li style="margin-bottom: 0.5rem;"><strong>Album suggestions from your library</strong> - Missing-album and compilation rows offer albums from plays of the exact artist and track, plus your prior choices. Use a suggestion to fill the field; Fixed saves it. Suggestions are evidence for research, not verified original releases</li>
+                        <li style="margin-bottom: 0.5rem;"><strong>Catch repeat offenses</strong> - After a fresh complete export shows old-name plays were removed, later plays under that name can return even below the original count. Follow-ups only and Follow-ups first help you revisit them</li>
+                        <li style="margin-bottom: 0.5rem;"><strong>More precise grouping</strong> - Live/remaster labels no longer swallow meaningful title parentheses. Ordinary case-only differences are excluded; original names and invisible-character findings remain visible</li>
+                        <li style="margin-bottom: 0.5rem;"><strong>Safer imports and saved history</strong> - Quoted fields and hidden whitespace are preserved. Older or unordered exports open for review without changing saved history. Ambiguous prior decisions ask for review instead of hiding an uncertain match</li>
+                        <li style="margin-bottom: 0.5rem;"><strong>Smoother triage</strong> - Details and category controls support keyboard use. Open cards and unsaved correction fields survive paging and filtering within an import</li>
                     </ul>
                     
                     <h3 style="font-size: 1rem; color: var(--accent-orange); margin-bottom: 1rem;">💬 Feedback & Support</h3>

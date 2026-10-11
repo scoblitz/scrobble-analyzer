@@ -111,9 +111,12 @@ Because the card body is otherwise strictly neutral — name, play count, Last.f
 - Export report with dismissed-items checkbox; search debounce; search/filter clear buttons
 - Visual refresh (orange reserved for header LED + action buttons; tinted rather than solid active states)
 
+**Prepared for v0.8.0, pending native browser verification and publication:**
+- Review phases 1–4 (§4.6–4.9): lossless imports, stable identities, correction memory, recurrence after observed count decreases, conservative history migration, detection precision and desktop triage with exact-track album evidence.
+- Five dependency-free contract scripts in `tests/`: 155 merge assertions, 23 import/identity, 16 recurrence/correction, 16 detection/migration and 26 triage/evidence scenarios. They extract functions live from `index.html`; run every script before release.
+
 **Scoped but not built:**
-- Everything in the roadmap (§4) except §4.1 (shipped as v0.6.1) and §4.5 (shipped as v0.7.0).
-- The only automated test is the merge contract, `tests/merge-contract.js` (§4.1.1): 125 assertions as of v0.7.0, reading the normalizers, the invisible-character finder and the dismissal functions live out of `index.html`. Run it with `node tests/merge-contract.js`.
+- The additional pattern detectors (§4.2, now v0.9.0), reference detection (§4.3) and other unimplemented roadmap ideas.
 
 **Half-designed:**
 - Uniform-error / reference detection (§4.3) — problem well understood, no implementation design yet.
@@ -325,7 +328,7 @@ The lesson is worth keeping: **a normalizer change validated against a single ex
 
 Both fixes are guarded going forward — item 9 by MUST_MERGE cases, item 10 by MUST_NOT_MERGE cases including `1991`/`1983` and `80186`/`80286`, plus a `KEY_MUST_NOT_BE` entry for the `Spring 1 - 2012` dangle.
 
-### 4.2 v0.8.0 — pattern-detector release (scoped, not built; was numbered v0.7.0 until the dismissal split took that release — §5.6)
+### 4.2 v0.9.0 — pattern-detector release (scoped, not built; previously v0.7.0, then v0.8.0; review improvements take v0.8.0 — §4.10)
 
 An opt-in **pattern search mode** (UI shape unresolved — §5.3), comprising:
 
@@ -512,11 +515,21 @@ A full inline-script simulated-DOM run with the October 2 export preserves **162
 
 Candidate limits: absent exact-track evidence is left for manual research; a matching album may itself be mistagged, and the compilation heuristic can exclude legitimate albums. Play counts describe listening, not correctness or original-release provenance. External catalog verification and similarity matching are outside this chunk.
 
+### 4.10 v0.8.0 — release preparation (phase 5, publication pending)
+
+Approved 2026-10-11: finish and release the current review work before examining direct library retrieval further. The maintainer selected **v0.8.0**, moving the planned pattern-detector release to **v0.9.0**. This release adds correction memory and changes saved-history handling as well as desktop triage; it is a minor release, not a normalization-only patch.
+
+The in-file version, What's New, README, contributor instructions and [release notes](releases/v0.8.0.md) describe the final scope. Export instructions now explain lastfmstats' per-account Database → Remove from database control and the need for a completed full retrieval after historical edits. There is no new cache-detection heuristic or direct retrieval in this release.
+
+**Release gate:** native desktop layout, keyboard/focus and compatibility checks are still required in Chrome, Firefox and Safari. The browser automation tool previously rejected opening the local HTML file; the full-source simulated-DOM checks do not establish browser compatibility. [The manual checklist](releases/v0.8.0-checklist.md) records the remaining checks. Keep merge/tag/publication pending until the result is recorded. Preserve the feature-branch commits with a merge commit.
+
+Direct retrieval and correction verification remain a separate post-release proposal. There is a new workflow argument for reconsidering §1.1: detecting historical changes made on Last.fm without requiring a prior Fixed action. No API implementation or architecture change is authorized as part of v0.8.0.
+
 ## 5. Open questions — flag these to the maintainer, don't guess
 
 1. ~~**Dismissal ID stability across normalization changes.**~~ **RESOLVED 2026-08-01 — no migration needed.** `getIssueId()` (`index.html:1133`) derives from `issue.title`, which is the **raw display name of the highest-count member** of a group, not a normalized key. So normalizer changes orphan a dismissal only when they change *which member ranks first*. Measured across the full combined v0.6.1 change set on the issue-#11 export: **0 of 76** previously-flagged artist members change their top name, **2 of 878** track members do, and no previously-flagged group stops being flagged. The risk is negligible and v0.6.1 is unblocked on this question.
 2. ~~**Test data access.**~~ **RESOLVED.** `lastfmstats-Maeldun.zip` is attached to issue #11, downloads without authentication, and contains 380,877 scrobbles. The reporter supplied it explicitly for debugging. Fine for local validation — but it is a real person's complete listening history: do not commit it to the repo, redistribute it, or paste excerpts of it into public issues beyond the cases the reporter already published themselves.
-3. **v0.7 pattern-mode UI.** Checkbox within existing views vs. a separate tab. Explicitly undecided.
+3. **v0.9 pattern-mode UI.** Checkbox within existing views vs. a separate tab. Explicitly undecided.
 4. ~~**Diacritic folding philosophy.**~~ **RESOLVED 2026-08-01.** Yes — diacritics follow the same model as smart quotes: fold for *grouping*, preserve originals for *display*, human picks the winner. The concern that a card might imply the ASCII form is "correct" turned out to be unfounded on inspection: the card body is strictly neutral (name, count, Last.fm link, no badge), and the Google lookup asks `Is the correct spelling "X" or "Y"…` rather than asserting. A Motörhead card is just an ordinary variation card.
 
    The one place the tool *could* editorialize is the chips — and the governing principle there is §1.9: **chips mark invisibility, not incorrectness.** That reframes the question from "should diacritics be chipped?" (wrong question — it treats a character class as the criterion) to "can the user see this difference?". `Motörhead` vs `Motorhead`: yes, no chip. `Subcarpați` vs `Subcarpaţi`: no, chip it. See §4.1.2, which makes the confusable-character chip a hard dependency of shipping folding.
