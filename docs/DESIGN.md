@@ -32,7 +32,7 @@ Established empirically during v0.6.0 testing. "The Cream of Clapton" (1995 comp
 
 ### 1.5 Persistent dismissals keyed by username + name-based IDs
 
-**Unreleased review work (2026-10-11):** phase 1 of the approved reliability and usability plan replaces lossy IDs with versioned, encoded name tuples. Variation-card identity uses the existing normalization key and artist context rather than the highest-count display title; invisible cards include their subtype and visible context. Per-track IDs retain the exact track spelling, including Unicode, punctuation and case. Card baselines retain both artist context and member name. See §4.6 for migration and validation. The v0.6/v0.7 description below records the previous design, not the new ID algorithm.
+**v0.8.0 review work (2026-10-11):** phase 1 of the approved reliability and usability plan replaces lossy IDs with versioned, encoded name tuples. Variation-card identity uses the existing normalization key and artist context rather than the highest-count display title; invisible cards include their subtype and visible context. Per-track IDs retain the exact track spelling, including Unicode, punctuation and case. Card baselines retain both artist context and member name. See §4.6 for migration and validation. The v0.6/v0.7 description below records the previous design, not the new ID algorithm.
 
 Shipped in v0.6.0. Two coupled decisions:
 
@@ -53,7 +53,7 @@ A third class — **reference detectors**, comparing the library against an exte
 
 ### 1.7 Normalization pipeline choices
 
-**What is actually implemented today** — verified line-by-line against `index.html` on 2026-09-18, with unreleased suffix refinements checked on 2026-10-11 (§4.8; first verified 2026-08-01, before v0.6.1 landed). An earlier revision of this document (and of CLAUDE.md) described the pipeline inaccurately; this table is the corrected record and should be re-verified whenever a normalizer changes.
+**What is actually implemented today** — verified line-by-line against `index.html` on 2026-09-18, with v0.8.0 suffix refinements checked on 2026-10-11 (§4.8; first verified 2026-08-01, before v0.6.1 landed). An earlier revision of this document (and of CLAUDE.md) described the pipeline inaccurately; this table is the corrected record and should be re-verified whenever a normalizer changes.
 
 | Step | Artist | Album | Track |
 |---|:---:|:---:|:---:|
@@ -74,7 +74,7 @@ Rules run in roughly that order; the punctuation row runs last because the suffi
 - The canonical MUST-NOT-merge example: **Elvis Costello vs. Elvis Costello & The Attractions** are different credits, correctly distinct. Any normalization change that merges them is wrong. Now enforced.
 - The title guard — numeric-punctuation titles like *3.15.20* must not normalize to "31520" — **is now enforced**, but not as a pair. It could not be: asserting that `3.15.20` and `31520` stay unmerged proves nothing, because the year rule rewrites `31520` to `3` and the two differ no matter what punctuation does. It lives in the contract's `KEY_MUST_NOT_BE` list as an assertion about the key itself. This was found by injecting the exact mistake the guard exists to catch and watching the pair form pass.
 
-**Unreleased precision refinements:** album/track metadata stripping now parses balanced parentheses after bracket canonicalization. A marker in one group cannot consume a meaningful sibling: `Song (Part 1) (Live)` retains `(Part 1)`. Nested groups are handled independently: `(Part 1 (Live))` retains Part 1, while `(Live (Berlin))` is metadata in full. Unclosed groups are retained. Removing a label inserts a space, so `Foo(Live)Bar` does not become `Foobar`. Markers require boundaries against Unicode letters, numbers and underscore; `Credit`, `Delivered`, `Mixtape` and `Inversion` are title text. Supported inflections are explicit, including Remastered/Remastering/Remasters, Remixed, Edited, Edition and Take 3A; `Alt.` keeps its literal period. Album and track vocabularies remain separate. Dash suffixes use the same whole-word principle, and bare year-plus-keyword track suffixes require whitespace on both sides of the four-digit year. The separate trailing-year rule and the artist normalizer are unchanged. These are grouping heuristics: a meaningful phrase containing a whole metadata word can still be flagged for human review.
+**v0.8.0 precision refinements:** album/track metadata stripping now parses balanced parentheses after bracket canonicalization. A marker in one group cannot consume a meaningful sibling: `Song (Part 1) (Live)` retains `(Part 1)`. Nested groups are handled independently: `(Part 1 (Live))` retains Part 1, while `(Live (Berlin))` is metadata in full. Unclosed groups are retained. Removing a label inserts a space, so `Foo(Live)Bar` does not become `Foobar`. Markers require boundaries against Unicode letters, numbers and underscore; `Credit`, `Delivered`, `Mixtape` and `Inversion` are title text. Supported inflections are explicit, including Remastered/Remastering/Remasters, Remixed, Edited, Edition and Take 3A; `Alt.` keeps its literal period. Album and track vocabularies remain separate. Dash suffixes use the same whole-word principle, and bare year-plus-keyword track suffixes require whitespace on both sides of the four-digit year. The separate trailing-year rule and the artist normalizer are unchanged. These are grouping heuristics: a meaningful phrase containing a whole metadata word can still be flagged for human review.
 
 ### 1.8 Git/release conventions (and why)
 
@@ -111,7 +111,7 @@ Because the card body is otherwise strictly neutral — name, play count, Last.f
 - Export report with dismissed-items checkbox; search debounce; search/filter clear buttons
 - Visual refresh (orange reserved for header LED + action buttons; tinted rather than solid active states)
 
-**Prepared for v0.8.0, pending native browser verification and publication:**
+**v0.8.0 review release (maintainer browser verification 2026-10-12):**
 - Review phases 1–4 (§4.6–4.9): lossless imports, stable identities, correction memory, recurrence after observed count decreases, conservative history migration, detection precision and desktop triage with exact-track album evidence.
 - Five dependency-free contract scripts in `tests/`: 155 merge assertions, 23 import/identity, 16 recurrence/correction, 16 detection/migration and 26 triage/evidence scenarios. They extract functions live from `index.html`; run every script before release.
 
@@ -153,7 +153,7 @@ All confirmed against the issue-#11 export on 2026-08-01 unless noted.
 
 Last.fm normalizes case to its catalog entry server-side; nothing SA flags about pure case will be user-fixable. Keep case-only differences from generating flags.
 
-**Enforced in unreleased phase 3 (§4.8):** ordinary artist/album/track detectors skip clusters whose raw names differ only by lowercase conversion. Mixed groups retain all spellings, and invisible-character detection is unchanged. Case aliases of an explicitly chosen kept member do not recur; punctuation, whitespace and accent differences still can. Old case-only fixed cards are not reconstructed as repeat offenses.
+**Enforced in v0.8.0 phase 3 (§4.8):** ordinary artist/album/track detectors skip clusters whose raw names differ only by lowercase conversion. Mixed groups retain all spellings, and invisible-character detection is unchanged. Case aliases of an explicitly chosen kept member do not recur; punctuation, whitespace and accent differences still can. Old case-only fixed cards are not reconstructed as repeat offenses.
 
 ### 3.6 Container punctuation and the limits of suffix stripping
 
@@ -453,7 +453,7 @@ where `current` is a count (per-track) or a member map (card). Everything else �
 
 ---
 
-### 4.6 Approved review plan — import and identity foundations (phase 1, unreleased)
+### 4.6 Approved review plan — import and identity foundations (phase 1, v0.8.0)
 
 Approved 2026-10-11 after a code and interface review. Priorities: desktop usability, variation discovery, correction suggestions and memory of prior corrections. Supported inputs are **complete lastfmstats.com exports**; mobile layout is lower priority. The single-file architecture, separate normalizers, ignored AlbumId and human-led correction workflow remain requirements.
 
@@ -467,9 +467,9 @@ Phase 1 implementation:
 
 Validation: `node tests/merge-contract.js` (125 assertions) and `node tests/import-identity-contract.js` (23 regression scenarios, extracting shipped functions). The new cases were run against the old code first and reproduced the defects. The October 2 maintainer export still parses as 162,915 scrobbles, with 2,089 cards / 5,098 findings and **zero duplicate new IDs**. The one added card is the trailing NBSP artist variation previously erased by parsing. A synthetic legacy migration covering all current findings preserves 5,096 hidden decisions and leaves the two Marillion rows sharing one old key active; their original decision is retained as ambiguous. No listening-history fixtures are committed.
 
-Phase 2 is implemented in §4.7, phase 3 in §4.8 and phase 4 in §4.9. Remaining: browser verification and release documentation. Future normalizer changes must validate identity migration because IDs now use grouping keys; §5.1's historical measurement is not evidence for this new scheme. Changed UI still needs verification in leading browsers before release.
+Phase 2 is implemented in §4.7, phase 3 in §4.8 and phase 4 in §4.9. Browser verification and release documentation are recorded in §4.10. Future normalizer changes must validate identity migration because IDs now use grouping keys; §5.1's historical measurement is not evidence for this new scheme. Maintainer verification in leading browsers is recorded in §4.10.
 
-### 4.7 Approved review plan — correction memory and recurrence (phase 2, unreleased)
+### 4.7 Approved review plan — correction memory and recurrence (phase 2, v0.8.0)
 
 Authorized 2026-10-11 as the next reviewable chunk. This supersedes §4.5's mark-time-count-only rule and the accepted false recurrence from continued listening to the kept spelling **when the user explicitly identifies that spelling**. Detection remains advisory; no Last.fm data is changed.
 
@@ -482,7 +482,7 @@ Authorized 2026-10-11 as the next reviewable chunk. This supersedes §4.5's mark
 
 Validation: `node tests/recurrence-contract.js` adds 16 scenarios for disappearance, partial correction, selected-spelling growth, below-threshold recurrence, raw artist context, compilation album boundaries, ID decoding, snapshot ordering, v4 storage, controls and full import sequences. The 23 import/identity scenarios and 125 existing assertions also pass. The October 2 export still yields 162,915 scrobbles and 2,089 cards. A synthetic stress check marking all 5,098 current findings fixed, with explicit kept choices on variation cards, produces **zero false recurrences** for unchanged data. A full inline-script smoke check with a simulated DOM confirms real-file import, controls rendering, Fixed-view memory, re-import behavior and remembered choices in reports. No listening-history fixtures are committed. These checks do not substitute for browser layout/keyboard verification, which remains in the approved pre-release phase.
 
-### 4.8 Approved review plan — detection precision (phase 3, unreleased)
+### 4.8 Approved review plan — detection precision (phase 3, v0.8.0)
 
 Authorized 2026-10-11 as the next reviewable chunk. The precision rules are described in §1.7 and the case-only exclusion in §3.5. Thresholds, artist normalization, punctuation/diacritic folding, compilation and missing-album detectors are unchanged. No correction is applied to Last.fm.
 
@@ -496,7 +496,7 @@ The October 2 maintainer export still parses as **162,915 scrobbles**, now yield
 
 A synthetic upgrade using the real export preserves all **5,098 saved decisions** and **1,348 correction choices**. Four expanded groups ask for review without claiming new plays; 14 split histories are retained as ambiguous, of which eight have current findings requiring review. A full inline-script simulated-DOM check covers import, rendered review explanations, four `[REVIEW]` report tags and zero false `[RECURRED]` tags, stable re-import and unchanged storage after loading the older September export. Listening-history fixtures remain local and uncommitted. Browser layout and keyboard verification remain part of the approved pre-release phase; these checks do not substitute for them.
 
-### 4.9 Approved review plan — desktop triage and album evidence (phase 4, unreleased)
+### 4.9 Approved review plan — desktop triage and album evidence (phase 4, v0.8.0)
 
 Authorized 2026-10-11 after committing phase 3. The single-file architecture and advisory correction workflow remain unchanged.
 
@@ -515,13 +515,13 @@ A full inline-script simulated-DOM run with the October 2 export preserves **162
 
 Candidate limits: absent exact-track evidence is left for manual research; a matching album may itself be mistagged, and the compilation heuristic can exclude legitimate albums. Play counts describe listening, not correctness or original-release provenance. External catalog verification and similarity matching are outside this chunk.
 
-### 4.10 v0.8.0 — release preparation (phase 5, publication pending)
+### 4.10 v0.8.0 — review release (phase 5)
 
 Approved 2026-10-11: finish and release the current review work before examining direct library retrieval further. The maintainer selected **v0.8.0**, moving the planned pattern-detector release to **v0.9.0**. This release adds correction memory and changes saved-history handling as well as desktop triage; it is a minor release, not a normalization-only patch.
 
 The in-file version, What's New, README, contributor instructions and [release notes](releases/v0.8.0.md) describe the final scope. Export instructions now explain lastfmstats' per-account Database → Remove from database control and the need for a completed full retrieval after historical edits. There is no new cache-detection heuristic or direct retrieval in this release.
 
-**Release gate:** native desktop layout, keyboard/focus and compatibility checks are still required in Chrome, Firefox and Safari. The browser automation tool previously rejected opening the local HTML file; the full-source simulated-DOM checks do not establish browser compatibility. [The manual checklist](releases/v0.8.0-checklist.md) records the remaining checks. Keep merge/tag/publication pending until the result is recorded. Preserve the feature-branch commits with a merge commit.
+**Browser verification (2026-10-12):** the maintainer reported checking the page in Chrome, Firefox and Safari and noticing no issues, in response to [the manual checklist](releases/v0.8.0-checklist.md). Individual checklist-step outcomes were not separately logged. This is maintainer verification, not automated browser coverage: the browser tool previously rejected opening the local HTML file. All five contracts pass again. The question about album suggestions was checked against the real export in the full-source simulated DOM: compilation candidate text and Use controls render; suggestions are supported for both missing-album and compilation rows, inside Remember album correction, only with exact artist/track evidence or saved choices. No behavior change was needed. Preserve the feature-branch commits with a merge commit when publishing v0.8.0.
 
 Direct retrieval and correction verification remain a separate post-release proposal. There is a new workflow argument for reconsidering §1.1: detecting historical changes made on Last.fm without requiring a prior Fixed action. No API implementation or architecture change is authorized as part of v0.8.0.
 

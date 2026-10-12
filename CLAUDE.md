@@ -35,7 +35,7 @@ Data flow:
 
 ## Current release state
 
-The checkout is prepared for v0.8.0: correction choices, recurrence after observed play-count decreases, storage v4 and issue-v3 name tuples, conservative grouping migrations, precise metadata labels, paged desktop triage and album suggestions from exact library evidence. v0.7.0 remains the public release until the v0.8.0 browser checklist and publication are complete; see DESIGN.md §4.10. Earlier releases: v0.6.1 (normalization patch), v0.6.0 (persistent dismissals, invisible-character work, visual refresh). v0.9.0 (pattern-detector release) is scoped but not built. Direct library retrieval is deferred to a separate proposal after this release.
+v0.8.0 adds correction choices, recurrence after observed play-count decreases, storage v4 and issue-v3 name tuples, conservative grouping migrations, precise metadata labels, paged desktop triage and album suggestions from exact library evidence. Maintainer browser checks in Chrome, Firefox and Safari reported no issues on 2026-10-12; see DESIGN.md §4.10. Earlier releases: v0.7.0 (Fixed / Ignored views), v0.6.1 (normalization patch), v0.6.0 (persistent dismissals, invisible-character work, visual refresh). v0.9.0 (pattern-detector release) is scoped but not built. Direct library retrieval is deferred to a separate proposal after this release.
 
 ## Deeper context
 
