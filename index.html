@@ -444,6 +444,27 @@
             border-color: rgba(255, 107, 53, 0.45);
         }
 
+        .details-toggle, .page-btn, .album-candidate button {
+            background: var(--bg-dark);
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 0.4rem 0.65rem;
+            font: inherit;
+            font-size: 0.75rem;
+            cursor: pointer;
+        }
+        button:focus-visible, a:focus-visible, select:focus-visible, input:focus-visible, [role="button"]:focus-visible {
+            outline: 2px solid var(--accent-orange);
+            outline-offset: 3px;
+        }
+        .page-btn:disabled { opacity: 0.4; cursor: default; }
+        .pagination { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; margin: 1rem 0; color: var(--text-secondary); font-size: 0.8rem; }
+        .pagination[hidden], .issue-details[hidden] { display: none; }
+        .album-candidates { margin-top: 0.5rem; }
+        .album-candidate { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; padding: 0.4rem 0; }
+        .album-candidate small { color: var(--text-muted); }
+
         .issue-header {
             display: flex;
             align-items: flex-start;
@@ -561,6 +582,38 @@
             font-family: inherit;
             font-size: 0.7rem;
             white-space: nowrap;
+        }
+
+        .correction-memory, .remembered-correction {
+            margin-top: 0.65rem;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .correction-memory label, .correction-memory small {
+            display: block;
+            margin-top: 0.4rem;
+        }
+
+        .correction-memory select, .correction-memory input {
+            display: block;
+            max-width: 100%;
+            width: 28rem;
+            margin-top: 0.35rem;
+            padding: 0.5rem;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            font: inherit;
+        }
+
+        .correction-memory [hidden] { display: none; }
+        .correction-memory summary { cursor: pointer; }
+        .correction-memory :is(input, select, summary):focus-visible {
+            outline: 2px solid var(--accent-blue);
+            outline-offset: 3px;
         }
 
         /* Small dismiss button for individual items */
@@ -943,7 +996,7 @@
             <div class="logo-icon">📊</div>
             <div class="logo-text">
                 <h1>Scrobble Analyzer</h1>
-                <div class="tagline">Find & Fix Your Last.fm Data <span style="color: var(--accent-orange); margin-left: 0.5rem;">v0.7.0</span></div>
+                <div class="tagline">Find & Fix Your Last.fm Data <span style="color: var(--accent-orange); margin-left: 0.5rem;">v0.8.0</span></div>
             </div>
         </div>
         <div class="header-stats" id="header-stats" style="display: none;">
@@ -966,7 +1019,7 @@
         <aside class="sidebar">
             <div class="sidebar-section">
                 <div class="sidebar-title">Data Source</div>
-                <div class="upload-zone" id="upload-zone">
+                <div class="upload-zone" id="upload-zone" role="button" tabindex="0" aria-label="Upload a Last.fm CSV export">
                     <div class="upload-icon">📁</div>
                     <div class="upload-text">
                         Drop your <strong>Last.fm CSV</strong> here<br>
@@ -984,37 +1037,37 @@
 
             <div class="sidebar-section" id="nav-section" style="display: none;">
                 <div class="sidebar-title">Issue Types</div>
-                <div class="nav-item active" data-filter="all">
+                <div class="nav-item active" role="button" tabindex="0" aria-pressed="true" data-filter="all">
                     <span class="nav-icon">📋</span>
                     <span>All Issues</span>
                     <span class="count" id="count-all">0</span>
                 </div>
-                <div class="nav-item" data-filter="artist">
+                <div class="nav-item" role="button" tabindex="0" aria-pressed="false" data-filter="artist">
                     <span class="nav-icon">🎤</span>
                     <span>Artist Variations</span>
                     <span class="count" id="count-artist">0</span>
                 </div>
-                <div class="nav-item" data-filter="album">
+                <div class="nav-item" role="button" tabindex="0" aria-pressed="false" data-filter="album">
                     <span class="nav-icon">💿</span>
                     <span>Album Variations</span>
                     <span class="count" id="count-album">0</span>
                 </div>
-                <div class="nav-item" data-filter="track">
+                <div class="nav-item" role="button" tabindex="0" aria-pressed="false" data-filter="track">
                     <span class="nav-icon">🎵</span>
                     <span>Track Variations</span>
                     <span class="count" id="count-track">0</span>
                 </div>
-                <div class="nav-item" data-filter="missing">
+                <div class="nav-item" role="button" tabindex="0" aria-pressed="false" data-filter="missing">
                     <span class="nav-icon">❓</span>
                     <span>Tracks Missing Albums</span>
                     <span class="count" id="count-missing">0</span>
                 </div>
-                <div class="nav-item" data-filter="compilation">
+                <div class="nav-item" role="button" tabindex="0" aria-pressed="false" data-filter="compilation">
                     <span class="nav-icon">📀</span>
                     <span>Tracks on Compilations</span>
                     <span class="count" id="count-compilation">0</span>
                 </div>
-                <div class="nav-item" data-filter="invisible">
+                <div class="nav-item" role="button" tabindex="0" aria-pressed="false" data-filter="invisible">
                     <span class="nav-icon">👻</span>
                     <span>Invisible Characters</span>
                     <span class="count" id="count-invisible">0</span>
@@ -1022,9 +1075,9 @@
                 <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border);">
                     <div class="sidebar-title">View</div>
                     <div class="view-switch" id="view-switch">
-                        <button class="view-btn active" data-view="active" title="Open issues, including ones that came back after being marked fixed">Active <span class="count" id="count-active">0</span></button>
-                        <button class="view-btn" data-view="fixed" title="Marked fixed and unchanged since">Fixed <span class="count" id="count-fixed">0</span></button>
-                        <button class="view-btn" data-view="ignored" title="Marked ignore - never shown as active">Ignored <span class="count" id="count-ignored">0</span></button>
+                        <button class="view-btn active" aria-pressed="true" data-view="active" title="Open issues, including ones that came back after being marked fixed">Active <span class="count" id="count-active">0</span></button>
+                        <button class="view-btn" aria-pressed="false" data-view="fixed" title="Marked fixed and unchanged since">Fixed <span class="count" id="count-fixed">0</span></button>
+                        <button class="view-btn" aria-pressed="false" data-view="ignored" title="Marked ignore - never shown as active">Ignored <span class="count" id="count-ignored">0</span></button>
                     </div>
                 </div>
             </div>
@@ -1032,7 +1085,7 @@
             <div class="sidebar-section" id="artist-filter-section" style="display: none;">
                 <div class="sidebar-title">Filter by Artist</div>
                 <div class="filter-row">
-                    <select id="artist-filter" style="width: 100%; padding: 0.5rem; background: var(--bg-dark); border: 1px solid var(--border); border-radius: 4px; color: var(--text-primary); font-family: inherit;">
+                    <select id="artist-filter" aria-label="Filter by artist" style="width: 100%; padding: 0.5rem; background: var(--bg-dark); border: 1px solid var(--border); border-radius: 4px; color: var(--text-primary); font-family: inherit;">
                         <option value="">All Artists</option>
                     </select>
                     <button class="filter-clear" id="artist-filter-clear" title="Show all artists" aria-label="Clear artist filter">✕</button>
@@ -1051,25 +1104,25 @@
                     <h3 style="font-size: 1rem; color: var(--accent-orange); margin-bottom: 1rem;">📁 How to Get Your Export File</h3>
                     <ol style="color: var(--text-secondary); font-size: 0.9rem; padding-left: 1.25rem; margin-bottom: 1.5rem;">
                         <li style="margin-bottom: 0.5rem;">Go to <a href="https://lastfmstats.com" target="_blank" style="color: var(--accent-blue);">lastfmstats.com</a></li>
-                        <li style="margin-bottom: 0.5rem;">Enter your Last.fm username and wait for data to load</li>
+                        <li style="margin-bottom: 0.5rem;">Enter your Last.fm username and wait for your complete library to load</li>
                         <li style="margin-bottom: 0.5rem;">Click the <strong>Export</strong> button to download your CSV</li>
                         <li>Drag the file to the upload box in the sidebar, or click the box to browse</li>
                     </ol>
+                    <p style="color: var(--text-secondary); font-size: 0.9rem; max-width: none; margin: 0 0 1.5rem;"><strong>After corrections on Last.fm:</strong> lastfmstats can reuse saved history and retrieve only new plays. On its homepage, open <strong>Database</strong>, use <strong>Remove from database</strong> beside your username, then retrieve your library again by username and wait for it to finish before exporting. Do not re-import your old file. A newly downloaded CSV alone does not prove older metadata was refreshed.</p>
                     
-                    <h3 style="font-size: 1rem; color: var(--accent-orange); margin-bottom: 1rem;">🆕 What's New in v0.7.0</h3>
+                    <h3 style="font-size: 1rem; color: var(--accent-orange); margin-bottom: 1rem;">🆕 What's New in v0.8.0</h3>
                     <!-- max-width/margin override: .empty-state p centres text in a
                          400px column, which is right for the intro blurb above but
                          indents this one oddly inside the card. -->
-                    <p style="color: var(--text-secondary); font-size: 0.9rem; max-width: none; margin: 0 0 0.75rem;">This release changes what dismissing means. One button has become two, and the tool can now tell you when something you fixed has come back.</p>
+                    <p style="color: var(--text-secondary); font-size: 0.9rem; max-width: none; margin: 0 0 0.75rem;">Browse every finding, remember your correction choices, and revisit names that return after their old plays were corrected away.</p>
                     <ul style="color: var(--text-secondary); font-size: 0.9rem; padding-left: 1.25rem; margin-bottom: 1.5rem;">
-                        <li style="margin-bottom: 0.5rem;"><strong>✓ Fixed or 🚫 Ignore</strong> - Fixed means "I corrected this on Last.fm": the item hides until new plays appear under the old name. Ignore means "not a problem": the item hides for good. Both can be restored</li>
-                        <li style="margin-bottom: 0.5rem;"><strong>Recurrences come back tagged</strong> - When a fixed item picks up new scrobbles or a new spelling, it returns to the active list with a line saying when you marked it and what changed since</li>
-                        <li style="margin-bottom: 0.5rem;"><strong>Your existing dismissals</strong> - Everything you dismissed before is treated as fixed. Anything still in your export shows once more with a note, so you can confirm it or switch it to ignore. Items you genuinely fixed never reappear</li>
-                        <li style="margin-bottom: 0.5rem;"><strong>Active / Fixed / Ignored views</strong> - The "view dismissed only" checkbox is now a three-way switch in the sidebar, each with its own count</li>
-                        <li style="margin-bottom: 0.5rem;"><strong>Compilations in one click</strong> - "Fixed all" and "Ignore all" on a compilation card act on every track still showing</li>
-                        <li style="margin-bottom: 0.5rem;"><strong>Report markers</strong> - [FIXED], [IGNORED] and [RECURRED] replace [DISMISSED]</li>
-                        <li style="margin-bottom: 0.5rem;"><strong>Hyphens</strong> - "Hip Hop" now groups with "Hip-Hop", and dashes are treated like other punctuation in artist, album and track names</li>
-                        <li style="margin-bottom: 0.5rem;"><strong>Lone invisible characters</strong> - An album or track with a hidden character in its name is flagged even when there is no clean spelling to compare it with</li>
+                        <li style="margin-bottom: 0.5rem;"><strong>Every result is reachable</strong> - Previous/Next pages show 100 cards at a time. Search narrows missing-album and compilation rows; counts and impact sorting reflect the rows shown</li>
+                        <li style="margin-bottom: 0.5rem;"><strong>Remember your choices</strong> - Optionally record the spelling or album you kept when marking Fixed. Your choice remains available after Restore and appears in reports</li>
+                        <li style="margin-bottom: 0.5rem;"><strong>Album suggestions from your library</strong> - Missing-album and compilation rows offer albums from plays of the exact artist and track, plus your prior choices. Use a suggestion to fill the field; Fixed saves it. Suggestions are evidence for research, not verified original releases</li>
+                        <li style="margin-bottom: 0.5rem;"><strong>Catch repeat offenses</strong> - After a fresh complete export shows old-name plays were removed, later plays under that name can return even below the original count. Follow-ups only and Follow-ups first help you revisit them</li>
+                        <li style="margin-bottom: 0.5rem;"><strong>More precise grouping</strong> - Live/remaster labels no longer swallow meaningful title parentheses. Ordinary case-only differences are excluded; original names and invisible-character findings remain visible</li>
+                        <li style="margin-bottom: 0.5rem;"><strong>Safer imports and saved history</strong> - Quoted fields and hidden whitespace are preserved. Older or unordered exports open for review without changing saved history. Ambiguous prior decisions ask for review instead of hiding an uncertain match</li>
+                        <li style="margin-bottom: 0.5rem;"><strong>Smoother triage</strong> - Details and category controls support keyboard use. Open cards and unsaved correction fields survive paging and filtering within an import</li>
                     </ul>
                     
                     <h3 style="font-size: 1rem; color: var(--accent-orange); margin-bottom: 1rem;">💬 Feedback & Support</h3>
@@ -1106,19 +1159,21 @@
             </div>
 
             <!-- Results -->
+            <p id="import-notice" role="status" style="display: none; color: var(--accent-yellow); margin-bottom: 1rem;"></p>
             <div id="results-container" style="display: none;">
                 <div class="content-header">
                     <div>
                         <div class="content-title" id="results-title">All Issues</div>
-                        <div class="content-subtitle" id="results-subtitle">Sorted by impact (scrobble count)</div>
+                        <div class="content-subtitle" id="results-subtitle" role="status" tabindex="-1">Sorted by impact (scrobble count)</div>
                     </div>
                     <div style="display: flex; gap: 1rem; align-items: flex-start;">
                         <div class="sort-controls">
-                            <span>Sort by:</span>
+                            <label for="sort-select">Sort by:</label>
                             <select id="sort-select">
                                 <option value="count">Impact (Count)</option>
                                 <option value="variations">Variations</option>
                                 <option value="name">Name</option>
+                                <option value="followups">Follow-ups first</option>
                             </select>
                         </div>
                         <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 0.35rem;">
@@ -1135,9 +1190,13 @@
 
                 <div class="toolbar">
                     <div class="search-box">
-                        <input type="text" id="search-input" placeholder="Search artists, albums, tracks...">
+                        <input type="text" id="search-input" aria-label="Search artists, albums, tracks and remembered corrections" placeholder="Search artists, albums, tracks...">
                         <button class="search-clear" id="search-clear" title="Clear search" aria-label="Clear search">✕</button>
                     </div>
+                    <label style="display: flex; align-items: center; gap: 0.5rem; color: var(--text-secondary); font-size: 0.8rem;">
+                        <input type="checkbox" id="followups-only">
+                        Follow-ups only (Active)
+                    </label>
                 </div>
 
                 <div class="summary-bar" id="summary-bar">
@@ -1173,9 +1232,11 @@
                     </div>
                 </div>
 
+                <nav class="pagination" id="pagination-top" aria-label="Issue pages"></nav>
                 <div class="issue-grid" id="issue-grid">
                     <!-- Issues will be populated here -->
                 </div>
+                <nav class="pagination" id="pagination-bottom" aria-label="Issue pages"></nav>
             </div>
         </section>
     </main>
@@ -1198,7 +1259,23 @@
             currentFilter: 'all',
             currentArtist: '',
             searchQuery: '',
-            sortBy: 'count'
+            sortBy: 'count',
+            followupsOnly: false,
+            page: 0,
+            pageSize: 100,
+            expandedIssues: new Set(),
+            correctionDrafts: new Map(),
+            albumEvidence: new Map(),
+            albumMemory: new Map(),
+            importSequence: 0,
+            importNotice: '',
+            persistenceNotice: '',
+            persistenceReadFailed: false,
+            corrections: {},   // explicit user choices, retained after Restore
+            savedObservation: null,
+            currentObservation: null,
+            historicalImport: false,
+            observationNotice: ''
         };
 
         // Generate a simple hash of file contents (used to locate old-format saved state)
@@ -1212,9 +1289,22 @@
             return hash.toString(16);
         }
 
-        // Generate unique ID for an issue
+        // Versioned, reversible name keys. Display titles can change when a
+        // different member becomes most played; grouping identity must not.
         function getIssueId(issue) {
-            return `${issue.type}-${issue.title}`.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
+            const row = (issue.variations || [])[0] || {};
+            let artist = issue.artist || '';
+            let name = issue.normalized;
+            if (issue.type === 'artist') name = name ?? normalizeArtist(issue.title);
+            else if (issue.type === 'album') name = name ?? normalizeAlbum(row.name || issue.title);
+            else if (issue.type === 'track') name = name ?? normalizeTrack(row.name || issue.title);
+            else if (issue.type === 'missing') { artist = artist || issue.title; name = ''; }
+            else if (issue.type === 'compilation') name = issue.album ?? issue.title.slice(artist.length + 3);
+            else if (issue.type === 'invisible') {
+                artist = issue.subtype === 'artist' ? '' : getVisibleString(artist || row.artist || '');
+                name = getVisibleString(row.name || issue.title);
+            }
+            return 'issue-v3-' + encodeURIComponent(JSON.stringify([issue.type, issue.subtype || '', artist, name || '']));
         }
 
         // Generate unique ID for an item within an issue (missing/compilation tracks).
@@ -1222,8 +1312,19 @@
         // right track even when play counts (and therefore sort order) change
         // between exports.
         function getItemId(issueId, itemName) {
-            const namePart = String(itemName || '').replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
-            return `${issueId}-item-${namePart}`;
+            return `${issueId}-item-${encodeURIComponent(JSON.stringify(String(itemName || '')))}`;
+        }
+
+        function getLegacyIssueId(issue) {
+            return `${issue.type}-${issue.title}`.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
+        }
+
+        function getLegacyItemId(issueId, itemName) {
+            return `${issueId}-item-${String(itemName || '').replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()}`;
+        }
+
+        function getMemberKey(issue, row) {
+            return JSON.stringify([row.artist || issue.artist || '', row.name || '']);
         }
 
         // --- Persistence -----------------------------------------------------
@@ -1236,12 +1337,12 @@
             return `scrobble-analyzer-user-${username || 'default'}`;
         }
 
-        // --- Dismissal records (storage v2) ----------------------------------
+        // --- Dismissal records (storage v4, with v1/v2/v3 migration) ------------
         // One record per dismissed ID (DESIGN.md 4.5):
         //
         //   { intent: 'fixed' | 'ignored',
         //     count: <number>,           // per-track items (missing/compilation rows)
-        //     members: { name: count },  // card-level items (every row on the card)
+        //     members: { tuple: count }, // JSON [artist, name] keys for card rows
         //     at: <ms timestamp>,
         //     legacy: true }             // migrated from v1, no baseline; dropped on re-mark
         //
@@ -1254,28 +1355,40 @@
             return Object.prototype.hasOwnProperty.call(state.dismissals, id);
         }
 
-        function markDismissed(id, current, intent) {
-            const record = { intent: intent === 'ignored' ? 'ignored' : 'fixed', at: Date.now() };
+        function markDismissed(id, current, intent, correction) {
+            if (state.historicalImport) return;
+            const record = { intent: intent === 'ignored' ? 'ignored' : 'fixed', at: Date.now(), identityVersion: 3, normalizationVersion: 2 };
             if (typeof current === 'number') record.count = current;
             else if (current && typeof current === 'object') record.members = { ...current };
             state.dismissals[id] = record;
+            if (record.intent === 'fixed' && correction !== undefined) {
+                if (correction) state.corrections[id] = correction;
+                else delete state.corrections[id];
+            }
+            if (record.intent === 'fixed' && state.corrections[id] && typeof current === 'object' && current) {
+                const choice = { ...state.corrections[id], sourceMembers: Object.keys(current), normalizationVersion: 2 };
+                delete choice.normalizationAmbiguous;
+                delete choice.normalizationTargets;
+                state.corrections[id] = choice;
+            }
         }
 
         function unmarkDismissed(id) {
+            if (state.historicalImport) return;
             delete state.dismissals[id];
         }
 
         // What an issue looks like right now, in the shape dismissalStatus
         // compares against: one row's play count when itemId is given, else
-        // { name: count } for every row on the card.
+        // { JSON [artist, name]: count } for every row on the card.
         function currentBaseline(issue, itemId) {
             const rows = issue.variations || [];
             if (itemId !== undefined) {
-                const row = rows.find(v => getItemId(issue._id, v.name) === itemId);
+                const row = rows.find(v => getItemId(issue._id || getIssueId(issue), v.name) === itemId);
                 return row ? row.count : 0;
             }
-            const members = {};
-            rows.forEach(v => { members[v.name] = v.count; });
+            const members = Object.create(null);
+            rows.forEach(v => { members[getMemberKey(issue, v)] = v.count; });
             return members;
         }
 
@@ -1287,27 +1400,28 @@
         //   current - this row's play count, or a card's { name: count } map
         // Returns 'active' | 'hidden' | 'recurred'.
         //
-        // Counts, not presence: an item marked fixed stays hidden while its
-        // count is unchanged, so re-exporting before the Last.fm edit has
-        // propagated (or reloading the same file) does not un-hide it. Only
-        // genuinely new scrobbles under the flagged name do. On a card, a
-        // member that disappears is not a recurrence; a member that appears,
-        // or any member whose count grew, is - including the winner, which
-        // the tool cannot tell from the losers (accepted tradeoff, 4.5).
-        function dismissalStatus(record, current) {
+        // Re-exporting unchanged data stays hidden. Counts compare with the
+        // lowest accepted observation, so corrected-away plays returning
+        // below the mark-time count still recur. On a card, a disappeared
+        // member contributes nothing. Growth in an explicitly chosen kept
+        // spelling is excluded; without a choice every member is monitored.
+        function dismissalStatus(record, current, correction) {
             if (!record) return 'active';
+            if (record.identityAmbiguous) return 'active';
             if (record.intent === 'ignored') return 'hidden';
+            if (record.identityReview) return 'recurred';
             // Fixed with no baseline (migrated from v1): if it is still here it
             // recurred, was never fixed, or was meant as ignore. All three
             // need one human decision, so it surfaces once.
             if (record.legacy) return 'recurred';
             if (typeof current === 'number') {
-                return current > (record.count || 0) ? 'recurred' : 'hidden';
+                return current > (record.observedCount ?? record.count ?? 0) ? 'recurred' : 'hidden';
             }
-            const stored = record.members || {};
+            const stored = record.observedMembers || record.members || {};
             const names = Object.keys(current || {});
             for (let i = 0; i < names.length; i++) {
                 const name = names[i];
+                if (isKeptMember(name, correction)) continue;
                 if (!Object.prototype.hasOwnProperty.call(stored, name)) return 'recurred';
                 if (current[name] > stored[name]) return 'recurred';
             }
@@ -1315,26 +1429,34 @@
         }
 
         function cardStatus(issue, issueId) {
-            return dismissalStatus(state.dismissals[issueId], currentBaseline(issue));
+            return decisionStatus(issueId, currentBaseline(issue));
         }
 
         function itemStatus(issueId, row) {
-            return dismissalStatus(state.dismissals[getItemId(issueId, row.name)], row.count);
+            return decisionStatus(getItemId(issueId, row.name), row.count);
+        }
+
+        function decisionStatus(id, current) {
+            const record = state.dismissals[id];
+            // Historical snapshots cannot establish a new recurrence.
+            if (state.historicalImport && record && !record.legacy && !record.identityReview && !record.identityAmbiguous) return 'hidden';
+            return dismissalStatus(record, current, state.corrections[id]);
         }
 
         // What changed since a fixed item was marked. Pure and top-level for
         // the contract. newPlays counts growth in members that were stored
         // (or the row itself); newMembers lists spellings not stored at all.
         // A legacy record has no baseline, so nothing is measurable.
-        function recurrenceDelta(record, current) {
+        function recurrenceDelta(record, current, correction) {
             if (!record || record.legacy) return { newPlays: 0, newMembers: [] };
             if (typeof current === 'number') {
-                return { newPlays: Math.max(0, current - (record.count || 0)), newMembers: [] };
+                return { newPlays: Math.max(0, current - (record.observedCount ?? record.count ?? 0)), newMembers: [] };
             }
-            const stored = record.members || {};
+            const stored = record.observedMembers || record.members || {};
             let newPlays = 0;
             const newMembers = [];
             Object.keys(current || {}).forEach(name => {
+                if (isKeptMember(name, correction)) return;
                 if (!Object.prototype.hasOwnProperty.call(stored, name)) newMembers.push(name);
                 else newPlays += Math.max(0, current[name] - stored[name]);
             });
@@ -1343,18 +1465,24 @@
 
         // The line a recurred item carries so a reappearance does not look
         // like the tool forgot. `short` is the inline form for a track row.
-        function recurrenceNote(record, current, short) {
+        function recurrenceNote(record, current, short, correction) {
             if (!record) return '';
+            if (record.identityReview) return '↻ Previous counts could not be matched safely — please confirm fixed or ignore.';
             if (record.legacy) {
                 return short
                     ? '↻ dismissed before v0.7 — fixed, or ignore?'
                     : '↻ Dismissed before v0.7 — fixed, or ignore from now on?';
             }
-            const { newPlays, newMembers } = recurrenceDelta(record, current);
+            const { newPlays, newMembers } = recurrenceDelta(record, current, correction);
+            if (needsGroupingReview(record, current, correction)) return '↻ Refined detection now groups additional spellings with this correction. Review your previous choice.';
             const parts = [];
             if (newPlays > 0) parts.push(`${newPlays} new play${newPlays !== 1 ? 's' : ''}`);
             if (newMembers.length > 0) parts.push(`${newMembers.length} new spelling${newMembers.length !== 1 ? 's' : ''}`);
             const what = parts.join(' and ') || 'changes';
+            const reduced = typeof current === 'number'
+                ? record.observedCount < record.count
+                : Object.keys(record.members || {}).some(name => record.observedMembers && record.observedMembers[name] < record.members[name]);
+            if (reduced) return `↻ ${what} after previously corrected plays disappeared or decreased`;
             if (short) return `↻ ${what} since marked fixed`;
             const when = new Date(record.at || 0).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
             const atPlays = typeof current === 'number' ? ` at ${record.count || 0} play${record.count !== 1 ? 's' : ''}` : '';
@@ -1363,6 +1491,110 @@
 
         function intentLabel(record) {
             return record && record.intent === 'ignored' ? 'ignored' : 'fixed';
+        }
+
+        function correctionLabel(choice) {
+            if (!choice) return '';
+            const context = choice.artist ? ` (${choice.artist})` : '';
+            return `Previously chosen ${choice.kind}: ${choice.name}${context}${choice.normalizationAmbiguous ? ' — review this choice after grouping changes' : ''}`;
+        }
+
+        function needsGroupingReview(record, current, correction) {
+            return !!(record && record.groupingReview && recurrenceDelta(record, current, correction).newMembers.length);
+        }
+
+        function isKeptMember(key, choice) {
+            if (!choice || !choice.memberKey) return false;
+            if (key === choice.memberKey) return true;
+            try {
+                const [artist, name] = JSON.parse(key);
+                const [keptArtist, keptName] = JSON.parse(choice.memberKey);
+                return artist.toLowerCase() === keptArtist.toLowerCase() && name.toLowerCase() === keptName.toLowerCase();
+            } catch (error) { return false; }
+        }
+
+        function caseOnlyMembers(members) {
+            try { return differsOnlyByCase(Object.keys(members || {}).map(key => JSON.parse(key)[1])); }
+            catch (error) { return false; }
+        }
+
+        function rememberedCorrectionHtml(id) {
+            const choice = state.corrections[id];
+            if (!choice) return '';
+            return `<div class="remembered-correction">Previously chosen ${choice.kind}: ${escapeHtml(correctionChoiceLabel(choice))}${choice.normalizationAmbiguous ? ' — review this choice after grouping changes' : ''}</div>`;
+        }
+
+        // Options expose non-space whitespace; their values retain exact raw
+        // member keys. Count order never selects a preferred spelling.
+        function correctionChoiceLabel(row) {
+            const describe = name => String(name || '').replace(/[^\S ]|[\u200B-\u200D\u2060\uFEFF]/gu, ch => `[U+${ch.codePointAt(0).toString(16).toUpperCase().padStart(4, '0')}]`).replace(/^ +| +$/g, spaces => `[${spaces.length}×SP]`).replace(/ {2,}/g, spaces => `[${spaces.length}×SP]`);
+            return describe(row.name) + (row.artist ? ` (${describe(row.artist)})` : '');
+        }
+
+        function correctionControlsHtml(issue, id, perTrack, row) {
+            if (state.view !== 'active' || state.historicalImport) return '';
+            const choice = state.corrections[id];
+            if (perTrack) return `<details class="correction-memory" data-correction-id="${id}">
+                <summary>Remember album correction</summary>
+                <label>Album chosen on Last.fm (optional)
+                    <input class="correction-album" type="text" value="${escapeHtml(choice ? choice.name : '')}" placeholder="Exact album name" autocomplete="off">
+                </label>
+                ${row ? albumCandidatesHtml(issue, row) : ''}
+                <small>Saved when you mark Fixed. Leave empty to forget a previous choice.</small>
+            </details>`;
+            const rows = issue.variations || [];
+            const kind = issue.type === 'invisible' ? issue.subtype : issue.type;
+            const matches = choice && rows.some(row => getMemberKey(issue, row) === choice.memberKey);
+            const selected = !choice ? '' : matches ? encodeURIComponent(choice.memberKey) : 'custom';
+            const options = rows.map(row => {
+                const value = encodeURIComponent(getMemberKey(issue, row));
+                return `<option value="${value}"${selected === value ? ' selected' : ''}>${escapeHtml(correctionChoiceLabel(row))}</option>`;
+            }).join('');
+            return `<div class="correction-memory" data-correction-id="${id}">
+                <label>Spelling kept on Last.fm (optional)
+                    <select class="correction-choice">
+                        <option value=""${!selected ? ' selected' : ''}>No remembered spelling</option>
+                        ${options}
+                        <option value="custom"${selected === 'custom' ? ' selected' : ''}>Another spelling…</option>
+                    </select>
+                </label>
+                <div class="correction-custom-fields"${selected !== 'custom' ? ' hidden' : ''}>
+                    <label>Exact spelling you kept
+                        <input class="correction-custom" type="text" value="${escapeHtml(selected === 'custom' ? choice.name : '')}" autocomplete="off">
+                    </label>
+                    ${kind !== 'artist' ? `<label>Artist for this spelling
+                        <input class="correction-custom-artist" type="text" value="${escapeHtml(choice ? choice.artist : issue.artist || '')}" autocomplete="off">
+                    </label>` : ''}
+                </div>
+                <small>Saved when you mark Fixed. Plays under this spelling won't count as a recurrence.</small>
+            </div>`;
+        }
+
+        function albumCandidatesHtml(issue, row) {
+            const candidates = getAlbumCandidates(state.albumEvidence, state.albumMemory, issue.artist || '', row.name, issue.album || '');
+            if (!candidates.length) return '<small>No album evidence for this exact artist and track in this export or your saved choices. Use the lookup to research it.</small>';
+            return `<div class="album-candidates"><small>Albums to consider — evidence, not a verified original release:</small>${candidates.map(candidate => {
+                const url = getLastFmUrl(issue.artist, candidate.name, null);
+                const evidence = [candidate.remembered ? 'Previously chosen for this artist and track' : '', candidate.count ? `${candidate.count.toLocaleString()} play${candidate.count === 1 ? '' : 's'} of this exact track in your library` : ''].filter(Boolean).join(' · ');
+                return `<div class="album-candidate"><span>${escapeHtml(correctionChoiceLabel({ name: candidate.name }))}</span><small>${escapeHtml(evidence)}</small><a class="lastfm-link" href="${url}" target="_blank" rel="noopener">Last.fm</a><button type="button" class="use-album" data-album="${escapeHtml(candidate.name)}">Use this album</button></div>`;
+            }).join('')}</div>`;
+        }
+
+        function readCorrectionChoice(card, id, issue) {
+            const control = [...card.querySelectorAll('.correction-memory')].find(el => el.dataset.correctionId === id);
+            if (!control) return undefined;
+            const albumInput = control.querySelector('.correction-album');
+            if (albumInput) return albumInput.value.trim() ? { kind: 'album', artist: issue.artist || '', name: albumInput.value } : null;
+            const select = control.querySelector('.correction-choice');
+            if (!select || !select.value) return null;
+            const kind = issue.type === 'invisible' ? issue.subtype : issue.type;
+            let artist, name;
+            if (select.value === 'custom') {
+                name = control.querySelector('.correction-custom').value;
+                artist = kind === 'artist' ? '' : control.querySelector('.correction-custom-artist').value;
+                if (!name.trim()) return null;
+            } else [artist, name] = JSON.parse(decodeURIComponent(select.value));
+            return { kind, artist, name, memberKey: JSON.stringify([artist, name]) };
         }
 
         // Does an item with this status and record belong in the current
@@ -1375,38 +1607,68 @@
 
         function setView(view) {
             state.view = view;
-            document.querySelectorAll('.view-btn').forEach(b => b.classList.toggle('active', b.dataset.view === view));
+            document.querySelectorAll('.view-btn').forEach(b => {
+                b.classList.toggle('active', b.dataset.view === view);
+                b.setAttribute('aria-pressed', String(b.dataset.view === view));
+            });
         }
 
         function saveDismissedState() {
-            if (!state.username) return;
+            if (!state.username || state.historicalImport) return false;
+            if (state.persistenceReadFailed) {
+                state.persistenceNotice = 'Your decisions are kept for this session. Existing saved data could not be read, so it has been left untouched.';
+                showImportNotices();
+                return false;
+            }
             const data = {
-                version: 2,
+                version: 4,
                 items: state.dismissals,
-                // Shadow of the v1 shape, so a pre-split build of the tool
-                // still sees these dismissals if someone opens one. Drop once
-                // the split has shipped.
-                dismissed: Object.keys(state.dismissals),
+                corrections: state.corrections || {},
+                lastObservation: state.savedObservation || null,
                 savedAt: Date.now()
             };
-            localStorage.setItem(userStorageKey(state.username), JSON.stringify(data));
+            try {
+                localStorage.setItem(userStorageKey(state.username), JSON.stringify(data));
+                state.persistenceNotice = '';
+                showImportNotices();
+                return true;
+            } catch (error) {
+                state.persistenceNotice = 'Your decisions are kept for this session, but could not be saved in this browser.';
+                showImportNotices();
+                return false;
+            }
         }
 
         // Returns the { id: record } map for this user. A v1 blob is converted
-        // in memory here and written back as v2 on the next save.
+        // in memory here; identity migration follows detection, and the next
+        // save writes v4. A failed read never authorizes replacing old data.
         function loadDismissedState(username) {
-            const stored = localStorage.getItem(userStorageKey(username));
-            if (stored) {
-                try {
-                    return migrateDismissalBlob(JSON.parse(stored));
-                } catch (e) {
-                    console.error('Error loading dismissed state:', e);
-                }
+            state.persistenceReadFailed = false;
+            state.corrections = {};
+            state.savedObservation = null;
+            try {
+                const stored = localStorage.getItem(userStorageKey(username));
+                if (!stored) return {};
+                const data = JSON.parse(stored);
+                const items = migrateDismissalBlob(data);
+                const corrections = data.corrections || {};
+                if (typeof corrections !== 'object' || Array.isArray(corrections)) throw new Error('Invalid correction memory.');
+                Object.values(corrections).forEach(choice => {
+                    if (!choice || !['artist', 'album', 'track'].includes(choice.kind) || typeof choice.name !== 'string' || !choice.name || typeof choice.artist !== 'string' || (choice.memberKey !== undefined && typeof choice.memberKey !== 'string') || (choice.sourceMembers !== undefined && (!Array.isArray(choice.sourceMembers) || choice.sourceMembers.some(key => typeof key !== 'string')))) throw new Error('Invalid remembered correction.');
+                });
+                const observation = data.lastObservation || null;
+                if (observation && (!Number.isSafeInteger(observation.latestScrobble) || observation.latestScrobble < 0 || !Number.isSafeInteger(observation.modified) || observation.modified < 0 || typeof observation.hash !== 'string')) throw new Error('Invalid export observation.');
+                state.corrections = corrections;
+                state.savedObservation = observation;
+                return items;
+            } catch (error) {
+                state.persistenceReadFailed = true;
+                state.persistenceNotice = 'Saved decisions could not be loaded. This review starts with all findings active.';
+                return {};
             }
-            return {};
         }
 
-        // v2 ({ items }) passes through. v1 ({ dismissed: [id, ...] }) becomes
+        // v2/v3/v4 ({ items }) passes through. v1 ({ dismissed: [id, ...] }) becomes
         // one legacy 'fixed' record per ID, with no baseline (DESIGN.md 4.5):
         // whatever is still present in the next export surfaces once, tagged,
         // so nothing that recurred before the upgrade is swallowed. Migration
@@ -1414,10 +1676,19 @@
         // are cards, which is why a legacy record carries neither count nor
         // members; dismissalStatus treats it by its flag alone.
         function migrateDismissalBlob(data) {
-            if (data && data.items && typeof data.items === 'object') return data.items;
+            if (data && data.version > 4) throw new Error('Unsupported saved-decision version.');
+            if (data && data.items !== undefined) {
+                if (!data.items || typeof data.items !== 'object' || Array.isArray(data.items)) throw new Error('Invalid saved decisions.');
+                Object.values(data.items).forEach(record => {
+                    if (!record || !['fixed', 'ignored'].includes(record.intent)) throw new Error('Invalid saved decision.');
+                });
+                return data.items;
+            }
             const at = (data && data.savedAt) || Date.now();
             const items = {};
-            ((data && data.dismissed) || []).forEach(id => {
+            const dismissed = (data && data.dismissed) || [];
+            if (!Array.isArray(dismissed) || dismissed.some(id => typeof id !== 'string')) throw new Error('Invalid legacy decisions.');
+            dismissed.forEach(id => {
                 items[id] = legacyDismissalRecord(at);
             });
             return items;
@@ -1425,6 +1696,317 @@
 
         function legacyDismissalRecord(at) {
             return { intent: 'fixed', legacy: true, at };
+        }
+
+        // IDs contain enough raw context to observe a former finding even
+        // when the detector no longer emits its card. Never decode legacy IDs.
+        function decodeDecisionId(id) {
+            if (!id.startsWith('issue-v3-')) return null;
+            const encoded = id.slice('issue-v3-'.length);
+            const candidates = [[encoded, undefined, id]];
+            let position = encoded.indexOf('%5D-item-');
+            while (position !== -1) {
+                candidates.push([encoded.slice(0, position + 3), encoded.slice(position + 9), 'issue-v3-' + encoded.slice(0, position + 3)]);
+                position = encoded.indexOf('%5D-item-', position + 1);
+            }
+            for (const [card, item, cardId] of candidates) {
+                try {
+                    const [type, subtype, artist, name] = JSON.parse(decodeURIComponent(card));
+                    const itemName = item === undefined ? undefined : JSON.parse(decodeURIComponent(item));
+                    if (!['artist', 'album', 'track', 'invisible', 'missing', 'compilation'].includes(type)) continue;
+                    if (item !== undefined && (typeof itemName !== 'string' || !['missing', 'compilation'].includes(type))) continue;
+                    return { type, subtype, artist, name, album: type === 'compilation' ? name : undefined, itemName, cardId };
+                } catch (error) { /* Try the next possible closing bracket. */ }
+            }
+            return null;
+        }
+
+        function exportObservation(scrobbles, file, hash) {
+            let latestScrobble = 0;
+            scrobbles.forEach(row => { latestScrobble = Math.max(latestScrobble, Number(row.Date) || 0); });
+            return { latestScrobble, modified: Number(file.lastModified) || 0, hash };
+        }
+
+        // Last-play time orders snapshots with new listening. For edits made
+        // without new listening, use the export file's modification time.
+        // Equal times with different contents cannot establish chronology.
+        function isOlderObservation(previous, current) {
+            if (!previous) return false;
+            if (current.latestScrobble !== previous.latestScrobble) return current.latestScrobble < previous.latestScrobble;
+            if (current.hash === previous.hash) return false;
+            return !current.modified || current.modified <= previous.modified;
+        }
+
+        // Count exact metadata throughout the complete library. Thresholds
+        // and variation-card presence must not hide a remembered recurrence.
+        // Only requested card groups are retained, to bound memory use.
+        function libraryBaselines(scrobbles, items) {
+            const requests = new Map();
+            Object.entries(items).forEach(([id, record]) => {
+                if (record.intent !== 'fixed' || record.legacy || record.identityReview || record.identityAmbiguous) return;
+                const identity = decodeDecisionId(id);
+                if (identity && ['artist', 'album', 'track'].includes(identity.type) && caseOnlyMembers(record.members)) return;
+                if (identity) requests.set(id, identity);
+            });
+            const current = Object.create(null);
+            if (!requests.size) return current;
+            const artists = new Map(), albums = new Map(), tracks = new Map(), missing = new Map(), albumTracks = new Map();
+            const increment = (map, key) => map.set(key, (map.get(key) || 0) + 1);
+            scrobbles.forEach(row => {
+                if (!row.Artist) return;
+                increment(artists, row.Artist);
+                if (row.Album) increment(albums, JSON.stringify([row.Artist, row.Album]));
+                if (row.Track) {
+                    increment(tracks, JSON.stringify([row.Artist, row.Track]));
+                    if (!row.Album || !row.Album.trim()) increment(missing, JSON.stringify([row.Artist, row.Track]));
+                    if (row.Album) increment(albumTracks, JSON.stringify([row.Artist, row.Album, row.Track]));
+                }
+            });
+            requests.forEach((identity, id) => {
+                if (identity.itemName !== undefined) {
+                    current[id] = identity.type === 'missing'
+                        ? missing.get(JSON.stringify([identity.artist, identity.itemName])) || 0
+                        : albumTracks.get(JSON.stringify([identity.artist, identity.album, identity.itemName])) || 0;
+                } else current[id] = Object.create(null);
+            });
+            const normalizers = { artist: normalizeArtist, album: normalizeAlbum, track: normalizeTrack };
+            [[artists, 'artist'], [albums, 'album'], [tracks, 'track']].forEach(([entities, kind]) => {
+                entities.forEach((count, raw) => {
+                    const [artist, name] = kind === 'artist' ? ['', raw] : JSON.parse(raw);
+                    const row = { artist, name, count };
+                    const ordinary = getIssueId({ type: kind, artist, normalized: normalizers[kind](name) });
+                    const invisible = getIssueId({ type: 'invisible', subtype: kind, artist, variations: [row] });
+                    [ordinary, invisible].forEach(id => {
+                        if (requests.has(id)) current[id][JSON.stringify([artist, name])] = count;
+                    });
+                });
+            });
+            return current;
+        }
+
+        // Preserve the mark-time baseline and separately track the lowest
+        // observed counts. Growth above that minimum is a repeat offense,
+        // including 10 -> 0 -> 1. Called only for accepted complete snapshots.
+        function observeFixedRecords(items, baselines, corrections = {}) {
+            const observed = { ...items };
+            Object.entries(baselines).forEach(([id, current]) => {
+                const record = items[id];
+                if (!record || record.intent !== 'fixed' || record.legacy || record.identityReview || record.identityAmbiguous) return;
+                if (typeof current === 'number') {
+                    observed[id] = { ...record, observedCount: Math.min(record.observedCount ?? record.count ?? 0, current) };
+                } else if (record.members) {
+                    const previous = record.observedMembers || record.members;
+                    const members = Object.create(null);
+                    Object.keys(previous).forEach(name => { members[name] = Math.min(previous[name], current[name] || 0); });
+                    observed[id] = { ...record, observedMembers: members };
+                    if (record.normalizationUpgrade) {
+                        delete observed[id].normalizationUpgrade;
+                        if (Object.keys(current).some(name => !Object.prototype.hasOwnProperty.call(record.members, name) && !isKeptMember(name, corrections[id]))) observed[id].groupingReview = true;
+                    }
+                }
+            });
+            return observed;
+        }
+
+        function addRememberedRecurrences(issues, items, baselines, corrections) {
+            const result = [...issues];
+            const existing = new Map(issues.map(issue => [getIssueId(issue), issue]));
+            Object.entries(baselines).forEach(([id, current]) => {
+                const record = items[id];
+                if (dismissalStatus(record, current, corrections[id]) !== 'recurred') return;
+                const identity = decodeDecisionId(id);
+                if (!identity) return;
+                const { type, subtype, artist, name, album, itemName, cardId } = identity;
+                if (itemName !== undefined) {
+                    if (!current) return;
+                    const card = existing.get(cardId);
+                    if (card) {
+                        // Normally present already; never mutate a detector's rows.
+                        if ((card.variations || []).some(row => row.name === itemName)) return;
+                    }
+                    const row = { name: itemName, count: current };
+                    const issue = card
+                        ? { ...card, variations: [...card.variations, row], totalCount: card.totalCount + current }
+                        : { type, artist, album, title: type === 'missing' ? artist : `${artist} - ${album}`, description: 'Previously fixed track returned', totalCount: current, variations: [row] };
+                    if (card) result[result.indexOf(card)] = issue;
+                    else result.push(issue);
+                    existing.set(cardId, issue);
+                } else {
+                    if (existing.has(cardId)) return;
+                    const rows = Object.entries(current).filter(([, count]) => count > 0).map(([key, count]) => {
+                        const [rowArtist, rowName] = JSON.parse(key);
+                        return { artist: rowArtist, name: rowName, count, hasInvisible: hasInvisibleChars(rowName) || hasInvisibleChars(rowArtist) };
+                    }).sort((a, b) => b.count - a.count);
+                    if (!rows.length) return;
+                    if (['artist', 'album', 'track'].includes(type) && differsOnlyByCase(rows.map(row => row.name))) return;
+                    const title = type === 'artist' || (type === 'invisible' && subtype === 'artist') ? rows[0].name : `${artist} - ${rows[0].name}`;
+                    const issue = { type, subtype, artist, normalized: name, title, description: 'Previously fixed spelling returned', totalCount: rows.reduce((sum, row) => sum + row.count, 0), variations: rows };
+                    result.push(issue);
+                    existing.set(cardId, issue);
+                }
+            });
+            return result;
+        }
+
+        function freshNormalizationDecision(id, items, choices) {
+            return !!((items[id] && items[id].normalizationVersion === 2 && !items[id].identityAmbiguous && !items[id].groupingReview && !items[id].normalizationUpgrade)
+                || (!items[id] && choices[id] && choices[id].normalizationVersion === 2 && !choices[id].normalizationAmbiguous));
+        }
+
+        // Normalizer refinements can move or split grouping-key IDs. Match
+        // using saved raw members, independent of the current export or which
+        // cards its detectors emit. Never copy a broad decision to children.
+        function migrateNormalizationIdentities(items, corrections, issues) {
+            const migrated = { ...items }, choices = { ...corrections }, targets = new Map();
+            let ambiguous = 0;
+            const fresh = id => freshNormalizationDecision(id, items, choices);
+            const quarantine = (id, destinations) => {
+                if (items[id]) migrated[id] = { ...items[id], identityAmbiguous: true, normalizationTargets: destinations };
+                if (choices[id]) choices[id] = { ...choices[id], normalizationAmbiguous: true, normalizationTargets: destinations };
+                if (!destinations.length || destinations.some(target => !fresh(target))) ambiguous++;
+            };
+            const ids = new Set([...Object.keys(items), ...Object.keys(choices)]);
+            ids.forEach(id => {
+                const identity = decodeDecisionId(id);
+                if (!identity || !['album', 'track'].includes(identity.type) || identity.itemName !== undefined) return;
+                // Ignore deliberately keeps old correction memory. Its
+                // ambiguity must not undo a fresh decision on this child.
+                if (fresh(id)) return;
+                const record = items[id], choice = choices[id];
+                const members = record && record.members ? Object.keys(record.members) : choice && choice.sourceMembers;
+                if (!members || !members.length) return; // Retain baseline-less legacy or restored memory without source names.
+                if (choice) choices[id] = { ...choice, sourceMembers: [...members] };
+                const destinations = new Set();
+                try {
+                    members.forEach(key => {
+                        const tuple = JSON.parse(key);
+                        if (!Array.isArray(tuple) || tuple.length !== 2 || tuple.some(part => typeof part !== 'string')) throw new Error('Invalid member key.');
+                        const [artist, name] = tuple;
+                        destinations.add(getIssueId({ type: identity.type, artist, normalized: identity.type === 'album' ? normalizeAlbum(name) : normalizeTrack(name) }));
+                    });
+                } catch (error) { quarantine(id, []); return; }
+                const nextIds = [...destinations].sort();
+                if ((record && record.identityAmbiguous) || (choice && choice.normalizationAmbiguous) || nextIds.length !== 1) {
+                    quarantine(id, nextIds);
+                    return;
+                }
+                const nextId = nextIds[0];
+                if (!targets.has(nextId)) targets.set(nextId, []);
+                targets.get(nextId).push(id);
+            });
+            targets.forEach((sources, nextId) => {
+                // A deliberate choice made under these rules wins. Old sources
+                // remain quarantined and recoverable, with no ongoing warning.
+                if (fresh(nextId)) {
+                    sources.filter(id => id !== nextId).forEach(id => quarantine(id, [nextId]));
+                    return;
+                }
+                if (sources.length !== 1 || (migrated[nextId] && !sources.includes(nextId))) {
+                    sources.forEach(id => quarantine(id, [nextId]));
+                    return;
+                }
+                const id = sources[0];
+                if (items[id]) migrated[nextId] = {
+                    ...items[id], normalizationVersion: 2,
+                    ...(items[id].normalizationVersion !== 2 && items[id].intent === 'fixed' && !items[id].legacy ? { normalizationUpgrade: true } : {})
+                };
+                if (choices[id]) choices[nextId] = { ...choices[id], normalizationVersion: 2 };
+                if (id !== nextId) {
+                    delete migrated[id];
+                    delete choices[id];
+                }
+            });
+            if (issues) {
+                // A split into singletons may leave nothing to triage. Keep
+                // its history but show a notice only when a current finding
+                // is available to review, rather than a permanent dead end.
+                const present = new Map(issues.map(issue => [getIssueId(issue), issue]));
+                ambiguous = [...new Set([...Object.keys(migrated), ...Object.keys(choices)])].filter(id => {
+                    const entry = migrated[id] && migrated[id].identityAmbiguous ? migrated[id] : choices[id] && choices[id].normalizationAmbiguous ? choices[id] : null;
+                    if (!entry || !entry.normalizationTargets) return false;
+                    const destinations = entry.normalizationTargets.length ? entry.normalizationTargets : [id];
+                    return destinations.some(target => {
+                        const issue = present.get(target);
+                        return issue && !fresh(target) && dismissalStatus(migrated[target], currentBaseline(issue), choices[target]) !== 'hidden';
+                    });
+                }).length;
+            }
+            return { items: migrated, corrections: choices, ambiguous };
+        }
+
+        // Resolve legacy aliases against the whole issue set, never one card
+        // at a time: an old punctuation-only key may refer to several rows.
+        // Unmatched records are retained for later exports. Ambiguous records
+        // are retained but quarantined, so they cannot silently hide a sibling.
+        function migrateIssueIdentities(items, issues) {
+            const migrated = { ...items };
+            const aliases = new Map();
+            const targets = new Map();
+            const add = (oldId, newId, issue, row) => {
+                if (!aliases.has(oldId)) aliases.set(oldId, new Map());
+                aliases.get(oldId).set(newId, { issue, row });
+            };
+            issues.forEach(issue => {
+                const id = getIssueId(issue);
+                const oldId = getLegacyIssueId(issue);
+                if (['missing', 'compilation'].includes(issue.type)) {
+                    (issue.variations || []).forEach(row => add(getLegacyItemId(oldId, row.name), getItemId(id, row.name), issue, row));
+                } else {
+                    add(oldId, id, issue);
+                    if (['artist', 'album', 'track'].includes(issue.type)) {
+                        (issue.variations || []).forEach(row => {
+                            const title = issue.type === 'artist' ? row.name : `${issue.artist} - ${row.name}`;
+                            add(getLegacyIssueId({ type: issue.type, title }), id, issue);
+                        });
+                    }
+                }
+            });
+            let ambiguous = 0;
+            Object.entries(items).forEach(([oldId, record]) => {
+                if (oldId.startsWith('issue-v3-')) return;
+                const matches = aliases.get(oldId);
+                if (!matches) return;
+                if (record.identityAmbiguous || matches.size !== 1) {
+                    migrated[oldId] = { ...record, identityAmbiguous: true };
+                    if ([...matches.keys()].some(id => !items[id])) ambiguous++;
+                    return;
+                }
+                const [newId, target] = [...matches][0];
+                if (!targets.has(newId)) targets.set(newId, []);
+                targets.get(newId).push({ oldId, record, ...target });
+            });
+            targets.forEach((sources, newId) => {
+                if (sources.length !== 1 && !items[newId]) {
+                    sources.forEach(({ oldId, record }) => { migrated[oldId] = { ...record, identityAmbiguous: true }; });
+                    ambiguous += sources.length;
+                    return;
+                }
+                if (!items[newId]) {
+                    const { record, issue, row } = sources[0];
+                    const next = { ...record, identityVersion: 3 };
+                    if (!row && record.members && !record.legacy) {
+                        const members = Object.create(null);
+                        Object.entries(record.members).forEach(([name, count]) => {
+                            const rows = (issue.variations || []).filter(v => v.name === name);
+                            if (rows.length > 1 || (issue.type === 'invisible' && issue.subtype !== 'artist' && rows.length === 0)) {
+                                next.identityReview = true;
+                            } else {
+                                members[getMemberKey(issue, rows[0] || { name })] = count;
+                            }
+                        });
+                        next.members = members;
+                    }
+                    migrated[newId] = next;
+                }
+                sources.forEach(({ oldId }) => { delete migrated[oldId]; });
+            });
+            return { items: migrated, ambiguous };
+        }
+
+        function showImportNotices() {
+            const el = document.getElementById('import-notice');
+            el.textContent = [state.importNotice, state.observationNotice, state.persistenceNotice].filter(Boolean).join(' ');
+            el.style.display = el.textContent ? 'block' : 'none';
         }
 
         // Migrate dismissals saved by pre-v0.6.0 versions (keyed by file hash).
@@ -1445,14 +2027,17 @@
             const itemIdTranslation = {};
             issues.forEach(issue => {
                 if (!['missing', 'compilation'].includes(issue.type)) return;
-                const issueId = getIssueId(issue);
+                const issueId = getLegacyIssueId(issue);
                 (issue.variations || []).forEach((v, i) => {
-                    itemIdTranslation[`${issueId}-item-${i}`] = getItemId(issueId, v.name);
+                    itemIdTranslation[`${issueId}-item-${i}`] = getLegacyItemId(issueId, v.name);
                 });
             });
 
-            for (let k = 0; k < localStorage.length; k++) {
-                const key = localStorage.key(k);
+            let storageKeys;
+            try {
+                storageKeys = Array.from({ length: localStorage.length }, (_, k) => localStorage.key(k));
+            } catch (error) { return; }
+            for (const key of storageKeys) {
                 if (!key || !key.startsWith('scrobble-analyzer-')) continue;
                 if (key.startsWith('scrobble-analyzer-user-')) continue; // already new format
 
@@ -1489,11 +2074,15 @@
                 if (isMatchingFile) consumedKeys.push(key);
             }
 
-            consumedKeys.forEach(key => localStorage.removeItem(key));
-
             if (migratedIssueLevel || migratedItemLevel) {
                 console.log(`Migrated dismissals from old storage: ${migratedIssueLevel} issue-level, ${migratedItemLevel} item-level`);
-                saveDismissedState();
+                const migration = migrateIssueIdentities(state.dismissals, issues);
+                state.dismissals = migration.items;
+                if (saveDismissedState()) {
+                    consumedKeys.forEach(key => {
+                        try { localStorage.removeItem(key); } catch (error) { /* Keep the recoverable source. */ }
+                    });
+                }
             }
         }
 
@@ -1540,103 +2129,87 @@
             fileInput.value = '';
         });
 
-        // Parse CSV
-        function parseCSV(text) {
-            const lines = text.trim().split('\n');
-            
-            // Detect delimiter from first line
-            const firstLine = lines[0];
-            const delimiter = firstLine.includes(';') ? ';' : ',';
-            
-            const rawHeaders = parseCSVLine(firstLine.replace(/^\uFEFF/, ''), delimiter);
-            
-            // Normalize headers - map various possible names to our standard names.
-            // The lastfmstats.com export embeds the username in the date header
-            // ("Date#scoblitz") - capture it for per-user dismissal storage.
-            const headerMap = {};
-            let username = null;
-            rawHeaders.forEach((header, index) => {
-                const h = header.trim().toLowerCase();
-                if (h.includes('artist')) headerMap[index] = 'Artist';
-                else if (h.includes('album') && h.includes('id')) headerMap[index] = 'AlbumId';
-                else if (h.includes('album')) headerMap[index] = 'Album';
-                else if (h.includes('track') || h.includes('song') || h.includes('title')) headerMap[index] = 'Track';
-                else if (h.includes('date') || h.includes('time')) {
-                    headerMap[index] = 'Date';
-                    const usernameMatch = header.trim().match(/#(.+)$/);
-                    if (usernameMatch) username = usernameMatch[1].trim().toLowerCase();
+        // Parse the complete CSV stream: quoted line breaks are metadata,
+        // whereas unquoted line breaks separate records. Never trim raw names.
+        function parseCSVRecords(text, delimiter) {
+            const records = [];
+            let row = [], field = '', quoted = false, closedQuote = false;
+            for (let i = 0; i < text.length; i++) {
+                const ch = text[i];
+                if (quoted) {
+                    if (ch === '"' && text[i + 1] === '"') { field += '"'; i++; }
+                    else if (ch === '"') { quoted = false; closedQuote = true; }
+                    else field += ch;
+                } else if (ch === delimiter || ch === '\n' || ch === '\r') {
+                    row.push(field);
+                    field = '';
+                    closedQuote = false;
+                    if (ch !== delimiter) {
+                        records.push(row);
+                        row = [];
+                        if (ch === '\r' && text[i + 1] === '\n') i++;
+                    }
+                } else if (ch === '"' && field === '' && !closedQuote) {
+                    quoted = true;
+                } else {
+                    if (closedQuote || ch === '"') throw new Error('INVALID_HEADERS:Malformed CSV quoting. Please export a fresh file from lastfmstats.com.');
+                    field += ch;
                 }
-                else headerMap[index] = header.trim(); // Keep original if no match
+            }
+            if (quoted) throw new Error('INVALID_HEADERS:Unterminated quoted CSV field. Please export a fresh file.');
+            if (field !== '' || row.length || closedQuote) {
+                row.push(field);
+                records.push(row);
+            }
+            return records;
+        }
+
+        function parseCSV(text) {
+            text = text.replace(/^\uFEFF/, '');
+            const firstLine = text.split(/[\r\n]/, 1)[0];
+            const delimiter = firstLine.includes(';') ? ';' : ',';
+            const records = parseCSVRecords(text, delimiter);
+            const rawHeaders = records.shift() || [];
+            const seen = new Set();
+            let username = null;
+            const headers = rawHeaders.map(header => {
+                const h = header.trim().toLowerCase();
+                let mapped;
+                if (h === 'artist') mapped = 'Artist';
+                else if (h === 'albumid') mapped = 'AlbumId';
+                else if (h === 'album') mapped = 'Album';
+                else if (['track', 'song', 'title'].includes(h)) mapped = 'Track';
+                else if (h === 'date' || h.startsWith('date#')) {
+                    mapped = 'Date';
+                    username = header.trim().match(/^date#([a-z0-9_-]+)$/i)?.[1].toLowerCase() || null;
+                } else mapped = header.trim();
+                if (seen.has(mapped)) throw new Error('INVALID_HEADERS:Duplicate CSV column. Please use a complete lastfmstats.com export.');
+                seen.add(mapped);
+                return mapped;
             });
-            
-            console.log('Detected delimiter:', delimiter);
-            console.log('Raw headers:', rawHeaders);
-            console.log('Mapped headers:', headerMap);
-            
-            // Validate that we have required headers
-            const mappedValues = Object.values(headerMap);
-            const hasArtist = mappedValues.includes('Artist');
-            const hasTrack = mappedValues.includes('Track');
-            
-            if (!hasArtist || !hasTrack) {
-                const missingHeaders = [];
-                if (!hasArtist) missingHeaders.push('Artist');
-                if (!hasTrack) missingHeaders.push('Track');
-                
-                throw new Error(`INVALID_HEADERS:Missing required columns: ${missingHeaders.join(', ')}. Expected a CSV with Artist, Album, and Track columns. See the README for supported export formats.`);
-            }
-            
+            const missing = ['Artist', 'Album', 'Track', 'Date'].filter(name => !seen.has(name));
+            if (missing.length) throw new Error(`INVALID_HEADERS:Missing required columns: ${missing.join(', ')}. Please use a complete lastfmstats.com export.`);
+            if (!username) throw new Error('INVALID_HEADERS:Missing Last.fm username in the Date#username header. Please use a complete lastfmstats.com export.');
             const data = [];
-            for (let i = 1; i < lines.length; i++) {
-                if (!lines[i].trim()) continue; // Skip empty lines
-                
-                const values = parseCSVLine(lines[i], delimiter);
-                const row = {};
-                Object.entries(headerMap).forEach(([index, header]) => {
-                    row[header] = values[index] ? values[index].trim() : '';
-                });
+            records.forEach((values, index) => {
+                if (values.length === 1 && values[0] === '') return;
+                if (values.length !== headers.length) throw new Error(`INVALID_HEADERS:Record ${index + 2} has ${values.length} fields; expected ${headers.length} columns. Please export a fresh file.`);
+                const row = Object.fromEntries(headers.map((header, i) => [header, values[i]]));
+                if (!/^\d+$/.test(row.Date) || !Number.isSafeInteger(Number(row.Date))) throw new Error(`INVALID_HEADERS:Record ${index + 2} has an invalid timestamp. Expected milliseconds from lastfmstats.com.`);
                 data.push(row);
-            }
-            
-            // Debug: log first few rows
-            console.log('First 3 rows:', data.slice(0, 3));
-            console.log('Username from header:', username || '(none found, using default)');
-            
-            return { rows: data, username: username };
+            });
+            if (!data.length) throw new Error('INVALID_HEADERS:This export contains no scrobbles.');
+            return { rows: data, username };
         }
 
         function parseCSVLine(line, delimiter = ',') {
-            const result = [];
-            let current = '';
-            let inQuotes = false;
-            
-            for (let i = 0; i < line.length; i++) {
-                const char = line[i];
-                
-                if (char === '"') {
-                    if (inQuotes && line[i + 1] === '"') {
-                        current += '"';
-                        i++;
-                    } else {
-                        inQuotes = !inQuotes;
-                    }
-                } else if (char === delimiter && !inQuotes) {
-                    result.push(current);
-                    current = '';
-                } else {
-                    current += char;
-                }
-            }
-            result.push(current);
-            
-            // Note: no quote-stripping pass here. The loop above already handles
-            // quoting/escaping, so stripping again would corrupt values that
-            // legitimately begin/end with quotes (e.g. Bowie's "Heroes").
-            return result;
+            return parseCSVRecords(line, delimiter)[0] || [];
         }
 
         // Process uploaded file
         async function processFile(file) {
+            const importSequence = ++state.importSequence;
+            document.getElementById('import-notice').style.display = 'none';
             emptyState.style.display = 'none';
             loadingState.style.display = 'flex';
             resultsContainer.style.display = 'none';
@@ -1644,6 +2217,7 @@
             const reader = new FileReader();
             
             reader.onload = async (e) => {
+                if (importSequence !== state.importSequence) return;
                 try {
                     progressText.textContent = 'Parsing CSV...';
                     progressFill.style.width = '10%';
@@ -1655,70 +2229,110 @@
                     text = text.replace(/^\xEF\xBB\xBF/, ''); // UTF-8 BOM as bytes
                     
                     // Hash the file - used to locate old-format saved state for migration
-                    state.fileHash = hashString(text);
-                    console.log('File hash:', state.fileHash);
+                    const fileHash = hashString(text);
+                    console.log('File hash:', fileHash);
                     
                     const parsed = parseCSV(text);
-                    state.scrobbles = parsed.rows;
-                    state.username = parsed.username || 'default';
-                    
-                    // Load this user's dismissals (keyed by username, survives new exports)
-                    state.dismissals = loadDismissedState(state.username);
-                    setView('active');
-                    console.log('Loaded dismissed issues for', state.username + ':', Object.keys(state.dismissals).length);
-                    
-                    console.log('Parsed scrobbles count:', state.scrobbles.length);
-                    console.log('Sample scrobble:', state.scrobbles[0]);
-                    
+                    const scrobbles = parsed.rows;
+
                     progressText.textContent = 'Analyzing artist variations...';
                     progressFill.style.width = '20%';
                     await sleep(50);
+                    if (importSequence !== state.importSequence) return;
                     
-                    const artistIssues = findArtistVariations(state.scrobbles);
+                    const artistIssues = findArtistVariations(scrobbles);
                     
                     progressText.textContent = 'Analyzing album variations...';
                     progressFill.style.width = '35%';
                     await sleep(50);
+                    if (importSequence !== state.importSequence) return;
                     
-                    const albumIssues = findAlbumVariations(state.scrobbles);
+                    const albumIssues = findAlbumVariations(scrobbles);
                     
                     progressText.textContent = 'Analyzing track variations...';
                     progressFill.style.width = '50%';
                     await sleep(50);
+                    if (importSequence !== state.importSequence) return;
                     
-                    const trackIssues = findTrackVariations(state.scrobbles);
+                    const trackIssues = findTrackVariations(scrobbles);
                     
                     progressText.textContent = 'Finding missing albums...';
                     progressFill.style.width = '65%';
                     await sleep(50);
+                    if (importSequence !== state.importSequence) return;
                     
-                    const missingIssues = findMissingAlbums(state.scrobbles);
+                    const missingIssues = findMissingAlbums(scrobbles);
                     
                     progressText.textContent = 'Detecting compilations...';
                     progressFill.style.width = '80%';
                     await sleep(50);
+                    if (importSequence !== state.importSequence) return;
                     
-                    const compilationIssues = findCompilations(state.scrobbles);
+                    const compilationIssues = findCompilations(scrobbles);
                     
                     progressText.textContent = 'Detecting invisible characters...';
                     progressFill.style.width = '92%';
                     await sleep(50);
+                    if (importSequence !== state.importSequence) return;
                     
-                    const invisibleIssues = findInvisibleCharacterIssues(state.scrobbles);
+                    const invisibleIssues = findInvisibleCharacterIssues(scrobbles);
+                    const albumEvidence = buildAlbumEvidence(scrobbles);
                     
                     progressText.textContent = 'Finalizing...';
                     progressFill.style.width = '100%';
                     await sleep(100);
+                    if (importSequence !== state.importSequence) return;
                     
+                    state.scrobbles = scrobbles;
+                    state.username = parsed.username;
+                    state.fileHash = fileHash;
+                    state.albumEvidence = albumEvidence;
+                    state.expandedIssues.clear();
+                    state.correctionDrafts.clear();
+                    state.page = 0;
+                    issueGrid.innerHTML = '';
+                    state.persistenceNotice = '';
+                    state.dismissals = loadDismissedState(parsed.username);
+                    state.currentObservation = exportObservation(scrobbles, file, fileHash);
+                    state.historicalImport = isOlderObservation(state.savedObservation, state.currentObservation);
+                    state.observationNotice = state.historicalImport
+                        ? 'This export is older than the saved review, or its order cannot be established. Review only: recurrence tracking and saved decisions are unchanged. Import your latest complete export to make decisions.'
+                        : '';
+                    setView('active');
                     state.issues = [...artistIssues, ...albumIssues, ...trackIssues, ...missingIssues, ...compilationIssues, ...invisibleIssues];
                     
                     // Migrate any dismissals saved by pre-v0.6.0 versions.
                     // Must run after issues are built (item-level translation
                     // needs the current variation lists).
-                    migrateOldDismissals(state.fileHash, state.issues);
+                    if (!state.historicalImport) migrateOldDismissals(state.fileHash, state.issues);
                     
+                    const migration = migrateIssueIdentities(state.dismissals, state.issues);
+                    const normalization = migrateNormalizationIdentities(migration.items, state.corrections, state.issues);
+                    state.dismissals = normalization.items;
+                    state.corrections = normalization.corrections;
+                    state.importNotice = (migration.ambiguous
+                        ? `${migration.ambiguous} previous decision${migration.ambiguous === 1 ? '' : 's'} could not be matched safely. Affected findings are active again; the original records are retained.`
+                        : '') + (normalization.ambiguous
+                            ? ` ${normalization.ambiguous} saved decision${normalization.ambiguous === 1 ? ' or correction' : 's or corrections'} span changed variation groups. Review and re-mark affected findings; the original records are retained.`
+                            : '');
+                    if (!state.historicalImport) {
+                        const baselines = libraryBaselines(scrobbles, state.dismissals);
+                        state.dismissals = observeFixedRecords(state.dismissals, baselines, state.corrections);
+                        state.issues = addRememberedRecurrences(state.issues, state.dismissals, baselines, state.corrections);
+                        // Identical contents with an older file time may be
+                        // reviewed again, but cannot roll back the watermark.
+                        state.savedObservation = {
+                            ...state.currentObservation,
+                            modified: state.savedObservation && state.savedObservation.latestScrobble === state.currentObservation.latestScrobble
+                                ? Math.max(state.savedObservation.modified, state.currentObservation.modified)
+                                : state.currentObservation.modified
+                        };
+                        saveDismissedState();
+                    }
+                    showImportNotices();
                     displayResults();
                 } catch (error) {
+                    if (importSequence !== state.importSequence) return;
                     console.error('Error processing file:', error);
                     loadingState.style.display = 'none';
                     emptyState.style.display = 'flex';
@@ -1729,7 +2343,7 @@
                         emptyState.innerHTML = `
                             <div class="empty-state-icon">⚠️</div>
                             <h2>Invalid File Format</h2>
-                            <p style="color: var(--accent-red); max-width: 500px; margin: 1rem auto;">${errorMsg}</p>
+                            <p style="color: var(--accent-red); max-width: 500px; margin: 1rem auto;">${escapeHtml(errorMsg)}</p>
                             <p style="max-width: 500px; margin: 1rem auto;">Please export your data from <a href="https://lastfmstats.com" target="_blank" style="color: var(--accent-blue);">lastfmstats.com</a> which provides the correct format.</p>
                             <p style="margin-top: 1rem;"><a href="https://github.com/scoblitz/scrobble-analyzer#getting-your-data" target="_blank" style="color: var(--accent-blue);">See the README for more details →</a></p>
                             <button onclick="location.reload()" style="margin-top: 1.5rem; padding: 0.75rem 1.5rem; background: var(--accent-orange); border: none; border-radius: 6px; color: white; cursor: pointer; font-family: inherit;">Try Again</button>
@@ -1738,7 +2352,7 @@
                         emptyState.innerHTML = `
                             <div class="empty-state-icon">❌</div>
                             <h2>Error Processing File</h2>
-                            <p style="color: var(--accent-red);">${error.message}</p>
+                            <p style="color: var(--accent-red);">${escapeHtml(error.message)}</p>
                             <button onclick="location.reload()" style="margin-top: 1.5rem; padding: 0.75rem 1.5rem; background: var(--accent-orange); border: none; border-radius: 6px; color: white; cursor: pointer; font-family: inherit;">Try Again</button>
                         `;
                     }
@@ -1746,6 +2360,7 @@
             };
             
             reader.onerror = () => {
+                if (importSequence !== state.importSequence) return;
                 console.error('FileReader error:', reader.error);
                 loadingState.style.display = 'none';
                 emptyState.style.display = 'flex';
@@ -1857,6 +2472,10 @@
         // finders - this predicate lets the finders skip them.
         function differsOnlyInvisibly(names) {
             return new Set(names.map(getVisibleString)).size === 1;
+        }
+
+        function differsOnlyByCase(names) {
+            return names.length > 1 && new Set(names.map(name => name.toLowerCase())).size === 1;
         }
 
         // --- Confusable diacritics -------------------------------------------
@@ -1978,6 +2597,35 @@
             return norm;
         }
 
+        // Strip metadata without crossing into a sibling title label.
+        function stripMetadataLabels(value, pattern) {
+            // A stack keeps siblings and nested title parts independent.
+            // Only a group's own text can mark it as metadata: in
+            // (Part 1 (Live)), Live is removed and Part 1 survives.
+            const stack = [{ text: '', own: '', changed: false }];
+            for (let i = 0; i < value.length; i++) {
+                const ch = value[i];
+                if (ch === '(') {
+                    stack.push({ text: '', own: '', changed: false, start: i });
+                } else if (ch === ')' && stack.length > 1) {
+                    const group = stack.pop();
+                    const metadata = pattern.test(group.own);
+                    const body = group.changed ? group.text.trim() : group.text;
+                    const replacement = metadata || (group.changed && !body) ? ' ' : `(${body})`;
+                    const parent = stack[stack.length - 1];
+                    parent.text += replacement;
+                    parent.own += ' ';
+                    parent.changed = parent.changed || group.changed || metadata;
+                } else {
+                    const group = stack[stack.length - 1];
+                    group.text += ch;
+                    group.own += ch;
+                }
+            }
+            // An unclosed group is title text, not evidence for stripping.
+            return stack[0].text + (stack.length > 1 ? value.slice(stack[1].start) : '');
+        }
+
         // Album: strips edition/remaster suffixes. Does NOT strip a leading
         // "the" - "The Wall" and "Wall" are different albums.
         function normalizeAlbum(album) {
@@ -2009,9 +2657,9 @@
             // decompose, so o-slash, l-stroke and d-stroke are left alone.
             norm = norm.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
             // Remove remaster/deluxe/edition suffixes
-            norm = norm.replace(/\s*[\(\[].*?(remaster|deluxe|edition|bonus|expanded|anniversary|version|disc \d).*?[\)\]]/gi, '');
+            norm = stripMetadataLabels(norm, /(?:^|[^\p{L}\p{N}_])(?:remaster(?:ed|ing|s)?|deluxe|edition|bonus|expanded|anniversary|version|disc\s+\d+)(?=$|[^\p{L}\p{N}_])/u);
             // Optional year, as in normalizeTrack ("Aja - 1999 Remaster")
-            norm = norm.replace(/\s*-\s*(\d{4}\s+)?(remaster|deluxe|expanded).*$/i, '');
+            norm = norm.replace(/\s*-\s*(\d{4}\s+)?(?:remaster(?:ed|ing|s)?|deluxe|expanded)(?=$|[^\p{L}\p{N}_]).*$/u, '');
             // Same &/and unification the artist normalizer has always had. Its
             // absence here (and on tracks) is why discussion #10 went unflagged.
             norm = norm.replace(/\s*&\s*/g, ' and ');
@@ -2050,23 +2698,19 @@
             // Known limit - letters with a stroke rather than a mark do not
             // decompose, so o-slash, l-stroke and d-stroke are left alone.
             norm = norm.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-            // Remove common suffixes
-            // The \b around feat/ft are load-bearing: without them "ft" matches
-            // inside ordinary words and strips real titles - "Quattro (World
-            // Drifts In)", "Debase (Soft Palate)", "Winter (What We Never Were
-            // After All)" all lose their parenthetical. "feat(uring)?" is one
-            // token so "(Featuring Beth Ditto)" is caught too.
-            norm = norm.replace(/\s*[\(\[].*?(remaster|live|remix|edit|version|mix|demo|acoustic|mono|stereo|single|radio|extended|instrumental|reprise|take \d+|alternate|alt\.|bonus|\bfeat(?:uring)?\b|\bft\b).*?[\)\]]/gi, '');
+            // Every marker is a whole word, bounded by Unicode letters and
+            // numbers too. "credit", "delivered" and "mixtape" are titles.
+            norm = stripMetadataLabels(norm, /(?:^|[^\p{L}\p{N}_])(?:remaster(?:ed|ing|s)?|live|remix(?:ed)?|edit(?:ed)?|edition|version|mix|demo|acoustic|mono|stereo|single|radio|extended|instrumental|reprise|take\s+\d+[a-z]?|alternate|alt\.|bonus|feat(?:uring)?|ft)(?=$|[^\p{L}\p{N}_])/u);
             // A year may sit between the dash and the keyword ("Midtown - 2023
             // Remaster" - the common Spotify shape). Without the optional year
             // group the rule below strips "2023 Remaster" and orphans the dash,
             // leaving "midtown -" which groups with nothing.
-            norm = norm.replace(/\s*-\s*(\d{4}\s+)?(remaster|live|remix|edit|version|demo|acoustic|mono|stereo|single|radio|extended).*$/i, '');
+            norm = norm.replace(/\s*-\s*(\d{4}\s+)?(?:remaster(?:ed|ing|s)?|live|remix(?:ed)?|edit(?:ed)?|edition|version|demo|acoustic|mono|stereo|single|radio|extended)(?=$|[^\p{L}\p{N}_]).*$/u, '');
             // Year suffixes. The keyword is REQUIRED: a bare trailing number is
             // part of the title, not a suffix. Without it this ate real titles
             // ("1991" and "1983" both became "" and wrongly merged; "19-2000"
             // became "19-").
-            norm = norm.replace(/\s*\d{4}\s*(remaster|remix|version)$/i, '');
+            norm = norm.replace(/\s+\d{4}\s+(?:remaster(?:ed|ing|s)?|remix(?:ed)?|version)$/u, '');
             // Same &/and unification the artist normalizer has always had. Its
             // absence here is the whole of discussion #10: "9th & Hennepin" and
             // "9th and Hennepin" both existed and never grouped.
@@ -2093,7 +2737,7 @@
         function findArtistVariations(scrobbles) {
             console.log('Finding artist variations...');
             
-            const artistCounts = {};
+            const artistCounts = Object.create(null);
             scrobbles.forEach(s => {
                 if (s.Artist) {
                     artistCounts[s.Artist] = (artistCounts[s.Artist] || 0) + 1;
@@ -2113,6 +2757,7 @@
             const issues = [];
             normalized.forEach((artists, norm) => {
                 if (artists.length > 1) {
+                    if (differsOnlyByCase(artists.map(a => a.name))) return;
                     // Groups that differ only by invisible characters are routed
                     // to the Invisible Characters category instead
                     if (differsOnlyInvisibly(artists.map(a => a.name))) return;
@@ -2142,10 +2787,10 @@
         function findAlbumVariations(scrobbles) {
             console.log('Finding album variations...');
             
-            const albumCounts = {};
+            const albumCounts = Object.create(null);
             scrobbles.forEach(s => {
                 if (s.Album) {
-                    const key = `${s.Artist}|||${s.Album}`;
+                    const key = JSON.stringify([s.Artist, s.Album]);
                     albumCounts[key] = (albumCounts[key] || 0) + 1;
                 }
             });
@@ -2154,9 +2799,9 @@
 
             const grouped = new Map();
             Object.keys(albumCounts).forEach(key => {
-                const [artist, album] = key.split('|||');
+                const [artist, album] = JSON.parse(key);
                 const normAlbum = normalizeAlbum(album);
-                const groupKey = `${artist}|||${normAlbum}`;
+                const groupKey = JSON.stringify([artist, normAlbum]);
                 
                 if (!grouped.has(groupKey)) grouped.set(groupKey, []);
                 grouped.get(groupKey).push({ 
@@ -2170,11 +2815,12 @@
             const issues = [];
             grouped.forEach((albums, groupKey) => {
                 if (albums.length > 1) {
+                    if (differsOnlyByCase(albums.map(a => a.name))) return;
                     // Invisible-only differences are routed to Invisible Characters
                     if (differsOnlyInvisibly(albums.map(a => a.name))) return;
                     const total = albums.reduce((sum, a) => sum + a.count, 0);
                     if (total >= 5) {
-                        const [artist, normAlbum] = groupKey.split('|||');
+                        const [artist, normAlbum] = JSON.parse(groupKey);
                         issues.push({
                             type: 'album',
                             title: `${artist} - ${albums.sort((a, b) => b.count - a.count)[0].name}`,
@@ -2197,10 +2843,10 @@
         function findMissingAlbums(scrobbles) {
             console.log('Finding missing albums...');
             
-            const missing = {};
+            const missing = Object.create(null);
             scrobbles.forEach(s => {
                 if (!s.Album || s.Album.trim() === '') {
-                    const key = `${s.Artist}|||${s.Track}`;
+                    const key = JSON.stringify([s.Artist, s.Track]);
                     if (!missing[key]) {
                         missing[key] = { artist: s.Artist, track: s.Track, count: 0 };
                     }
@@ -2211,7 +2857,7 @@
             console.log('Tracks missing album:', Object.keys(missing).length);
 
             // Group by artist
-            const byArtist = {};
+            const byArtist = Object.create(null);
             Object.values(missing).forEach(m => {
                 if (!m.artist) return;  // Skip if no artist
                 if (!byArtist[m.artist]) {
@@ -2240,10 +2886,7 @@
             return issues;
         }
 
-        // Find compilation albums
-        function findCompilations(scrobbles) {
-            console.log('Finding compilations...');
-            
+        function isCompilationAlbum(album) {
             const compilationPatterns = [
                 /greatest hits/i,
                 /best of/i,
@@ -2267,25 +2910,63 @@
                 'the gold experience', // Prince album
             ];
 
-            const compilations = {};
+            return !falsePositives.includes(album.toLowerCase()) && compilationPatterns.some(pattern => pattern.test(album));
+        }
+
+        // Exact local evidence only: a live or remastered track title must
+        // not silently suggest an album for a different recording.
+        function buildAlbumEvidence(scrobbles) {
+            const evidence = new Map(), compilationCache = new Map();
+            scrobbles.forEach(row => {
+                if (!row.Artist || !row.Track || !row.Album || !row.Album.trim()) return;
+                if (!compilationCache.has(row.Album)) compilationCache.set(row.Album, isCompilationAlbum(row.Album));
+                if (compilationCache.get(row.Album)) return;
+                const key = JSON.stringify([row.Artist, row.Track]);
+                if (!evidence.has(key)) evidence.set(key, new Map());
+                const albums = evidence.get(key);
+                albums.set(row.Album, (albums.get(row.Album) || 0) + 1);
+            });
+            return evidence;
+        }
+
+        function rememberedAlbumEvidence(corrections) {
+            const memory = new Map();
+            Object.entries(corrections).forEach(([id, choice]) => {
+                const identity = decodeDecisionId(id);
+                if (!identity || !['missing', 'compilation'].includes(identity.type) || identity.itemName === undefined || choice.kind !== 'album' || choice.normalizationAmbiguous || choice.artist !== identity.artist) return;
+                const key = JSON.stringify([identity.artist, identity.itemName]);
+                if (!memory.has(key)) memory.set(key, new Set());
+                memory.get(key).add(choice.name);
+            });
+            return memory;
+        }
+
+        function getAlbumCandidates(evidence, memory, artist, track, sourceAlbum) {
+            const key = JSON.stringify([artist, track]), candidates = new Map();
+            (evidence.get(key) || new Map()).forEach((count, name) => {
+                if (name !== sourceAlbum) candidates.set(name, { name, count, remembered: false });
+            });
+            (memory.get(key) || new Set()).forEach(name => {
+                if (name !== sourceAlbum) candidates.set(name, { name, count: candidates.get(name)?.count || 0, remembered: true });
+            });
+            return [...candidates.values()].sort((a, b) => Number(b.remembered) - Number(a.remembered) || b.count - a.count || a.name.localeCompare(b.name));
+        }
+
+        // Find compilation albums
+        function findCompilations(scrobbles) {
+            console.log('Finding compilations...');
+            const compilations = Object.create(null), compilationCache = new Map();
             scrobbles.forEach(s => {
                 if (!s.Album || !s.Artist) return;
-                const albumLower = s.Album.toLowerCase();
-                
-                // Skip known false positives (exact match only — a substring check
-                // would wrongly exclude real compilations like ABBA's "Gold: Greatest Hits")
-                if (falsePositives.includes(albumLower)) {
-                    return;
-                }
-
-                const isCompilation = compilationPatterns.some(p => p.test(s.Album));
+                if (!compilationCache.has(s.Album)) compilationCache.set(s.Album, isCompilationAlbum(s.Album));
+                const isCompilation = compilationCache.get(s.Album);
                 if (isCompilation) {
-                    const key = `${s.Artist}|||${s.Album}`;
+                    const key = JSON.stringify([s.Artist, s.Album]);
                     if (!compilations[key]) {
                         compilations[key] = { 
                             artist: s.Artist, 
                             album: s.Album, 
-                            tracks: {},  // Changed from Set to object for counting
+                            tracks: Object.create(null),  // Changed from Set to object for counting
                             count: 0 
                         };
                     }
@@ -2312,6 +2993,7 @@
                         type: 'compilation',
                         title: `${c.artist} - ${c.album}`,
                         artist: c.artist,
+                        album: c.album,
                         description: `${tracksArray.length} tracks from compilation`,
                         totalCount: c.count,
                         variations: tracksArray
@@ -2328,10 +3010,10 @@
         function findTrackVariations(scrobbles) {
             console.log('Finding track variations...');
             
-            const trackCounts = {};
+            const trackCounts = Object.create(null);
             scrobbles.forEach(s => {
                 if (s.Track && s.Artist) {
-                    const key = `${s.Artist}|||${s.Track}`;
+                    const key = JSON.stringify([s.Artist, s.Track]);
                     trackCounts[key] = (trackCounts[key] || 0) + 1;
                 }
             });
@@ -2340,9 +3022,9 @@
 
             const grouped = new Map();
             Object.keys(trackCounts).forEach(key => {
-                const [artist, track] = key.split('|||');
+                const [artist, track] = JSON.parse(key);
                 const normTrack = normalizeTrack(track);
-                const groupKey = `${artist}|||${normTrack}`;
+                const groupKey = JSON.stringify([artist, normTrack]);
                 
                 if (!grouped.has(groupKey)) grouped.set(groupKey, []);
                 grouped.get(groupKey).push({ 
@@ -2356,11 +3038,12 @@
             const issues = [];
             grouped.forEach((tracks, groupKey) => {
                 if (tracks.length > 1) {
+                    if (differsOnlyByCase(tracks.map(t => t.name))) return;
                     // Invisible-only differences are routed to Invisible Characters
                     if (differsOnlyInvisibly(tracks.map(t => t.name))) return;
                     const total = tracks.reduce((sum, t) => sum + t.count, 0);
                     if (total >= 3) {
-                        const [artist, normTrack] = groupKey.split('|||');
+                        const [artist, normTrack] = JSON.parse(groupKey);
                         issues.push({
                             type: 'track',
                             title: `${artist} - ${tracks.sort((a, b) => b.count - a.count)[0].name}`,
@@ -2384,20 +3067,20 @@
             console.log('Finding invisible character issues...');
             
             // Get all unique artists, albums, and tracks
-            const artists = {};
-            const albums = {};
-            const tracks = {};
+            const artists = Object.create(null);
+            const albums = Object.create(null);
+            const tracks = Object.create(null);
             
             scrobbles.forEach(s => {
                 if (s.Artist) {
                     artists[s.Artist] = (artists[s.Artist] || 0) + 1;
                 }
                 if (s.Album && s.Artist) {
-                    const key = `${s.Artist}|||${s.Album}`;
+                    const key = JSON.stringify([s.Artist, s.Album]);
                     albums[key] = (albums[key] || 0) + 1;
                 }
                 if (s.Track && s.Artist) {
-                    const key = `${s.Artist}|||${s.Track}`;
+                    const key = JSON.stringify([s.Artist, s.Track]);
                     tracks[key] = (tracks[key] || 0) + 1;
                 }
             });
@@ -2417,8 +3100,8 @@
             // Group albums by visible string
             const albumGroups = new Map();
             Object.keys(albums).forEach(key => {
-                const [artist, album] = key.split('|||');
-                const visible = `${getVisibleString(artist)}|||${getVisibleString(album)}`;
+                const [artist, album] = JSON.parse(key);
+                const visible = JSON.stringify([getVisibleString(artist), getVisibleString(album)]);
                 if (!albumGroups.has(visible)) albumGroups.set(visible, []);
                 albumGroups.get(visible).push({ 
                     name: album,
@@ -2432,8 +3115,8 @@
             // Group tracks by visible string (same pattern as albums)
             const trackGroups = new Map();
             Object.keys(tracks).forEach(key => {
-                const [artist, track] = key.split('|||');
-                const visible = `${getVisibleString(artist)}|||${getVisibleString(track)}`;
+                const [artist, track] = JSON.parse(key);
+                const visible = JSON.stringify([getVisibleString(artist), getVisibleString(track)]);
                 if (!trackGroups.has(visible)) trackGroups.set(visible, []);
                 trackGroups.get(visible).push({ 
                     name: track,
@@ -2481,7 +3164,7 @@
                 if (hasIssue) {
                     const total = items.reduce((sum, i) => sum + i.count, 0);
                     if (total >= 3) {
-                        const [visArtist, visAlbum] = visible.split('|||');
+                        const [visArtist, visAlbum] = JSON.parse(visible);
                         issues.push({
                             type: 'invisible',
                             subtype: 'album',
@@ -2511,7 +3194,7 @@
                 if (hasIssue) {
                     const total = items.reduce((sum, i) => sum + i.count, 0);
                     if (total >= 3) {
-                        const [visArtist, visTrack] = visible.split('|||');
+                        const [visArtist, visTrack] = JSON.parse(visible);
                         issues.push({
                             type: 'invisible',
                             subtype: 'track',
@@ -2604,11 +3287,9 @@
             // Populate artist filter - get artist from either .artist property or extract from .title
             const artistsSet = new Set();
             state.issues.forEach(i => {
-                if (i.artist) {
-                    artistsSet.add(i.artist);
-                } else if (i.title && i.type === 'artist') {
-                    artistsSet.add(i.title);
-                }
+                if (i.type === 'artist' || (i.type === 'invisible' && i.subtype === 'artist')) {
+                    (i.variations || []).forEach(row => artistsSet.add(row.name));
+                } else if (i.artist) artistsSet.add(i.artist);
             });
             const artists = [...artistsSet].sort();
             
@@ -2717,138 +3398,158 @@
             document.getElementById('count-ignored').textContent = hidden.ignored;
         }
 
-        // Render issue cards
-        function renderIssues() {
-            console.log('Rendering issues...');
-            console.log('Current filter:', state.currentFilter);
-            console.log('Current artist:', state.currentArtist);
-            console.log('Search query:', state.searchQuery);
-            console.log('View:', state.view);
-            
-            let filtered = [...state.issues];  // Create a copy
-            
-            // Add issue IDs and dismissal status. "Dismissed" below means
-            // hidden; a recurred item counts as active everywhere.
-            filtered = filtered.map(issue => {
-                const issueId = getIssueId(issue);
-                const status = cardStatus(issue, issueId);
-                
-                // Per-track types are governed by their rows: how many
-                // belong in the current view
-                let rowsInView = 0;
-                if (['missing', 'compilation'].includes(issue.type)) {
-                    (issue.variations || []).forEach((v, i) => {
-                        if (inView(state.view, itemStatus(issueId, v), state.dismissals[getItemId(issueId, v.name)])) rowsInView++;
-                    });
-                }
-                
-                return {
-                    ...issue,
-                    _id: issueId,
-                    _status: status,
-                    _isDismissed: status === 'hidden',
-                    _rowsInView: rowsInView
-                };
-            });
-            
-            // Keep what belongs in the current view
-            filtered = filtered.filter(i => {
-                if (['missing', 'compilation'].includes(i.type)) return i._rowsInView > 0;
-                return inView(state.view, i._status, state.dismissals[i._id]);
-            });
-            
-            console.log('Starting with issues:', filtered.length);
-
-            // Apply type filter
-            if (state.currentFilter !== 'all') {
-                filtered = filtered.filter(i => i.type === state.currentFilter);
-                console.log('After type filter:', filtered.length);
-            }
-
-            // Apply artist filter
-            if (state.currentArtist) {
-                filtered = filtered.filter(i => {
-                    const issueArtist = i.artist || (i.type === 'artist' ? i.title : null);
-                    return issueArtist === state.currentArtist;
+        // View membership precedes search. Per-track matches narrow rows;
+        // variation matches retain their siblings for comparison.
+        function selectIssueRows(issues, options, items, corrections, statusForCard, statusForItem) {
+            const query = options.searchQuery.toLowerCase().trim();
+            const contains = value => typeof value === 'string' && value.toLowerCase().includes(query);
+            const reviewIds = new Set();
+            [...Object.entries(items), ...Object.entries(corrections)].forEach(([id, record]) => {
+                if (!record.identityAmbiguous && !record.normalizationAmbiguous) return;
+                [id, ...(record.normalizationTargets || [])].forEach(target => {
+                    if (!freshNormalizationDecision(target, items, corrections)) reviewIds.add(target);
                 });
-                console.log('After artist filter:', filtered.length);
-            }
-
-            // Apply search
-            if (state.searchQuery) {
-                const query = state.searchQuery.toLowerCase();
-                filtered = filtered.filter(i => 
-                    (i.title && i.title.toLowerCase().includes(query)) ||
-                    (i.description && i.description.toLowerCase().includes(query)) ||
-                    (i.variations && i.variations.some(v => v.name && v.name.toLowerCase().includes(query)))
-                );
-                console.log('After search filter:', filtered.length);
-            }
-
-            // Sort
-            if (state.sortBy === 'count') {
-                filtered.sort((a, b) => b.totalCount - a.totalCount);
-            } else if (state.sortBy === 'variations') {
-                filtered.sort((a, b) => (b.variations?.length || 0) - (a.variations?.length || 0));
-            } else if (state.sortBy === 'name') {
-                filtered.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
-            }
-
-            // Update title
-            const filterNames = {
-                all: 'All Issues',
-                artist: 'Artist Variations',
-                album: 'Album Variations',
-                track: 'Track Variations',
-                missing: 'Tracks Missing Albums',
-                compilation: 'Tracks on Compilations',
-                invisible: 'Invisible Characters'
-            };
-            document.getElementById('results-title').textContent = filterNames[state.currentFilter] || 'All Issues';
-            
-            // Calculate display count - for missing/compilation (or all), count tracks not cards
-            let displayCount = 0;
-            filtered.forEach(issue => {
-                displayCount += ['missing', 'compilation'].includes(issue.type) ? issue._rowsInView : 1;
             });
-            document.getElementById('results-subtitle').textContent = `${displayCount} issues found`;
+            const result = [];
+            issues.forEach(issue => {
+                if (options.currentFilter !== 'all' && issue.type !== options.currentFilter) return;
+                const artistCard = issue.type === 'artist' || (issue.type === 'invisible' && issue.subtype === 'artist');
+                if (options.currentArtist && !(artistCard ? (issue.variations || []).some(row => row.name === options.currentArtist) : issue.artist === options.currentArtist)) return;
+                const id = getIssueId(issue), status = statusForCard(issue, id), perTrack = ['missing', 'compilation'].includes(issue.type);
+                let rows = (issue.variations || []).map(row => {
+                    if (!perTrack) return row;
+                    const itemId = getItemId(id, row.name), itemStatus = statusForItem(id, row);
+                    return { ...row, _itemId: itemId, _itemStatus: itemStatus, _isItemDismissed: itemStatus === 'hidden' };
+                });
+                if (perTrack) rows = rows.filter(row => inView(options.view, row._itemStatus, items[row._itemId]));
+                else if (!inView(options.view, status, items[id])) return;
+                const followup = status === 'recurred' || reviewIds.has(id);
+                const rowFollowup = row => row._itemStatus === 'recurred' || reviewIds.has(row._itemId);
+                if (options.followupsOnly && options.view === 'active') {
+                    if (perTrack) rows = rows.filter(rowFollowup);
+                    else if (!followup) return;
+                }
+                if (query) {
+                    const contextMatch = [issue.title, issue.artist, issue.album].some(contains);
+                    const rowMatch = row => [row.name, row.artist, corrections[row._itemId]?.name, corrections[row._itemId]?.artist].some(contains);
+                    if (perTrack) {
+                        if (!contextMatch) rows = rows.filter(rowMatch);
+                    } else if (!contextMatch && !contains(issue.description) && !contains(corrections[id]?.name) && !rows.some(rowMatch)) return;
+                }
+                if (perTrack && !rows.length) return;
+                result.push({ ...issue, _id: id, _status: status, _isDismissed: status === 'hidden', _rowsInView: perTrack ? rows.length : 0,
+                    _identityReview: reviewIds.has(id),
+                    _followups: perTrack ? rows.filter(rowFollowup).length : Number(followup),
+                    _visibleRows: rows, _visibleCount: rows.reduce((sum, row) => sum + (row.count || 0), 0) });
+            });
+            result.sort((a, b) => {
+                const nameOrder = (a.title || '').localeCompare(b.title || '') || a._id.localeCompare(b._id);
+                if (options.sortBy === 'followups') return b._followups - a._followups || b._visibleCount - a._visibleCount || nameOrder;
+                if (options.sortBy === 'variations') return b._visibleRows.length - a._visibleRows.length || nameOrder;
+                if (options.sortBy === 'name') return nameOrder;
+                return b._visibleCount - a._visibleCount || nameOrder;
+            });
+            return result;
+        }
 
-            // Render
+        function issuePage(issues, requestedPage, size) {
+            const pages = Math.ceil(issues.length / size), page = Math.max(0, Math.min(requestedPage, Math.max(0, pages - 1)));
+            return { cards: issues.slice(page * size, (page + 1) * size), page, pages,
+                start: issues.length ? page * size + 1 : 0, end: Math.min((page + 1) * size, issues.length),
+                findings: issues.reduce((sum, issue) => sum + (['missing', 'compilation'].includes(issue.type) ? issue._rowsInView : 1), 0) };
+        }
+
+        function toggleIssueDetails(card) {
+            const expanded = !state.expandedIssues.has(card.dataset.issueId);
+            if (expanded) state.expandedIssues.add(card.dataset.issueId);
+            else state.expandedIssues.delete(card.dataset.issueId);
+            card.classList.toggle('expanded', expanded);
+            const button = card.querySelector('.details-toggle');
+            button.setAttribute('aria-expanded', String(expanded));
+            button.textContent = expanded ? 'Hide details ▴' : 'Show details ▾';
+            card.querySelector('.issue-details').hidden = !expanded;
+        }
+
+        function renderFromFirstPage() {
+            state.page = 0;
+            renderIssues();
+            document.querySelector('.content').scrollTop = 0;
+        }
+
+        function changeIssuePage(action) {
+            state.page += action === 'next' ? 1 : -1;
+            renderIssues();
+            document.querySelector('.content').scrollTop = 0;
+            const navigation = document.getElementById('pagination-top');
+            const preferred = navigation.querySelector(`[data-page-action="${action}"]`);
+            (preferred && !preferred.disabled ? preferred : navigation.querySelector('.page-btn:not(:disabled)'))?.focus({ preventScroll: true });
+        }
+
+        // Draft fields remain local to this import and survive paging, search
+        // and actions on other rows. They become saved choices only on Fixed.
+        function captureCorrectionDrafts() {
+            issueGrid.querySelectorAll('.correction-memory').forEach(control => {
+                const fields = {};
+                ['correction-album', 'correction-choice', 'correction-custom', 'correction-custom-artist'].forEach(name => {
+                    const field = control.querySelector('.' + name);
+                    if (field) fields[name] = field.value;
+                });
+                state.correctionDrafts.set(control.dataset.correctionId, { fields, open: control.open });
+            });
+        }
+
+        function applyCorrectionDrafts(card) {
+            card.querySelectorAll('.correction-memory').forEach(control => {
+                const draft = state.correctionDrafts.get(control.dataset.correctionId);
+                if (!draft) return;
+                Object.entries(draft.fields).forEach(([name, value]) => {
+                    const field = control.querySelector('.' + name);
+                    if (field) field.value = value;
+                });
+                if (control.tagName === 'DETAILS') control.open = draft.open;
+                const custom = control.querySelector('.correction-custom-fields');
+                if (custom) custom.hidden = control.querySelector('.correction-choice').value !== 'custom';
+            });
+        }
+
+        // Render issue cards
+        function renderIssues(resetDrafts = []) {
+            captureCorrectionDrafts();
+            resetDrafts.forEach(id => state.correctionDrafts.delete(id));
+            state.albumMemory = rememberedAlbumEvidence(state.corrections);
+            const focused = document.activeElement;
+            const focusedCard = focused?.closest?.('.issue-card');
+            const focusedId = focusedCard?.dataset.issueId;
+            const focusedItem = focused?.dataset.itemId;
+            const focusedIndex = [...issueGrid.querySelectorAll('.issue-card')].indexOf(focusedCard);
+            const filtered = selectIssueRows(state.issues, state, state.dismissals, state.corrections, cardStatus, itemStatus);
+            const page = issuePage(filtered, state.page, state.pageSize);
+            state.page = page.page;
+            document.getElementById('followups-only').disabled = state.view !== 'active';
+            const filterNames = { all: 'All Issues', artist: 'Artist Variations', album: 'Album Variations', track: 'Track Variations',
+                missing: 'Tracks Missing Albums', compilation: 'Tracks on Compilations', invisible: 'Invisible Characters' };
+            document.getElementById('results-title').textContent = filterNames[state.currentFilter] || 'All Issues';
+            document.getElementById('results-subtitle').textContent = `${page.findings.toLocaleString()} findings in ${filtered.length.toLocaleString()} cards · showing cards ${page.start.toLocaleString()}–${page.end.toLocaleString()}`;
+            ['pagination-top', 'pagination-bottom'].forEach(id => {
+                const navigation = document.getElementById(id);
+                navigation.hidden = page.pages <= 1;
+                navigation.innerHTML = `<button type="button" class="page-btn" data-page-action="previous"${!page.page ? ' disabled' : ''}>← Previous</button>
+                    <span role="status">Page ${page.page + 1} of ${page.pages} · ${page.start}–${page.end} of ${filtered.length} cards</span>
+                    <button type="button" class="page-btn" data-page-action="next"${page.page + 1 >= page.pages ? ' disabled' : ''}>Next →</button>`;
+            });
             issueGrid.innerHTML = '';
-            
-            if (filtered.length === 0) {
+            if (!filtered.length) {
                 issueGrid.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--text-secondary);">No issues found matching your filters.</div>';
+                if (focusedId) document.getElementById('results-subtitle').focus();
                 return;
             }
-            
-            // Limit to first 100 for performance
-            const toRender = filtered.slice(0, 100);
-            console.log('Rendering', toRender.length, 'of', filtered.length, 'issues');
-            
+            const toRender = page.cards;
             toRender.forEach((issue, index) => {
                 const card = document.createElement('div');
-                card.className = 'issue-card';
+                card.className = 'issue-card' + (state.expandedIssues.has(issue._id) ? ' expanded' : '');
                 card.dataset.issueId = issue._id; // For finding card after re-render
                 
-                // Build variations HTML with Last.fm links
-                // For missing/compilation, filter items based on dismissed state
-                let variationsToRender = issue.variations || [];
-                
-                if (['missing', 'compilation'].includes(issue.type)) {
-                    variationsToRender = variationsToRender.map((v, i) => {
-                        const status = itemStatus(issue._id, v);
-                        return {
-                            ...v,
-                            _itemId: getItemId(issue._id, v.name),
-                            _itemStatus: status,
-                            _isItemDismissed: status === 'hidden'
-                        };
-                    });
-                    
-                    // Keep the rows that belong in the current view
-                    variationsToRender = variationsToRender.filter(v => inView(state.view, v._itemStatus, state.dismissals[v._itemId]));
-                }
-                
+                const variationsToRender = issue._visibleRows;
                 // Which rows differ from a sibling only by which diacritic
                 // they carry - the ones the eye cannot separate (1.9).
                 const confusableByRow = confusableMarkChars(variationsToRender.map(v => v.name || ''));
@@ -2904,7 +3605,7 @@
                             trackName: v.name
                         });
                         if (trackSearchUrl) {
-                            itemLookupHtml = `<a href="${trackSearchUrl}" target="_blank" class="lookup-btn-small" onclick="event.stopPropagation()" title="Look up original album">🔍</a>`;
+                            itemLookupHtml = `<a href="${trackSearchUrl}" target="_blank" class="lookup-btn-small" onclick="event.stopPropagation()" title="Look up original album" aria-label="Research an album for ${escapeHtml(v.name)}">🔍</a>`;
                         }
                     }
                     
@@ -2915,14 +3616,14 @@
                     let itemNoteHtml = '';
                     if (['missing', 'compilation'].includes(issue.type) && v._itemId) {
                         if (v._isItemDismissed) {
-                            itemDismissHtml = `<button class="dismiss-btn-small restore" data-item-id="${v._itemId}" title="Restore">↩️</button>`;
+                            itemDismissHtml = `<button class="dismiss-btn-small restore" data-item-id="${v._itemId}" title="Restore" aria-label="Restore ${escapeHtml(v.name)}">↩️</button>`;
                         } else {
                             itemDismissHtml =
-                                `<button class="dismiss-btn-small" data-item-id="${v._itemId}" data-intent="fixed" title="Fixed on Last.fm - hide until new plays appear under this name">✓</button>` +
-                                `<button class="dismiss-btn-small ignore" data-item-id="${v._itemId}" data-intent="ignored" title="Not a problem - never show again">🚫</button>`;
+                                `<button class="dismiss-btn-small" data-item-id="${v._itemId}" data-intent="fixed" title="Fixed on Last.fm - hide until new plays appear under this name" aria-label="Mark ${escapeHtml(v.name)} fixed">✓</button>` +
+                                `<button class="dismiss-btn-small ignore" data-item-id="${v._itemId}" data-intent="ignored" title="Not a problem - never show again" aria-label="Ignore ${escapeHtml(v.name)}">🚫</button>`;
                         }
                         if (v._itemStatus === 'recurred') {
-                            itemNoteHtml = `<span class="recurred-note small">${escapeHtml(recurrenceNote(state.dismissals[v._itemId], v.count, true))}</span>`;
+                            itemNoteHtml = `<span class="recurred-note small">${escapeHtml(recurrenceNote(state.dismissals[v._itemId], v.count, true, state.corrections[v._itemId]))}</span>`;
                         }
                     }
                     
@@ -2934,7 +3635,7 @@
                     
                     return `
                         <div class="variation-item">
-                            <span class="variation-value">${nameHtml}${lookalikeHtml}${invisibleWarning}</span>
+                            <div class="variation-value">${nameHtml}${lookalikeHtml}${invisibleWarning}${v._itemId ? rememberedCorrectionHtml(v._itemId) + correctionControlsHtml(issue, v._itemId, true, v) : ''}</div>
                             ${itemNoteHtml}
                             ${v.count ? `<span class="variation-count">${v.count}</span>` : ''}
                             ${lastFmLinkHtml}
@@ -3004,8 +3705,8 @@
 
                 // Why a card-level item is back (per-track rows carry their own)
                 const cardNoteHtml = issue._status === 'recurred'
-                    ? `<div class="recurred-note">${escapeHtml(recurrenceNote(state.dismissals[issue._id], currentBaseline(issue), false))}</div>`
-                    : '';
+                    ? `<div class="recurred-note">${escapeHtml(recurrenceNote(state.dismissals[issue._id], currentBaseline(issue), false, state.corrections[issue._id]))}</div>`
+                    : issue._identityReview ? '<div class="recurred-note">Refined detection changed this group’s boundary. Review the prior decision and re-mark this finding.</div>' : '';
                 const hiddenTag = isCardDismissed
                     ? ` <span style="color: var(--text-muted); font-size: 0.75rem;">(${intentLabel(state.dismissals[issue._id])})</span>`
                     : '';
@@ -3043,18 +3744,28 @@
                         </div>
                         <div class="issue-meta">
                             <div>
-                                <div class="issue-count">${(issue.totalCount || 0).toLocaleString()}</div>
+                                <div class="issue-count">${issue._visibleCount.toLocaleString()}</div>
                                 <div class="issue-count-label">scrobbles</div>
                             </div>
                         </div>
                     </div>
-                    <div class="issue-details">
+                    <button type="button" class="details-toggle" aria-expanded="${state.expandedIssues.has(issue._id)}" aria-controls="issue-details-${index}" aria-label="Details for ${escapeHtml(issue.title)}">${state.expandedIssues.has(issue._id) ? 'Hide details ▴' : 'Show details ▾'}</button>
+                    <div class="issue-details" id="issue-details-${index}"${state.expandedIssues.has(issue._id) ? '' : ' hidden'}>
                         <div class="variation-list">
                             ${variationsHtml}
                         </div>
+                        ${!['missing', 'compilation'].includes(issue.type) ? rememberedCorrectionHtml(issue._id) + correctionControlsHtml(issue, issue._id, false) : ''}
                         ${buttonsHtml}
                     </div>
                 `;
+
+                if (state.historicalImport) card.querySelectorAll('button:not(.details-toggle)').forEach(button => { button.disabled = true; });
+                applyCorrectionDrafts(card);
+                card.addEventListener('change', e => {
+                    if (!e.target.classList.contains('correction-choice')) return;
+                    const control = e.target.closest('.correction-memory');
+                    control.querySelector('.correction-custom-fields').hidden = e.target.value !== 'custom';
+                });
 
                 // Track mousedown position to distinguish click from drag
                 let mouseDownX, mouseDownY;
@@ -3065,6 +3776,16 @@
                 });
                 
                 card.addEventListener('click', (e) => {
+                    const detailsButton = e.target.closest('.details-toggle');
+                    if (detailsButton) { toggleIssueDetails(card); return; }
+                    if (state.historicalImport && e.target.closest('button')) return;
+                    const albumButton = e.target.closest('.use-album');
+                    if (albumButton) {
+                        const input = albumButton.closest('.correction-memory').querySelector('.correction-album');
+                        input.value = albumButton.dataset.album;
+                        input.focus();
+                        return;
+                    }
                     // "Dismiss all" / "Restore all" on a compilation card: every
                     // track currently showing, by its per-track ID. Checked
                     // before the plain dismiss-btn branch, which it would
@@ -3073,16 +3794,16 @@
                     if (e.target.classList.contains('dismiss-all')) {
                         const isRestore = e.target.classList.contains('restore');
                         const intent = e.target.dataset.intent;
-                        (issue.variations || []).forEach(v => {
+                        variationsToRender.forEach(v => {
                             const itemId = getItemId(issue._id, v.name);
                             if (!inView(state.view, itemStatus(issue._id, v), state.dismissals[itemId])) return;
                             if (isRestore) unmarkDismissed(itemId);
-                            else markDismissed(itemId, v.count, intent);
+                            else markDismissed(itemId, v.count, intent, intent === 'fixed' ? readCorrectionChoice(card, itemId, issue) : undefined);
                         });
                         saveDismissedState();
                         updateCounts();
                         const scrollTop = document.querySelector('.content').scrollTop;
-                        renderIssues();
+                        renderIssues(variationsToRender.map(v => v._itemId));
                         document.querySelector('.content').scrollTop = scrollTop;
                         return;
                     }
@@ -3094,14 +3815,14 @@
                             unmarkDismissed(issueId);
                         } else {
                             // Card-level: baseline is every row's count
-                            markDismissed(issueId, currentBaseline(issue), e.target.dataset.intent);
+                            markDismissed(issueId, currentBaseline(issue), e.target.dataset.intent, e.target.dataset.intent === 'fixed' ? readCorrectionChoice(card, issueId, issue) : undefined);
                         }
                         saveDismissedState();
                         updateCounts();
                         
                         // Save scroll position, re-render, restore scroll
                         const scrollTop = document.querySelector('.content').scrollTop;
-                        renderIssues();
+                        renderIssues([issueId]);
                         document.querySelector('.content').scrollTop = scrollTop;
                         return;
                     }
@@ -3114,72 +3835,19 @@
                         if (isRestore) {
                             unmarkDismissed(itemId);
                         } else {
-                            markDismissed(itemId, currentBaseline(issue, itemId), e.target.dataset.intent);
+                            markDismissed(itemId, currentBaseline(issue, itemId), e.target.dataset.intent, e.target.dataset.intent === 'fixed' ? readCorrectionChoice(card, itemId, issue) : undefined);
                         }
                         saveDismissedState();
                         
-                        // Find the variation item element
-                        const variationItem = e.target.closest('.variation-item');
-                        const variationList = card.querySelector('.variation-list');
-                        const remainingItems = variationList.querySelectorAll('.variation-item');
-                        
-                        // Count how many items will remain after this action
-                        const currentCount = remainingItems.length;
-                        const isLastItem = currentCount === 1 && !isRestore;
-                        
-                        if (isLastItem) {
-                            // Last item being dismissed - need full re-render to pull in new cards
-                            const scrollTop = document.querySelector('.content').scrollTop;
-                            updateCounts();
-                            renderIssues();
-                            document.querySelector('.content').scrollTop = scrollTop;
-                        } else {
-                            // Just update this item in place
-                            if (isRestore) {
-                                // This shouldn't happen in normal view, but handle it
-                                updateCounts();
-                                const scrollTop = document.querySelector('.content').scrollTop;
-                                renderIssues();
-                                document.querySelector('.content').scrollTop = scrollTop;
-                            } else {
-                                // Hide the item with animation
-                                variationItem.style.transition = 'opacity 0.2s, height 0.2s, margin 0.2s, padding 0.2s';
-                                variationItem.style.opacity = '0';
-                                variationItem.style.height = '0';
-                                variationItem.style.margin = '0';
-                                variationItem.style.padding = '0';
-                                variationItem.style.overflow = 'hidden';
-                                
-                                setTimeout(() => {
-                                    variationItem.remove();
-                                    
-                                    // Update the card's description (e.g., "3 tracks" -> "2 tracks")
-                                    const descEl = card.querySelector('.issue-description');
-                                    if (descEl) {
-                                        const newCount = variationList.querySelectorAll('.variation-item').length;
-                                        descEl.textContent = `${newCount} track${newCount !== 1 ? 's' : ''} remaining`;
-                                    }
-                                    
-                                    // Update the card's scrobble count
-                                    const countEl = card.querySelector('.issue-count');
-                                    if (countEl && (issue.type === 'missing' || issue.type === 'compilation')) {
-                                        // Calculate remaining scrobbles
-                                        let remainingScrobbles = 0;
-                                        variationList.querySelectorAll('.variation-count').forEach(vc => {
-                                            remainingScrobbles += parseInt(vc.textContent) || 0;
-                                        });
-                                        countEl.textContent = remainingScrobbles.toLocaleString();
-                                    }
-                                }, 200);
-                                
-                                updateCounts();
-                            }
-                        }
+                        const scrollTop = document.querySelector('.content').scrollTop;
+                        updateCounts();
+                        renderIssues([itemId]);
+                        document.querySelector('.content').scrollTop = scrollTop;
                         return;
                     }
                     
                     // Don't toggle if clicking action buttons or links
-                    if (e.target.classList.contains('variation-action') || 
+                    if (e.target.closest('a, button, input, select, label, summary') || e.target.closest('.correction-memory') || e.target.classList.contains('variation-action') ||
                         e.target.classList.contains('lastfm-link') ||
                         e.target.classList.contains('lookup-btn') ||
                         e.target.classList.contains('lookup-btn-small') ||
@@ -3191,26 +3859,29 @@
                     const deltaY = Math.abs(e.clientY - mouseDownY);
                     if (deltaX > dragThreshold || deltaY > dragThreshold) return;
                     
-                    card.classList.toggle('expanded');
+                    toggleIssueDetails(card);
                 });
 
                 issueGrid.appendChild(card);
             });
             
-            // Show message if there are more cards than we're displaying
-            if (filtered.length > 100) {
-                const moreMsg = document.createElement('div');
-                moreMsg.style.cssText = 'text-align: center; padding: 1rem; color: var(--text-secondary);';
-                moreMsg.textContent = `Showing first 100 issue cards of ${displayCount} total issues. Use search or filters to narrow down.`;
-                issueGrid.appendChild(moreMsg);
+            // Keep keyboard focus on a surviving row/card, or the next card
+            // occupying its slot when the acted-on finding leaves this view.
+            if (focusedId) {
+                const cards = [...issueGrid.querySelectorAll('.issue-card')];
+                const next = cards.find(card => card.dataset.issueId === focusedId) || cards[Math.min(Math.max(0, focusedIndex), cards.length - 1)];
+                const rowButton = focusedItem && next && [...next.querySelectorAll('button')].find(button => button.dataset.itemId === focusedItem);
+                (rowButton || next?.querySelector('.details-toggle'))?.focus();
             }
+
         }
 
         function escapeHtml(str) {
             if (!str) return '';
-            const div = document.createElement('div');
-            div.textContent = str;
-            return div.innerHTML;
+            // This helper is also used inside quoted attributes. A text
+            // node's innerHTML escapes markup but leaves quotes unchanged.
+            const entities = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+            return String(str).replace(/[&<>"']/g, character => entities[character]);
         }
 
         // Render a name with invisible characters exposed as labeled chips,
@@ -3256,12 +3927,29 @@
         }
 
         // Event listeners
+        document.querySelectorAll('.nav-item, #upload-zone').forEach(control => {
+            control.addEventListener('keydown', event => {
+                if (event.key !== 'Enter' && event.key !== ' ') return;
+                event.preventDefault();
+                control.click();
+            });
+        });
+
+        ['pagination-top', 'pagination-bottom'].forEach(id => {
+            document.getElementById(id).addEventListener('click', event => {
+                const button = event.target.closest('[data-page-action]');
+                if (!button || button.disabled) return;
+                changeIssuePage(button.dataset.pageAction);
+            });
+        });
+
         document.querySelectorAll('.nav-item').forEach(item => {
             item.addEventListener('click', () => {
                 document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
                 item.classList.add('active');
+                document.querySelectorAll('.nav-item').forEach(i => i.setAttribute('aria-pressed', String(i === item)));
                 state.currentFilter = item.dataset.filter;
-                renderIssues();
+                renderFromFirstPage();
             });
         });
 
@@ -3270,9 +3958,10 @@
         let searchDebounceTimer = null;
         searchInput.addEventListener('input', (e) => {
             state.searchQuery = e.target.value;
+            state.page = 0;
             searchClearBtn.style.display = e.target.value ? 'block' : 'none';
             clearTimeout(searchDebounceTimer);
-            searchDebounceTimer = setTimeout(renderIssues, 200);
+            searchDebounceTimer = setTimeout(renderFromFirstPage, 200);
         });
 
         searchClearBtn.addEventListener('click', () => {
@@ -3280,27 +3969,32 @@
             state.searchQuery = '';
             searchClearBtn.style.display = 'none';
             clearTimeout(searchDebounceTimer); // clearing is instant, no debounce
-            renderIssues();
+            renderFromFirstPage();
             searchInput.focus();
         });
 
         sortSelect.addEventListener('change', (e) => {
             state.sortBy = e.target.value;
-            renderIssues();
+            renderFromFirstPage();
+        });
+
+        document.getElementById('followups-only').addEventListener('change', event => {
+            state.followupsOnly = event.target.checked;
+            renderFromFirstPage();
         });
 
         const artistFilterClearBtn = document.getElementById('artist-filter-clear');
         artistFilter.addEventListener('change', (e) => {
             state.currentArtist = e.target.value;
             artistFilterClearBtn.style.display = e.target.value ? 'block' : 'none';
-            renderIssues();
+            renderFromFirstPage();
         });
 
         artistFilterClearBtn.addEventListener('click', () => {
             artistFilter.value = '';
             state.currentArtist = '';
             artistFilterClearBtn.style.display = 'none';
-            renderIssues();
+            renderFromFirstPage();
         });
 
         // Show dismissed toggle
@@ -3308,7 +4002,7 @@
             const btn = e.target.closest('.view-btn');
             if (!btn) return;
             setView(btn.dataset.view);
-            renderIssues();
+            renderFromFirstPage();
         });
 
         // Export functionality
@@ -3319,6 +4013,8 @@
             report += '========================\n\n';
             report += `Generated: ${new Date().toLocaleString()}\n`;
             report += `Total Scrobbles: ${state.scrobbles.length.toLocaleString()}\n`;
+            report += 'Changes to prior correction groups after detection refinements are tagged [REVIEW].\n';
+            if (state.historicalImport) report += 'Historical or unordered export: saved history unchanged; recurrence not evaluated.\n';
             report += includeDismissed
                 ? 'Dismissed items: included (tagged [FIXED] / [IGNORED]; items back since being marked fixed are tagged [RECURRED])\n\n'
                 : 'Dismissed items: excluded (items back since being marked fixed are tagged [RECURRED])\n\n';
@@ -3338,8 +4034,9 @@
                 const entries = [];
                 // Marker for one item: [FIXED] / [IGNORED] when hidden,
                 // [RECURRED] when back, nothing when active.
-                const marker = (status, record) => {
+                const marker = (status, record, current, correction) => {
                     if (status === 'hidden') return ` [${intentLabel(record).toUpperCase()}]`;
+                    if (status === 'recurred' && needsGroupingReview(record, current, correction)) return ' [REVIEW]';
                     if (status === 'recurred') return ' [RECURRED]';
                     return '';
                 };
@@ -3356,7 +4053,8 @@
                             ...v,
                             _dismissed: itemSt === 'hidden',
                             _marker: marker(itemSt, rec),
-                            _note: itemSt === 'recurred' ? recurrenceNote(rec, v.count, true) : ''
+                            _note: itemSt === 'recurred' ? recurrenceNote(rec, v.count, true, state.corrections[getItemId(issueId, v.name)]) : '',
+                            _correction: correctionLabel(state.corrections[getItemId(issueId, v.name)])
                         };
                     });
                     
@@ -3369,8 +4067,9 @@
                     const record = state.dismissals[issueId];
                     entries.push({
                         issue, issueDismissed, variations,
-                        marker: marker(status, record),
-                        note: status === 'recurred' ? recurrenceNote(record, currentBaseline(issue), false) : ''
+                        marker: marker(status, record, currentBaseline(issue), state.corrections[issueId]),
+                        note: status === 'recurred' ? recurrenceNote(record, currentBaseline(issue), false, state.corrections[issueId]) : '',
+                        correction: correctionLabel(state.corrections[issueId])
                     });
                 });
                 
@@ -3380,14 +4079,16 @@
                 report += `${typeNames[type]} (${entries.length})\n`;
                 report += `${'='.repeat(50)}\n\n`;
 
-                entries.sort((a, b) => b.issue.totalCount - a.issue.totalCount).forEach(({ issue, variations, marker, note }) => {
+                entries.sort((a, b) => b.issue.totalCount - a.issue.totalCount).forEach(({ issue, variations, marker, note, correction }) => {
                     report += `${issue.title}${marker}\n`;
                     report += `  ${issue.description} | ${issue.totalCount} scrobbles\n`;
                     if (note) report += `  ${note}\n`;
+                    if (correction) report += `  ${correction}\n`;
                     variations.forEach(v => {
                         const invisibleNote = v.hasInvisible ? ' [HAS INVISIBLE CHARS]' : '';
                         report += `    - ${v.name}${v.count ? ` (${v.count})` : ''}${invisibleNote}${v._marker}\n`;
                         if (v._note) report += `      ${v._note}\n`;
+                        if (v._correction) report += `      ${v._correction}\n`;
                     });
                     report += '\n';
                 });

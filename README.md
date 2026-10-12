@@ -43,18 +43,22 @@ Or [download index.html](index.html) to run locally (note: you won't receive upd
 3. Use the Export feature to download your scrobble history as CSV
 4. Drop the CSV file into the upload area in Scrobble Analyzer
 
-**Required CSV format:** Must have a header row with columns for `Artist`, `Album`, `Track`, and `Date`. This is exactly what lastfmstats.com exports - no preparation needed.
+**After correcting metadata on Last.fm, retrieve the whole library again.** lastfmstats can load saved history and fetch only new scrobbles, leaving your older corrections out of the export. On the lastfmstats homepage, open **Database**, select **Remove from database** beside your username, then start a new retrieval by username and wait for it to finish before exporting. Do not import the old CSV back into lastfmstats. A new download date does not prove historical metadata was refreshed. This removes the saved library on lastfmstats; your analyzer decisions are stored separately.
+
+**Required CSV format:** Use a complete lastfmstats.com export with `Artist`, `Album`, `Track`, and `Date#username` columns. The username identifies whose saved decisions to load. This is exactly what lastfmstats.com exports - no preparation needed. Raw names are preserved, including hidden characters and surrounding whitespace.
 
 ## Current Status
 
-**Version 0.7.0** - [full release notes](https://github.com/scoblitz/scrobble-analyzer/releases/tag/v0.7.0) · [all releases](https://github.com/scoblitz/scrobble-analyzer/releases)
+**Version 0.8.0** - [release notes](docs/releases/v0.8.0.md) · [all releases](https://github.com/scoblitz/scrobble-analyzer/releases)
 
-v0.7.0 changes what dismissing means. **✓ Fixed** hides an item until new plays appear under the old name, then brings it back tagged so you can see it recurred. **🚫 Ignore** hides it for good. Everything you dismissed in an earlier version is treated as fixed: whatever is still in your next export shows once more with a note asking which you meant, and items you genuinely fixed stay gone.
+v0.8.0 adds correction memory and improves repeat-offense detection. Optionally remember the spelling or album you kept when marking **✓ Fixed**. After a complete export shows old-name plays were removed, later plays under that name can return even below its original play count. **🚫 Ignore** continues to hide an item until you restore it. Existing saved decisions migrate conservatively; ambiguous matches ask for review instead of hiding findings.
+
+Browse every result with Previous/Next pages of 100 cards. Search narrows missing-album and compilation cards to matching tracks; counts and impact sorting reflect the rows shown. “Follow-ups only” and “Follow-ups first” help revisit prior corrections. Album-correction controls offer candidates from plays of the exact artist and track in your export, plus your prior album choices. Each candidate shows its evidence; choosing one fills the optional field and saves only when you mark Fixed. It is not verification of an original release.
 
 ### Current Limitations
 
 - Analysis only (doesn't modify your Last.fm data directly - you'll use Last.fm's edit interface)
-- Shows first 100 issue cards per category (use search/filters to find more)
+- Requires a fresh, complete lastfmstats.com export. The CSV cannot prove that historical metadata was refreshed. Older or unordered exports can be reviewed but cannot change saved history; preserve the downloaded file's original modification time
 - Compilations spanning multiple track artists (e.g. an Eric Clapton compilation containing Cream tracks) appear split across those artists, because the export only carries the track artist
 - The `AlbumId` column in the export is currently ignored - it turns out those IDs aren't always trustworthy (ask me about the two Clapton compilations sometime)
 - Genuine misspellings aren't detected - `Citzen Erased` won't be matched to `Citizen Erased`. Everything above works by treating two spellings as the same name; a typo is a different name. Matching by similarity instead sounds obvious but flags far more real songs than typos (`Song for the Dead` and `Song for the Deaf` are both QOTSA tracks, one letter apart), so it isn't in yet
@@ -85,6 +89,16 @@ This project came out of my own frustration with messy scrobble data. If you:
 Please [open an issue](../../issues) or start a [discussion](../../discussions)! I'd love to hear what problems you're finding in your data.
 
 ## Built With
+
+Developer verification (no build step or installed dependencies):
+
+```sh
+node tests/merge-contract.js
+node tests/import-identity-contract.js
+node tests/recurrence-contract.js
+node tests/detection-contract.js
+node tests/triage-contract.js
+```
 
 This is a collaboration between a music data nerd (me) and Claude (Anthropic's AI assistant). The entire tool is a single HTML file with no dependencies - just open it in a browser.
 

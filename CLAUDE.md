@@ -14,7 +14,7 @@ Data flow:
 2. **Normalization** — artist/album/track strings are reduced to normalization keys. The three normalizers differ and are *not* interchangeable: all lowercase, collapse whitespace, map NBSP → space, apostrophe-likes and smart quotes → ASCII, fold diacritics (NFD), unify &/and, and map `.` `,` and dashes to a **space** (never deleted); only the artist normalizer strips a leading "the"; only the album/track normalizers strip keyword suffixes (remaster/live/feat/…) and canonicalize `[ ]` to `( )`. See DESIGN.md §1.7 for the verified per-normalizer table before assuming a rule exists.
 3. **Detection** — two detector classes:
    - *Variation detectors*: cluster entities by normalization key; any cluster with >1 original spelling is flagged.
-   - *Pattern detectors*: regex against individual entries, no variation needed (compilation detection, missing-album detection; more coming in v0.7).
+   - *Pattern detectors*: regex against individual entries, no variation needed (compilation detection, missing-album detection; additional patterns scoped for v0.9.0).
 4. **UI** — issues rendered as cards grouped by category; character-reveal chips (NBSP, ZWSP, 2×SP, …) show invisible/ambiguous characters with Unicode codepoint tooltips.
 5. **Dismissals** — persisted in localStorage, keyed by Last.fm username + name-based item IDs (stable across re-exports).
 6. **Export** — report generation with a checkbox to include/exclude dismissed items.
@@ -22,7 +22,7 @@ Data flow:
 ## Run / test
 
 - **Run:** open the HTML file directly in a browser. That's it.
-- **Test:** `node tests/merge-contract.js`. It reads the normalizers, the invisible-character finder and the dismissal functions live out of index.html (they must stay top-level, 8-space-indented — see DESIGN.md §4.1.1) and pins MUST-merge / MUST-NOT-merge pairs plus the dismissal status rules. Add cases before changing behaviour. Still verify UI changes manually against a real export.
+- **Test:** run all five scripts in `tests/` with Node: `merge-contract.js`, `import-identity-contract.js`, `recurrence-contract.js`, `detection-contract.js` and `triage-contract.js`. They read functions live out of index.html (keep extracted functions top-level, 8-space-indented — see DESIGN.md §4.1.1). Add cases before changing behaviour. Still verify UI changes manually against a real export.
 
 ## Conventions & house rules
 
@@ -35,7 +35,7 @@ Data flow:
 
 ## Current release state
 
-v0.7.0 is the current release: dismissals split into "fixed" (hides until new plays appear under the old name, then recurs tagged) and "ignored" (hides for good), with an Active / Fixed / Ignored view and storage v2 that migrates older dismissals as fixed-with-no-baseline. Before it: v0.6.1 (normalization patch), v0.6.0 (persistent dismissals, invisible-character work, visual refresh). v0.8.0 (pattern-detector release) is scoped but not built.
+v0.8.0 adds correction choices, recurrence after observed play-count decreases, storage v4 and issue-v3 name tuples, conservative grouping migrations, precise metadata labels, paged desktop triage and album suggestions from exact library evidence. Maintainer browser checks in Chrome, Firefox and Safari reported no issues on 2026-10-12; see DESIGN.md §4.10. Earlier releases: v0.7.0 (Fixed / Ignored views), v0.6.1 (normalization patch), v0.6.0 (persistent dismissals, invisible-character work, visual refresh). v0.9.0 (pattern-detector release) is scoped but not built. Direct library retrieval is deferred to a separate proposal after this release.
 
 ## Deeper context
 
